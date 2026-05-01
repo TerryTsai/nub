@@ -16,10 +16,7 @@ impl DockerHandler {
 
     pub(super) async fn remove_image(&self, id: String, force: bool) -> Result<()> {
         use bollard::image::RemoveImageOptions;
-        let opts = RemoveImageOptions {
-            force,
-            noprune: false,
-        };
+        let opts = RemoveImageOptions { force, noprune: false };
         self.docker.remove_image(&id, Some(opts), None).await?;
         Ok(())
     }
@@ -30,11 +27,7 @@ impl DockerHandler {
     }
 }
 
-async fn run_pull(
-    docker: Docker,
-    reference: String,
-    tx: mpsc::Sender<StreamChunk>,
-) -> std::result::Result<(), String> {
+async fn run_pull(docker: Docker, reference: String, tx: mpsc::Sender<StreamChunk>) -> std::result::Result<(), String> {
     use bollard::image::CreateImageOptions;
     let opts = CreateImageOptions::<String> {
         from_image: reference,
@@ -70,11 +63,7 @@ fn pull_chunk(info: CreateImageInfo) -> StreamChunk {
 fn summarize_image(i: RawImage) -> ImageSummary {
     ImageSummary {
         id: short_id(&i.id),
-        repo_tag: i
-            .repo_tags
-            .into_iter()
-            .next()
-            .unwrap_or_else(|| "<none>".into()),
+        repo_tag: i.repo_tags.into_iter().next().unwrap_or_else(|| "<none>".into()),
         created: i.created,
         size: i.size,
         containers: i.containers,

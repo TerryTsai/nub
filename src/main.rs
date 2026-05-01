@@ -24,56 +24,45 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive("nub=info".parse()?))
-        .init();
-
-    let args = Args::parse();
-    let cfg = config::Config::load(args.config.as_deref())?;
-
+    init_tracing()?;
+    let cfg = config::Config::load(Args::parse().config.as_deref())?;
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
-        tracing::warn!(
-            "tls_cert/tls_key set in config but TLS is not yet wired; serving plaintext"
-        );
+        tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
 
     let policy = handler::Policy {
-        allowed_binds: cfg.allowed_binds.clone(),
+        allowed_binds: cfg.allowed_binds,
     };
     let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::DockerHandler::connect(policy)?);
 
     let mut tasks: JoinSet<()> = JoinSet::new();
-
-    if let Some(bind) = cfg.bind.clone() {
+    if let Some(bind) = cfg.bind {
         let token = cfg
             .token
-            .clone()
             .ok_or_else(|| anyhow!("`token` required when `bind` is set"))?;
         let auth = Arc::new(auth::AuthState { token });
         let app = http::router(handler.clone(), auth);
         let listener = tokio::net::TcpListener::bind(&bind).await?;
-        tracing::info!("nub listening on {}", bind);
+        tracing::info!("nub listening on {bind}");
         tasks.spawn(serve_http(listener, app));
     }
-
     if let Some(hub) = cfg.hub {
-        let hub_cfg = hub_client::Config {
-            url: hub.url.clone(),
-            node_token: hub.node_token,
-        };
         tracing::info!(url = %hub.url, "hub: dialing");
-        let h = handler.clone();
-        tasks.spawn(async move {
-            hub_client::run(h, hub_cfg).await;
-        });
+        tasks.spawn(hub_client::run(handler.clone(), hub));
     }
-
     while tasks.join_next().await.is_some() {}
+    Ok(())
+}
+
+fn init_tracing() -> Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(EnvFilter::from_default_env().add_directive("nub=info".parse()?))
+        .init();
     Ok(())
 }
 
 async fn serve_http(listener: tokio::net::TcpListener, app: axum::Router) {
     if let Err(e) = axum::serve(listener, app).await {
-        tracing::error!(error = %e, "axum serve failed");
+        tracing::error!("axum serve failed: {e}");
     }
 }

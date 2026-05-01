@@ -1,8 +1,8 @@
 use crate::proto::*;
 use anyhow::Result;
 use bollard::models::{
-    ContainerInspectResponse, ContainerSummary as RawSummary, EndpointSettings as RawEndpoint,
-    MountPoint as RawMount, PortBinding,
+    ContainerInspectResponse, ContainerSummary as RawSummary, EndpointSettings as RawEndpoint, MountPoint as RawMount,
+    PortBinding,
 };
 
 use super::util::short_id;
@@ -19,15 +19,14 @@ impl DockerHandler {
         Ok(cs.into_iter().map(summarize).collect())
     }
 
-    pub(super) async fn inspect_container(&self, id: String) -> Result<ContainerDetail> {
+    pub(super) async fn inspect_container(&self, id: String) -> Result<Box<ContainerDetail>> {
         let r = self.docker.inspect_container(&id, None).await?;
-        Ok(to_detail(r))
+        Ok(Box::new(to_detail(r)))
     }
 
     pub(super) async fn container_action(&self, id: String, action: Action) -> Result<()> {
         use bollard::container::{
-            KillContainerOptions, RemoveContainerOptions, RestartContainerOptions,
-            StopContainerOptions,
+            KillContainerOptions, RemoveContainerOptions, RestartContainerOptions, StopContainerOptions,
         };
         match action {
             Action::Start => {
@@ -107,12 +106,7 @@ fn to_detail(r: ContainerInspectResponse) -> ContainerDetail {
             .unwrap_or_default(),
         privileged: host.privileged.unwrap_or(false),
         memory_limit: host.memory.unwrap_or(0),
-        mounts: r
-            .mounts
-            .unwrap_or_default()
-            .into_iter()
-            .map(to_mount)
-            .collect(),
+        mounts: r.mounts.unwrap_or_default().into_iter().map(to_mount).collect(),
         networks: net
             .networks
             .unwrap_or_default()
@@ -141,9 +135,7 @@ fn to_endpoint(e: RawEndpoint) -> NetworkEndpoint {
     }
 }
 
-fn ports_from_map(
-    map: Option<std::collections::HashMap<String, Option<Vec<PortBinding>>>>,
-) -> Vec<PortMapping> {
+fn ports_from_map(map: Option<std::collections::HashMap<String, Option<Vec<PortBinding>>>>) -> Vec<PortMapping> {
     let Some(map) = map else {
         return Vec::new();
     };

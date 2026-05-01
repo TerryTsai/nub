@@ -13,12 +13,7 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
     for (path, n) in &over {
-        println!(
-            "cargo::error={} has {} lines (limit {})",
-            path.display(),
-            n,
-            LIMIT
-        );
+        println!("cargo::error={} has {} lines (limit {})", path.display(), n, LIMIT);
     }
     std::process::exit(1);
 }

@@ -14,12 +14,7 @@ type ExecOutput = Pin<Box<dyn Stream<Item = std::result::Result<LogOutput, Bolla
 type ExecInput = Pin<Box<dyn AsyncWrite + Send>>;
 
 impl DockerHandler {
-    pub(super) fn stream_logs(
-        &self,
-        id: String,
-        follow: bool,
-        tail: Option<u32>,
-    ) -> BoxStream<'static, StreamChunk> {
+    pub(super) fn stream_logs(&self, id: String, follow: bool, tail: Option<u32>) -> BoxStream<'static, StreamChunk> {
         let docker = self.docker.clone();
         spawn_chunked(move |tx| run_logs(docker, id, follow, tail, tx))
     }
@@ -72,11 +67,7 @@ async fn run_logs(
     Ok(())
 }
 
-async fn run_stats(
-    docker: Docker,
-    id: String,
-    tx: mpsc::Sender<StreamChunk>,
-) -> std::result::Result<(), String> {
+async fn run_stats(docker: Docker, id: String, tx: mpsc::Sender<StreamChunk>) -> std::result::Result<(), String> {
     use bollard::container::StatsOptions;
     let opts = StatsOptions {
         stream: true,
@@ -105,29 +96,22 @@ async fn run_exec(
     out_tx: mpsc::Sender<StreamChunk>,
 ) -> std::result::Result<(), String> {
     use bollard::exec::{CreateExecOptions, StartExecOptions, StartExecResults};
-    let exec = docker
-        .create_exec(
-            &id,
-            CreateExecOptions::<String> {
-                cmd: Some(cmd),
-                attach_stdin: Some(true),
-                attach_stdout: Some(true),
-                attach_stderr: Some(true),
-                tty: Some(tty),
-                ..Default::default()
-            },
-        )
-        .await
-        .map_err(|e| e.to_string())?;
+    let create = CreateExecOptions::<String> {
+        cmd: Some(cmd),
+        attach_stdin: Some(true),
+        attach_stdout: Some(true),
+        attach_stderr: Some(true),
+        tty: Some(tty),
+        ..Default::default()
+    };
+    let start = StartExecOptions {
+        detach: false,
+        tty,
+        ..Default::default()
+    };
+    let exec = docker.create_exec(&id, create).await.map_err(|e| e.to_string())?;
     let started = docker
-        .start_exec(
-            &exec.id,
-            Some(StartExecOptions {
-                detach: false,
-                tty,
-                ..Default::default()
-            }),
-        )
+        .start_exec(&exec.id, Some(start))
         .await
         .map_err(|e| e.to_string())?;
     let (output, input) = match started {
@@ -159,10 +143,7 @@ async fn forward_input(input: &mut ExecInput, chunk: StreamChunk) -> bool {
     }
 }
 
-async fn pump_exec_output(
-    mut output: ExecOutput,
-    tx: mpsc::Sender<StreamChunk>,
-) -> std::result::Result<(), String> {
+async fn pump_exec_output(mut output: ExecOutput, tx: mpsc::Sender<StreamChunk>) -> std::result::Result<(), String> {
     while let Some(item) = output.next().await {
         let chunk = match item {
             Ok(LogOutput::StdOut { message }) => log_chunk(false, &message),
@@ -178,10 +159,9 @@ async fn pump_exec_output(
 }
 
 fn to_stats_chunk(s: &bollard::container::Stats) -> StreamChunk {
-    let cpu_delta =
-        s.cpu_stats.cpu_usage.total_usage as i128 - s.precpu_stats.cpu_usage.total_usage as i128;
-    let sys_delta = s.cpu_stats.system_cpu_usage.unwrap_or(0) as i128
-        - s.precpu_stats.system_cpu_usage.unwrap_or(0) as i128;
+    let cpu_delta = s.cpu_stats.cpu_usage.total_usage as i128 - s.precpu_stats.cpu_usage.total_usage as i128;
+    let sys_delta =
+        s.cpu_stats.system_cpu_usage.unwrap_or(0) as i128 - s.precpu_stats.system_cpu_usage.unwrap_or(0) as i128;
     let online = s.cpu_stats.online_cpus.unwrap_or_else(|| {
         s.cpu_stats
             .cpu_usage

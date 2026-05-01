@@ -20,11 +20,7 @@ enum Inbound {
 /// Drive the wire protocol on a transport-agnostic mpsc pair. Reads JSON
 /// frames from `in_rx`, dispatches against `handler`, writes responses and
 /// stream chunks as JSON to `out_tx`. Returns when `in_rx` is closed.
-pub async fn serve(
-    handler: Shared,
-    mut in_rx: mpsc::Receiver<String>,
-    out_tx: mpsc::Sender<String>,
-) {
+pub async fn serve(handler: Shared, mut in_rx: mpsc::Receiver<String>, out_tx: mpsc::Sender<String>) {
     let routes: Routes = Arc::new(Mutex::new(HashMap::new()));
     while let Some(text) = in_rx.recv().await {
         if out_tx.is_closed() {
@@ -87,36 +83,28 @@ fn end_err(msg: &str) -> StreamChunk {
 }
 
 async fn send_frame(out: &mpsc::Sender<String>, frame: Frame) -> bool {
-    let json = match serde_json::to_string(&frame) {
-        Ok(s) => s,
-        Err(e) => {
-            tracing::warn!(error = %e, "frame serialize failed");
-            return true;
-        }
+    let Ok(json) = serde_json::to_string(&frame) else {
+        tracing::warn!("frame serialize failed");
+        return true;
     };
     out.send(json).await.is_ok()
 }
 
-async fn handle_request(
-    id: u64,
-    op: Op,
-    h: Shared,
-    in_rx: mpsc::Receiver<StreamChunk>,
-    out: mpsc::Sender<String>,
-) {
+fn response(id: u64, result: OpResult) -> Frame {
+    Frame::Response { id, result }
+}
+
+fn stream_frame(id: u64, chunk: StreamChunk) -> Frame {
+    Frame::Stream { id, chunk }
+}
+
+async fn handle_request(id: u64, op: Op, h: Shared, in_rx: mpsc::Receiver<StreamChunk>, out: mpsc::Sender<String>) {
     match h.handle(op, in_rx).await {
         HandlerOutput::Unary(result) => {
-            send_frame(&out, Frame::Response { id, result }).await;
+            send_frame(&out, response(id, result)).await;
         }
         HandlerOutput::Stream(source) => {
-            send_frame(
-                &out,
-                Frame::Response {
-                    id,
-                    result: OpResult::StreamStarted,
-                },
-            )
-            .await;
+            send_frame(&out, response(id, OpResult::StreamStarted)).await;
             pump_stream(id, source, out).await;
         }
     }
@@ -128,23 +116,14 @@ async fn pump_stream(id: u64, source: BoxStream<'static, StreamChunk>, out: mpsc
     loop {
         let chunk = match b_rx.recv().await {
             Ok(c) => c,
-            Err(broadcast::error::RecvError::Lagged(n)) => {
-                StreamChunk::Lagging { dropped: n as u32 }
-            }
+            Err(broadcast::error::RecvError::Lagged(n)) => StreamChunk::Lagging { dropped: n as u32 },
             Err(broadcast::error::RecvError::Closed) => {
-                send_frame(
-                    &out,
-                    Frame::Stream {
-                        id,
-                        chunk: end_err("source ended without End chunk"),
-                    },
-                )
-                .await;
+                send_frame(&out, stream_frame(id, end_err("source ended without End chunk"))).await;
                 break;
             }
         };
         let is_end = matches!(chunk, StreamChunk::End { .. });
-        let alive = send_frame(&out, Frame::Stream { id, chunk }).await;
+        let alive = send_frame(&out, stream_frame(id, chunk)).await;
         if is_end || !alive {
             break;
         }
@@ -152,10 +131,7 @@ async fn pump_stream(id: u64, source: BoxStream<'static, StreamChunk>, out: mpsc
     producer.abort();
 }
 
-async fn forward_to_broadcast(
-    mut source: BoxStream<'static, StreamChunk>,
-    tx: broadcast::Sender<StreamChunk>,
-) {
+async fn forward_to_broadcast(mut source: BoxStream<'static, StreamChunk>, tx: broadcast::Sender<StreamChunk>) {
     while let Some(chunk) = source.next().await {
         if tx.send(chunk).is_err() {
             break;

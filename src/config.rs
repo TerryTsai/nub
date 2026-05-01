@@ -10,13 +10,7 @@ pub struct Config {
     pub tls_key: Option<PathBuf>,
     #[serde(default)]
     pub allowed_binds: Vec<PathBuf>,
-    pub hub: Option<HubConfig>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct HubConfig {
-    pub url: String,
-    pub node_token: String,
+    pub hub: Option<crate::hub_client::Config>,
 }
 
 impl Config {
@@ -29,19 +23,14 @@ impl Config {
                     .map(PathBuf::from)
                     .find(|p| p.exists())
             })
-            .ok_or_else(|| {
-                anyhow!("no config at ./nub.toml or /etc/nub/config.toml; pass --config")
-            })?;
-        let s = std::fs::read_to_string(&path)
-            .with_context(|| format!("reading {}", path.display()))?;
+            .ok_or_else(|| anyhow!("no config at ./nub.toml or /etc/nub/config.toml; pass --config"))?;
+        let s = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
         let cfg: Config = toml::from_str(&s)?;
         if cfg.bind.is_some() && cfg.token.as_deref().unwrap_or("").is_empty() {
             return Err(anyhow!("`token` required when `bind` is set"));
         }
         if cfg.bind.is_none() && cfg.hub.is_none() {
-            return Err(anyhow!(
-                "config must set `bind` (standalone), `hub` (fleet), or both"
-            ));
+            return Err(anyhow!("config must set `bind` (standalone), `hub` (fleet), or both"));
         }
         Ok(cfg)
     }

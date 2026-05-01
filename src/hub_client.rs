@@ -3,6 +3,7 @@ use crate::wire;
 use anyhow::{anyhow, Context, Result};
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
+use serde::Deserialize;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpStream;
@@ -11,6 +12,7 @@ use tokio_tungstenite::tungstenite::client::IntoClientRequest;
 use tokio_tungstenite::tungstenite::Message;
 use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
+#[derive(Debug, Deserialize)]
 pub struct Config {
     pub url: String,
     pub node_token: String,
@@ -55,11 +57,7 @@ fn next_backoff(result: &Result<()>, current: Duration) -> Duration {
 }
 
 async fn connect_and_serve(handler: &Arc<dyn OpHandler>, cfg: &Config) -> Result<()> {
-    let mut req = cfg
-        .url
-        .as_str()
-        .into_client_request()
-        .context("invalid hub URL")?;
+    let mut req = cfg.url.as_str().into_client_request().context("invalid hub URL")?;
     let bearer = format!("Bearer {}", cfg.node_token)
         .parse()
         .map_err(|_| anyhow!("token contains invalid header bytes"))?;

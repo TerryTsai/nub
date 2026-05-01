@@ -18,9 +18,18 @@ pub enum Frame {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Op {
     HostInfo,
+
     ListContainers {
         all: bool,
     },
+    InspectContainer {
+        id: String,
+    },
+    ContainerAction {
+        id: String,
+        action: Action,
+    },
+    CreateContainer(Box<CreateContainerReq>),
     StreamLogs {
         id: String,
         #[serde(default)]
@@ -37,13 +46,7 @@ pub enum Op {
         #[serde(default)]
         tty: bool,
     },
-    InspectContainer {
-        id: String,
-    },
-    ContainerAction {
-        id: String,
-        action: Action,
-    },
+
     ListImages,
     RemoveImage {
         id: String,
@@ -53,17 +56,18 @@ pub enum Op {
     PullImage {
         reference: String,
     },
+
     ListVolumes,
     RemoveVolume {
         name: String,
         #[serde(default)]
         force: bool,
     },
+
     ListNetworks,
     RemoveNetwork {
         id: String,
     },
-    CreateContainer(Box<CreateContainerReq>),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -91,14 +95,14 @@ pub enum Action {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum OpResult {
     HostInfo(HostInfo),
-    Containers { items: Vec<ContainerSummary> },
+    Containers(Vec<ContainerSummary>),
     ContainerDetail(Box<ContainerDetail>),
-    Images { items: Vec<ImageSummary> },
-    Volumes { items: Vec<VolumeSummary> },
-    Networks { items: Vec<NetworkSummary> },
+    Images(Vec<ImageSummary>),
+    Volumes(Vec<VolumeSummary>),
+    Networks(Vec<NetworkSummary>),
     ContainerCreated(ContainerCreated),
     Ok,
     StreamStarted,

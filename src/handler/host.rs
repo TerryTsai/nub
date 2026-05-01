@@ -8,10 +8,7 @@ impl DockerHandler {
         let info = self.docker.info().await?;
         let ver = self.docker.version().await?;
         Ok(HostInfo {
-            engine: ver
-                .platform
-                .map(|p| p.name)
-                .unwrap_or_else(|| "docker".into()),
+            engine: ver.platform.map(|p| p.name).unwrap_or_else(|| "docker".into()),
             version: ver.version.unwrap_or_default(),
             os: info.operating_system.unwrap_or_default(),
             arch: info.architecture.unwrap_or_default(),

@@ -8,25 +8,17 @@ use std::path::{Path, PathBuf};
 use super::DockerHandler;
 
 impl DockerHandler {
-    pub(super) async fn create_container(
-        &self,
-        req: CreateContainerReq,
-    ) -> Result<ContainerCreated> {
+    pub(super) async fn create_container(&self, req: CreateContainerReq) -> Result<ContainerCreated> {
         validate(&req, &self.policy.allowed_binds)?;
         let create_opts = req.name.as_deref().map(|n| CreateContainerOptions {
             name: n.to_string(),
             platform: None,
         });
         let cfg = build_config(&req);
-        let resp = self
-            .docker
-            .create_container::<String, String>(create_opts, cfg)
-            .await?;
+        let resp = self.docker.create_container::<String, String>(create_opts, cfg).await?;
         let mut started = false;
         if req.start {
-            self.docker
-                .start_container::<String>(&resp.id, None)
-                .await?;
+            self.docker.start_container::<String>(&resp.id, None).await?;
             started = true;
         }
         Ok(ContainerCreated {
@@ -83,19 +75,11 @@ fn build_config(req: &CreateContainerReq) -> Config<String> {
 }
 
 fn nonempty_vec(v: &[String]) -> Option<Vec<String>> {
-    if v.is_empty() {
-        None
-    } else {
-        Some(v.to_vec())
-    }
+    (!v.is_empty()).then(|| v.to_vec())
 }
 
 fn nonempty_map(m: &HashMap<String, String>) -> Option<HashMap<String, String>> {
-    if m.is_empty() {
-        None
-    } else {
-        Some(m.clone())
-    }
+    (!m.is_empty()).then(|| m.clone())
 }
 
 fn build_exposed_ports(ports: &[PortPublish]) -> Option<HashMap<String, HashMap<(), ()>>> {
@@ -137,10 +121,9 @@ fn normalize_container_port(s: &str) -> String {
 }
 
 fn parse_host(s: &str) -> (String, String) {
-    if let Some(idx) = s.rfind(':') {
-        (s[..idx].to_string(), s[idx + 1..].to_string())
-    } else {
-        (String::new(), s.to_string())
+    match s.rfind(':') {
+        Some(i) => (s[..i].to_string(), s[i + 1..].to_string()),
+        None => (String::new(), s.to_string()),
     }
 }
 
@@ -160,13 +143,12 @@ fn build_binds(volumes: &[VolumeMount]) -> Option<Vec<String>> {
 }
 
 fn to_restart_policy(spec: &RestartPolicySpec) -> RestartPolicy {
+    use RestartPolicyNameEnum::*;
     let (name, retry) = match spec {
-        RestartPolicySpec::No => (RestartPolicyNameEnum::NO, None),
-        RestartPolicySpec::OnFailure { max_retries } => {
-            (RestartPolicyNameEnum::ON_FAILURE, *max_retries)
-        }
-        RestartPolicySpec::Always => (RestartPolicyNameEnum::ALWAYS, None),
-        RestartPolicySpec::UnlessStopped => (RestartPolicyNameEnum::UNLESS_STOPPED, None),
+        RestartPolicySpec::No => (NO, None),
+        RestartPolicySpec::OnFailure { max_retries } => (ON_FAILURE, *max_retries),
+        RestartPolicySpec::Always => (ALWAYS, None),
+        RestartPolicySpec::UnlessStopped => (UNLESS_STOPPED, None),
     };
     RestartPolicy {
         name: Some(name),
