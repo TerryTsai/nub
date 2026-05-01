@@ -2,8 +2,6 @@ mod auth;
 mod config;
 mod handler;
 mod http;
-mod hub;
-mod hub_client;
 mod proto;
 mod wire;
 mod ws;
@@ -12,55 +10,66 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use std::path::PathBuf;
 use std::sync::Arc;
-use tokio::task::JoinSet;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
-#[command(name = "nub", about = "Minimal Docker/Podman control plane: hub + nub")]
+#[command(name = "nub", about = "Minimal Docker/Podman control plane")]
 struct Args {
-    /// Path to TOML config (default: ./nub.toml or /etc/nub/config.toml)
+    /// Path to TOML config (default: ./nub.toml or /etc/nub/config.toml; optional)
     #[arg(long)]
     config: Option<PathBuf>,
+    /// This binary's identifier
+    #[arg(long)]
+    id: Option<String>,
+    /// Address to listen on (e.g. 127.0.0.1:8080)
+    #[arg(long)]
+    bind: Option<String>,
+    /// TLS certificate path
+    #[arg(long)]
+    tls_cert: Option<PathBuf>,
+    /// TLS private key path
+    #[arg(long)]
+    tls_key: Option<PathBuf>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
     init_tracing()?;
-    let cfg = config::Config::load(Args::parse().config.as_deref())?;
+    let args = Args::parse();
+    let mut cfg = config::Config::load(args.config.as_deref())?.unwrap_or_default();
+
+    // CLI overrides file.
+    if let Some(v) = args.id {
+        cfg.id = Some(v);
+    }
+    if let Some(v) = args.bind {
+        cfg.bind = Some(v);
+    }
+    if let Some(v) = args.tls_cert {
+        cfg.tls_cert = Some(v);
+    }
+    if let Some(v) = args.tls_key {
+        cfg.tls_key = Some(v);
+    }
+
+    let id = cfg.id.ok_or_else(|| anyhow!("`id` required (config or --id)"))?;
+    let bind = cfg.bind.ok_or_else(|| anyhow!("`bind` required (config or --bind)"))?;
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
         tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
 
-    // Pure-hub deployments don't talk to a local Docker socket.
-    let needs_docker = cfg.bind.is_some() || cfg.nub.is_some();
-    let docker: Option<Arc<dyn handler::OpHandler>> = if needs_docker {
-        let policy = handler::Policy {
-            allowed_binds: cfg.allowed_binds.clone(),
-        };
-        Some(Arc::new(handler::DockerHandler::connect(policy)?))
-    } else {
-        None
+    let policy = handler::Policy {
+        allowed_binds: cfg.engine.allowed_binds,
     };
+    let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::DockerHandler::connect(policy)?);
+    let auth = Arc::new(auth::AuthState { trust: cfg.trust });
+    let app = http::router(handler, auth);
 
-    let mut tasks: JoinSet<()> = JoinSet::new();
-    if let Some(bind) = cfg.bind {
-        let token = cfg
-            .token
-            .ok_or_else(|| anyhow!("`token` required when `bind` is set"))?;
-        let auth = Arc::new(auth::AuthState { token });
-        let app = http::router(docker.clone().unwrap(), auth);
-        let listener = tokio::net::TcpListener::bind(&bind).await?;
-        tracing::info!("hubnub listening on {bind}");
-        tasks.spawn(serve_http(listener, app));
+    let listener = tokio::net::TcpListener::bind(&bind).await?;
+    tracing::info!("nub {id} listening on {bind}");
+    if let Err(e) = axum::serve(listener, app).await {
+        tracing::error!("axum serve failed: {e}");
     }
-    if let Some(nub) = cfg.nub {
-        tracing::info!(hub = %nub.hub_url, "nub: dialing hub");
-        tasks.spawn(hub_client::run(docker.clone().unwrap(), nub));
-    }
-    if let Some(hub) = cfg.hub {
-        tasks.spawn(serve_hub(hub));
-    }
-    while tasks.join_next().await.is_some() {}
     Ok(())
 }
 
@@ -69,16 +78,4 @@ fn init_tracing() -> Result<()> {
         .with_env_filter(EnvFilter::from_default_env().add_directive("nub=info".parse()?))
         .init();
     Ok(())
-}
-
-async fn serve_http(listener: tokio::net::TcpListener, app: axum::Router) {
-    if let Err(e) = axum::serve(listener, app).await {
-        tracing::error!("axum serve failed: {e}");
-    }
-}
-
-async fn serve_hub(cfg: hub::Config) {
-    if let Err(e) = hub::run(cfg).await {
-        tracing::error!("hub failed: {e}");
-    }
 }

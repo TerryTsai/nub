@@ -1,4 +1,5 @@
 use crate::auth::{require_token, AuthState};
+use crate::config::TrustEntry;
 use crate::handler::{closed_input, HandlerOutput, OpHandler};
 use crate::proto::*;
 use crate::ws::ws_handler;
@@ -7,7 +8,7 @@ use axum::{
     http::StatusCode,
     middleware,
     routing::{get, post},
-    Json, Router,
+    Extension, Json, Router,
 };
 use std::sync::Arc;
 
@@ -21,7 +22,15 @@ pub fn router(handler: Shared, auth: Arc<AuthState>) -> Router {
         .with_state(handler)
 }
 
-async fn op(State(h): State<Shared>, Json(op): Json<Op>) -> Result<Json<OpResult>, StatusCode> {
+async fn op(
+    State(h): State<Shared>,
+    Extension(caller): Extension<TrustEntry>,
+    Json(op): Json<Op>,
+) -> Result<Json<OpResult>, StatusCode> {
+    if !caller.allows(op.name()) {
+        tracing::warn!("caller {} denied op {}", caller.id, op.name());
+        return Err(StatusCode::FORBIDDEN);
+    }
     match h.handle(op, closed_input()).await {
         HandlerOutput::Unary(r) => Ok(Json(r)),
         HandlerOutput::Stream(_) => Err(StatusCode::BAD_REQUEST),

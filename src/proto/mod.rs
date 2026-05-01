@@ -70,6 +70,29 @@ pub enum Op {
     },
 }
 
+impl Op {
+    /// Wire-format name (matches the `op` discriminator), used for permission checks.
+    pub fn name(&self) -> &'static str {
+        match self {
+            Op::HostInfo => "host_info",
+            Op::ListContainers { .. } => "list_containers",
+            Op::InspectContainer { .. } => "inspect_container",
+            Op::ContainerAction { .. } => "container_action",
+            Op::CreateContainer(_) => "create_container",
+            Op::StreamLogs { .. } => "stream_logs",
+            Op::StreamStats { .. } => "stream_stats",
+            Op::Exec { .. } => "exec",
+            Op::ListImages => "list_images",
+            Op::RemoveImage { .. } => "remove_image",
+            Op::PullImage { .. } => "pull_image",
+            Op::ListVolumes => "list_volumes",
+            Op::RemoveVolume { .. } => "remove_volume",
+            Op::ListNetworks => "list_networks",
+            Op::RemoveNetwork { .. } => "remove_network",
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum Action {

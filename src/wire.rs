@@ -1,3 +1,4 @@
+use crate::config::TrustEntry;
 use crate::handler::{HandlerOutput, OpHandler};
 use crate::proto::*;
 use futures::stream::BoxStream;
@@ -17,22 +18,27 @@ enum Inbound {
     Stream { id: u64, chunk: StreamChunk },
 }
 
-/// Drive the wire protocol on a transport-agnostic mpsc pair. Reads JSON
-/// frames from `in_rx`, dispatches against `handler`, writes responses and
-/// stream chunks as JSON to `out_tx`. Returns when `in_rx` is closed.
-pub async fn serve(handler: Shared, mut in_rx: mpsc::Receiver<String>, out_tx: mpsc::Sender<String>) {
+/// Drive the wire protocol on a transport-agnostic mpsc pair. The connection
+/// has been authenticated as `caller`; per-Request `caller.allows()` gates
+/// what can run. Returns when `in_rx` is closed.
+pub async fn serve(
+    handler: Shared,
+    caller: TrustEntry,
+    mut in_rx: mpsc::Receiver<String>,
+    out_tx: mpsc::Sender<String>,
+) {
     let routes: Routes = Arc::new(Mutex::new(HashMap::new()));
     while let Some(text) = in_rx.recv().await {
         if out_tx.is_closed() {
             break;
         }
-        dispatch(&text, &handler, &out_tx, &routes).await;
+        dispatch(&text, &handler, &caller, &out_tx, &routes).await;
     }
 }
 
-async fn dispatch(text: &str, h: &Shared, out: &mpsc::Sender<String>, routes: &Routes) {
+async fn dispatch(text: &str, h: &Shared, caller: &TrustEntry, out: &mpsc::Sender<String>, routes: &Routes) {
     match parse_inbound(text) {
-        Ok(Inbound::Request { id, op }) => start_request(id, op, h, out, routes),
+        Ok(Inbound::Request { id, op }) => start_request(id, op, h, caller, out, routes),
         Ok(Inbound::Stream { id, chunk }) => forward_to_route(id, chunk, routes).await,
         Err(msg) => {
             send_frame(out, err_reply(0, msg)).await;
@@ -40,7 +46,16 @@ async fn dispatch(text: &str, h: &Shared, out: &mpsc::Sender<String>, routes: &R
     }
 }
 
-fn start_request(id: u64, op: Op, h: &Shared, out: &mpsc::Sender<String>, routes: &Routes) {
+fn start_request(id: u64, op: Op, h: &Shared, caller: &TrustEntry, out: &mpsc::Sender<String>, routes: &Routes) {
+    if !caller.allows(op.name()) {
+        tracing::warn!("caller {} denied op {}", caller.id, op.name());
+        let out = out.clone();
+        let name = op.name().to_string();
+        tokio::spawn(async move {
+            send_frame(&out, err_reply(id, format!("op `{name}` not in allowed list"))).await;
+        });
+        return;
+    }
     let (in_tx, in_rx) = mpsc::channel::<StreamChunk>(INPUT_BUF);
     routes.lock().unwrap().insert(id, in_tx);
     let h = h.clone();
