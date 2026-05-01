@@ -29,7 +29,9 @@ async fn main() -> Result<()> {
     let cfg = config::Config::load(args.config.as_deref())?;
 
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
-        tracing::warn!("tls_cert/tls_key set in config but TLS is not yet wired; serving plaintext");
+        tracing::warn!(
+            "tls_cert/tls_key set in config but TLS is not yet wired; serving plaintext"
+        );
     }
 
     let handler = Arc::new(handler::DockerHandler::connect()?);

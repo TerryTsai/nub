@@ -20,7 +20,9 @@ impl Config {
                     .map(PathBuf::from)
                     .find(|p| p.exists())
             })
-            .ok_or_else(|| anyhow!("no config at ./nub.toml or /etc/nub/config.toml; pass --config"))?;
+            .ok_or_else(|| {
+                anyhow!("no config at ./nub.toml or /etc/nub/config.toml; pass --config")
+            })?;
         let s = std::fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
         let cfg: Config = toml::from_str(&s)?;

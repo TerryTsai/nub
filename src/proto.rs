@@ -12,7 +12,9 @@ pub enum Frame {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Op {
     HostInfo,
-    ListContainers { all: bool },
+    ListContainers {
+        all: bool,
+    },
     StreamLogs {
         id: String,
         #[serde(default)]
@@ -37,7 +39,10 @@ pub enum OpResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamChunk {
-    Log { stderr: bool, data: String },
+    Log {
+        stderr: bool,
+        data: String,
+    },
     Stats {
         cpu_pct: f64,
         mem_used: u64,
@@ -45,8 +50,13 @@ pub enum StreamChunk {
         net_rx: u64,
         net_tx: u64,
     },
-    Lagging { dropped: u32 },
-    End { ok: bool, err: Option<String> },
+    Lagging {
+        dropped: u32,
+    },
+    End {
+        ok: bool,
+        err: Option<String>,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

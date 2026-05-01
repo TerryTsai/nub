@@ -1,8 +1,11 @@
 use crate::proto::*;
 use anyhow::Result;
 use async_trait::async_trait;
+use bollard::models::ContainerSummary as RawSummary;
 use bollard::Docker;
 use futures::stream::{BoxStream, StreamExt};
+use std::future::Future;
+use tokio::sync::mpsc;
 
 pub enum HandlerOutput {
     Unary(OpResult),
@@ -20,32 +23,11 @@ pub struct DockerHandler {
 
 impl DockerHandler {
     pub fn connect() -> Result<Self> {
-        let docker = Docker::connect_with_local_defaults()?;
-        Ok(Self { docker })
+        Ok(Self {
+            docker: Docker::connect_with_local_defaults()?,
+        })
     }
-}
 
-#[async_trait]
-impl OpHandler for DockerHandler {
-    async fn handle(&self, op: Op) -> HandlerOutput {
-        match op {
-            Op::HostInfo => match self.host_info().await {
-                Ok(info) => HandlerOutput::Unary(OpResult::HostInfo(info)),
-                Err(e) => HandlerOutput::Unary(OpResult::Err { message: e.to_string() }),
-            },
-            Op::ListContainers { all } => match self.list_containers(all).await {
-                Ok(cs) => HandlerOutput::Unary(OpResult::Containers(cs)),
-                Err(e) => HandlerOutput::Unary(OpResult::Err { message: e.to_string() }),
-            },
-            Op::StreamLogs { id, follow, tail } => {
-                HandlerOutput::Stream(self.stream_logs(id, follow, tail))
-            }
-            Op::StreamStats { id } => HandlerOutput::Stream(self.stream_stats(id)),
-        }
-    }
-}
-
-impl DockerHandler {
     async fn host_info(&self) -> Result<HostInfo> {
         let info = self.docker.info().await?;
         let ver = self.docker.version().await?;
@@ -73,21 +55,7 @@ impl DockerHandler {
             ..Default::default()
         };
         let cs = self.docker.list_containers(Some(opts)).await?;
-        Ok(cs
-            .into_iter()
-            .map(|c| ContainerSummary {
-                id: c.id.unwrap_or_default().chars().take(12).collect(),
-                name: c
-                    .names
-                    .and_then(|n| n.into_iter().next())
-                    .map(|n| n.trim_start_matches('/').to_string())
-                    .unwrap_or_default(),
-                image: c.image.unwrap_or_default(),
-                state: c.state.unwrap_or_default(),
-                status: c.status.unwrap_or_default(),
-                created: c.created.unwrap_or(0),
-            })
-            .collect())
+        Ok(cs.into_iter().map(summarize).collect())
     }
 
     fn stream_logs(
@@ -96,80 +64,137 @@ impl DockerHandler {
         follow: bool,
         tail: Option<u32>,
     ) -> BoxStream<'static, StreamChunk> {
-        use bollard::container::{LogOutput, LogsOptions};
         let docker = self.docker.clone();
-        let (tx, rx) = tokio::sync::mpsc::channel::<StreamChunk>(32);
-        tokio::spawn(async move {
-            let opts = LogsOptions::<String> {
-                follow,
-                stdout: true,
-                stderr: true,
-                tail: tail.map(|n| n.to_string()).unwrap_or_else(|| "all".into()),
-                ..Default::default()
-            };
-            let logs = docker.logs(&id, Some(opts));
-            futures::pin_mut!(logs);
-            let mut err: Option<String> = None;
-            while let Some(item) = logs.next().await {
-                let chunk = match item {
-                    Ok(LogOutput::StdOut { message }) => StreamChunk::Log {
-                        stderr: false,
-                        data: String::from_utf8_lossy(&message).into_owned(),
-                    },
-                    Ok(LogOutput::StdErr { message }) => StreamChunk::Log {
-                        stderr: true,
-                        data: String::from_utf8_lossy(&message).into_owned(),
-                    },
-                    Ok(_) => continue,
-                    Err(e) => {
-                        err = Some(e.to_string());
-                        break;
-                    }
-                };
-                if tx.send(chunk).await.is_err() {
-                    return;
-                }
-            }
-            let _ = tx
-                .send(StreamChunk::End { ok: err.is_none(), err })
-                .await;
-        });
-        Box::pin(futures::stream::unfold(rx, |mut rx| async move {
-            rx.recv().await.map(|c| (c, rx))
-        }))
+        spawn_chunked(move |tx| run_logs(docker, id, follow, tail, tx))
     }
 
     fn stream_stats(&self, id: String) -> BoxStream<'static, StreamChunk> {
-        use bollard::container::StatsOptions;
         let docker = self.docker.clone();
-        let (tx, rx) = tokio::sync::mpsc::channel::<StreamChunk>(32);
-        tokio::spawn(async move {
-            let opts = StatsOptions {
-                stream: true,
-                one_shot: false,
-            };
-            let stats = docker.stats(&id, Some(opts));
-            futures::pin_mut!(stats);
-            let mut err: Option<String> = None;
-            while let Some(item) = stats.next().await {
-                let chunk = match item {
-                    Ok(s) => to_stats_chunk(&s),
-                    Err(e) => {
-                        err = Some(e.to_string());
-                        break;
-                    }
-                };
-                if tx.send(chunk).await.is_err() {
-                    return;
-                }
+        spawn_chunked(move |tx| run_stats(docker, id, tx))
+    }
+}
+
+async fn run_logs(
+    docker: Docker,
+    id: String,
+    follow: bool,
+    tail: Option<u32>,
+    tx: mpsc::Sender<StreamChunk>,
+) -> std::result::Result<(), String> {
+    use bollard::container::{LogOutput, LogsOptions};
+    let opts = LogsOptions::<String> {
+        follow,
+        stdout: true,
+        stderr: true,
+        tail: tail.map(|n| n.to_string()).unwrap_or_else(|| "all".into()),
+        ..Default::default()
+    };
+    let logs = docker.logs(&id, Some(opts));
+    futures::pin_mut!(logs);
+    while let Some(item) = logs.next().await {
+        let chunk = match item {
+            Ok(LogOutput::StdOut { message }) => log_chunk(false, &message),
+            Ok(LogOutput::StdErr { message }) => log_chunk(true, &message),
+            Ok(_) => continue,
+            Err(e) => return Err(e.to_string()),
+        };
+        if tx.send(chunk).await.is_err() {
+            return Ok(());
+        }
+    }
+    Ok(())
+}
+
+async fn run_stats(
+    docker: Docker,
+    id: String,
+    tx: mpsc::Sender<StreamChunk>,
+) -> std::result::Result<(), String> {
+    use bollard::container::StatsOptions;
+    let opts = StatsOptions {
+        stream: true,
+        one_shot: false,
+    };
+    let stats = docker.stats(&id, Some(opts));
+    futures::pin_mut!(stats);
+    while let Some(item) = stats.next().await {
+        let chunk = match item {
+            Ok(s) => to_stats_chunk(&s),
+            Err(e) => return Err(e.to_string()),
+        };
+        if tx.send(chunk).await.is_err() {
+            return Ok(());
+        }
+    }
+    Ok(())
+}
+
+#[async_trait]
+impl OpHandler for DockerHandler {
+    async fn handle(&self, op: Op) -> HandlerOutput {
+        match op {
+            Op::HostInfo => unary(self.host_info().await, OpResult::HostInfo),
+            Op::ListContainers { all } => {
+                unary(self.list_containers(all).await, OpResult::Containers)
             }
-            let _ = tx
-                .send(StreamChunk::End { ok: err.is_none(), err })
-                .await;
-        });
-        Box::pin(futures::stream::unfold(rx, |mut rx| async move {
-            rx.recv().await.map(|c| (c, rx))
-        }))
+            Op::StreamLogs { id, follow, tail } => {
+                HandlerOutput::Stream(self.stream_logs(id, follow, tail))
+            }
+            Op::StreamStats { id } => HandlerOutput::Stream(self.stream_stats(id)),
+        }
+    }
+}
+
+fn unary<T>(r: Result<T>, into: impl FnOnce(T) -> OpResult) -> HandlerOutput {
+    HandlerOutput::Unary(match r {
+        Ok(v) => into(v),
+        Err(e) => OpResult::Err {
+            message: e.to_string(),
+        },
+    })
+}
+
+/// Spawns `produce` on a task with a Sender for emitting chunks. When `produce`
+/// returns, an `End { ok, err }` chunk is appended automatically. Returns the
+/// receiving end as a BoxStream<'static>.
+fn spawn_chunked<F, Fut>(produce: F) -> BoxStream<'static, StreamChunk>
+where
+    F: FnOnce(mpsc::Sender<StreamChunk>) -> Fut + Send + 'static,
+    Fut: Future<Output = std::result::Result<(), String>> + Send + 'static,
+{
+    let (tx, rx) = mpsc::channel::<StreamChunk>(32);
+    let inner = tx.clone();
+    tokio::spawn(async move {
+        let (ok, err) = match produce(inner).await {
+            Ok(()) => (true, None),
+            Err(e) => (false, Some(e)),
+        };
+        let _ = tx.send(StreamChunk::End { ok, err }).await;
+    });
+    Box::pin(futures::stream::unfold(rx, |mut rx| async move {
+        rx.recv().await.map(|c| (c, rx))
+    }))
+}
+
+fn summarize(c: RawSummary) -> ContainerSummary {
+    ContainerSummary {
+        id: c.id.unwrap_or_default().chars().take(12).collect(),
+        name: c
+            .names
+            .and_then(|n| n.into_iter().next())
+            .map(|n| n.trim_start_matches('/').to_string())
+            .unwrap_or_default(),
+        image: c.image.unwrap_or_default(),
+        state: c.state.unwrap_or_default(),
+        status: c.status.unwrap_or_default(),
+        created: c.created.unwrap_or(0),
+    }
+}
+
+fn log_chunk(stderr: bool, msg: &[u8]) -> StreamChunk {
+    StreamChunk::Log {
+        stderr,
+        data: String::from_utf8_lossy(msg).into_owned(),
     }
 }
 
@@ -191,8 +216,6 @@ fn to_stats_chunk(s: &bollard::container::Stats) -> StreamChunk {
     } else {
         0.0
     };
-    let mem_used = s.memory_stats.usage.unwrap_or(0);
-    let mem_limit = s.memory_stats.limit.unwrap_or(0);
     let (net_rx, net_tx) = s
         .networks
         .as_ref()
@@ -204,8 +227,8 @@ fn to_stats_chunk(s: &bollard::container::Stats) -> StreamChunk {
         .unwrap_or((0, 0));
     StreamChunk::Stats {
         cpu_pct,
-        mem_used,
-        mem_limit,
+        mem_used: s.memory_stats.usage.unwrap_or(0),
+        mem_limit: s.memory_stats.limit.unwrap_or(0),
         net_rx,
         net_tx,
     }

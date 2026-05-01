@@ -21,10 +21,7 @@ pub fn router(handler: Shared, auth: Arc<AuthState>) -> Router {
         .with_state(handler)
 }
 
-async fn op(
-    State(h): State<Shared>,
-    Json(op): Json<Op>,
-) -> Result<Json<OpResult>, StatusCode> {
+async fn op(State(h): State<Shared>, Json(op): Json<Op>) -> Result<Json<OpResult>, StatusCode> {
     match h.handle(op).await {
         HandlerOutput::Unary(r) => Ok(Json(r)),
         HandlerOutput::Stream(_) => Err(StatusCode::BAD_REQUEST),
