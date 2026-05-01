@@ -47,7 +47,7 @@ human does on their phone at 11pm.
 
 ## Install
 
-Pre-built binaries (Linux x86_64 / aarch64, macOS Intel / Apple Silicon):
+Pre-built binaries (Linux x86_64 / aarch64; macOS not built yet — see below):
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/TerryTsai/nub/main/install.sh | sh
