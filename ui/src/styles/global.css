@@ -100,6 +100,77 @@ body {
 }
 .btn-destructive { background: var(--error); color: #fff; }
 
+/* Bottom sheet (Radix Dialog re-positioned) */
+.sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 40;
+  animation: fadeIn 0.2s var(--ease-out);
+}
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom));
+  max-height: 92vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideUp 0.3s var(--ease-spring);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.3);
+}
+.sheet-handle {
+  width: 36px;
+  height: 4px;
+  background: var(--text-tertiary);
+  border-radius: 2px;
+  align-self: center;
+  margin-bottom: 4px;
+  opacity: 0.5;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+/* Template chips (horizontal scroll) */
+.template-chip {
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  text-align: left;
+  min-width: 140px;
+  max-width: 200px;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), border-color 0.15s var(--ease-out);
+}
+.template-chip:active { transform: scale(0.97); }
+.template-chip:hover { border-color: var(--accent); }
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* State dots */
 .dot {
   display: inline-block;

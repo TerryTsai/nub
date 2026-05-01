@@ -7,6 +7,7 @@ import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
 import { Page } from "./Hosts";
+import { RunSheet } from "./RunSheet";
 
 export function HostHome() {
   const { hid } = useParams<{ hid: string }>();
@@ -19,6 +20,7 @@ export function HostHome() {
   const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [runOpen, setRunOpen] = useState(false);
 
   async function refresh() {
     if (!host) return;
@@ -74,9 +76,23 @@ export function HostHome() {
         <Card>
           <div className="flex justify-between items-center">
             <h2 className="text-base font-semibold">Containers</h2>
-            <Button variant="ghost" className="text-sm" onClick={refresh} disabled={refreshing}>
-              {refreshing ? "…" : "Refresh"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="primary"
+                className="text-sm"
+                onClick={() => setRunOpen(true)}
+                disallowReason={
+                  session.session.can("create_container")
+                    ? undefined
+                    : "your token doesn't allow create_container"
+                }
+              >
+                ▶ Run
+              </Button>
+              <Button variant="ghost" className="text-sm" onClick={refresh} disabled={refreshing}>
+                {refreshing ? "…" : "Refresh"}
+              </Button>
+            </div>
           </div>
           {error && <p className="text-[var(--error)] text-sm">{error}</p>}
           {containers === null && !error && (
@@ -108,6 +124,20 @@ export function HostHome() {
             </ul>
           )}
         </Card>
+      )}
+
+      {host && session.session && (
+        <RunSheet
+          host={host}
+          open={runOpen}
+          onOpenChange={setRunOpen}
+          onCreated={(id) => nav(`/h/${hid}/c/${id}`)}
+          disallowReason={
+            session.session.can("create_container")
+              ? undefined
+              : "your token doesn't allow create_container"
+          }
+        />
       )}
     </Page>
   );
