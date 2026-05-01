@@ -34,7 +34,10 @@ async fn main() -> Result<()> {
         );
     }
 
-    let handler = Arc::new(handler::DockerHandler::connect()?);
+    let policy = handler::Policy {
+        allowed_binds: cfg.allowed_binds.clone(),
+    };
+    let handler = Arc::new(handler::DockerHandler::connect(policy)?);
     let auth = Arc::new(auth::AuthState {
         token: cfg.token.clone(),
     });

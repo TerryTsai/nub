@@ -12,7 +12,8 @@ Implemented:
 - Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`,
   `inspect_container`, `container_action` (start/stop/restart/kill/remove),
   `list_images`, `remove_image`, `pull_image` (streaming),
-  `list_volumes`, `remove_volume`, `list_networks`, `remove_network`
+  `list_volumes`, `remove_volume`, `list_networks`, `remove_network`,
+  `create_container` (constrained — see Security)
 
 Not yet: TLS, hub mode, exec/stats/inspect/actions, image/volume/network ops, constrained create.
 
@@ -33,7 +34,24 @@ token = "replace-with-a-long-random-string"
 # nub will warn and serve plaintext if these are set.
 # tls_cert = "/etc/nub/cert.pem"
 # tls_key  = "/etc/nub/key.pem"
+
+# Host paths permitted as bind-mount sources in `create_container`.
+# Empty (default) = no host bind mounts allowed; only named volumes.
+# allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
+
+## Security: `create_container` constraints
+
+The wrapper deliberately exposes less than Docker's `/containers/create`.
+Rejected up front, before talking to the Docker socket:
+
+- `network = "host"` or `network = "container:<id>"`
+- bind-mount `source` outside `allowed_binds` (named volumes are unconstrained)
+
+Not surfaced in the wire format at all (no opt-in possible from the phone):
+`Privileged`, `PidMode`, `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`,
+`Sysctls`, `Devices`. If you need any of these, you're outside what nub is
+trying to be.
 
 If `--config` is omitted, nub looks for `./nub.toml` then `/etc/nub/config.toml`.
 
@@ -63,6 +81,18 @@ curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"op":"container_action","id":"<id>","action":{"kind":"stop","timeout":5}}'
+
+curl -sS http://127.0.0.1:8080/op \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "op":"create_container",
+    "image":"nginx:latest",
+    "name":"web",
+    "ports":[{"container":"80/tcp","host":"127.0.0.1:8080"}],
+    "restart":{"kind":"unless_stopped"},
+    "start":true
+  }'
 ```
 
 A streaming op over `/op` returns 400 — use `/ws`.

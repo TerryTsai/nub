@@ -8,6 +8,8 @@ pub struct Config {
     pub token: String,
     pub tls_cert: Option<PathBuf>,
     pub tls_key: Option<PathBuf>,
+    #[serde(default)]
+    pub allowed_binds: Vec<PathBuf>,
 }
 
 impl Config {
