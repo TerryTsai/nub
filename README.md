@@ -1,149 +1,217 @@
 # nub
 
-Minimal Docker/Podman control plane node. One static binary, mobile-shaped JSON+WebSocket API.
+> Manage containers from your phone. One small Rust binary, mobile-shaped API.
 
-## Status
+`nub` runs on each Docker or Podman host. It exposes a deliberately tiny
+JSON+WebSocket API designed to be driven from a phone: list containers, tail
+logs, stream stats, exec a shell, pull images, create containers under a strict
+policy. Run it standalone or wire it into a fleet behind a hub.
 
-Implemented:
+It's an experiment in suckless minimalism — every endpoint earns its place,
+list views are compact, detail views are full, and streaming things stream.
+The whole node is about 1.6k lines of Rust.
 
-- Standalone HTTP server (`/op`) for unary ops
-- WebSocket transport (`/ws`) with framed request/response/stream protocol
-- Hub-mode dial-out (outbound WebSocket to a hub; no inbound port required)
-- Bearer-token auth (constant-time compare) on all endpoints
-- Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`,
-  `inspect_container`, `container_action` (start/stop/restart/kill/remove),
-  `list_images`, `remove_image`, `pull_image` (streaming),
-  `list_volumes`, `remove_volume`, `list_networks`, `remove_network`,
-  `create_container` (constrained — see Security)
+## Table of Contents
 
-Not yet: TLS, hub mode, exec/stats/inspect/actions, image/volume/network ops, constrained create.
+- [Background](#background)
+- [Install](#install)
+- [Usage](#usage)
+- [Modes](#modes)
+- [Security](#security)
+- [Status](#status)
+- [Maintainers](#maintainers)
+- [Contributing](#contributing)
+- [License](#license)
 
-## Build & run
+## Background
+
+Docker's HTTP API is sprawling. `/containers/json` returns ~30 fields per
+container; every endpoint exposes every Docker knob. Driving that from a
+phone over a flaky connection is miserable.
+
+`nub` takes the opposite approach:
+
+- **Mobile-shaped responses.** Lists return ~6 fields per item, not 30. Detail
+  views return everything a detail screen actually wants. One round trip per
+  screen.
+- **Streams over polling.** Logs, stats, exec, image pull progress all stream
+  over one multiplexed WebSocket.
+- **Curated surface.** No users-and-roles, no orchestration, no compose. Just
+  container primitives over the wire.
+- **Wrapper as boundary.** `create_container` rejects host networking, host
+  bind mounts outside an allowlist, privileged mode. The phone-driven create
+  path is intentionally smaller than Docker's.
+
+If you want full Docker, run Docker. `nub` is for the 80% of operations a
+human does on their phone at 11pm.
+
+## Install
+
+`nub` builds with stable Rust:
 
 ```sh
+git clone https://github.com/TerryTsai/nub
+cd nub
 cargo build --release
-./target/release/nub --config ./nub.toml
+sudo install -m 0755 target/release/nub /usr/local/bin/nub
 ```
 
-## `nub.toml`
+The binary uses rustls, not OpenSSL — drop it on any Linux host with Docker
+or Podman running.
+
+## Usage
+
+Create `nub.toml`:
 
 ```toml
-bind = "127.0.0.1:8080"
-token = "replace-with-a-long-random-string"
-
-# Optional. Recognized by the loader but not yet wired into serving;
-# nub will warn and serve plaintext if these are set.
-# tls_cert = "/etc/nub/cert.pem"
-# tls_key  = "/etc/nub/key.pem"
-
-# Host paths permitted as bind-mount sources in `create_container`.
-# Empty (default) = no host bind mounts allowed; only named volumes.
-# allowed_binds = ["/data/nub", "/var/lib/nub"]
-
-# Fleet mode: dial out to a hub instead of (or in addition to) binding locally.
-# In pure hub mode, omit `bind` and `token` -- the node opens no inbound port.
-# [hub]
-# url = "wss://hub.example.com/node"
-# node_token = "long-lived-token-issued-at-enrollment"
+bind  = "127.0.0.1:8080"
+token = "use-a-long-random-string"
 ```
 
-`bind` and `hub` are each optional, but at least one must be set. Standalone
-dev nodes typically set just `bind`; fleet nodes typically set just `hub`.
-Setting both runs both transports against the same handler.
+Run it:
 
-## Security: `create_container` constraints
+```sh
+nub --config ./nub.toml
+```
 
-The wrapper deliberately exposes less than Docker's `/containers/create`.
-Rejected up front, before talking to the Docker socket:
+If `--config` is omitted, `nub` looks for `./nub.toml` then
+`/etc/nub/config.toml`.
 
-- `network = "host"` or `network = "container:<id>"`
-- bind-mount `source` outside `allowed_binds` (named volumes are unconstrained)
+### Talking to nub
 
-Not surfaced in the wire format at all (no opt-in possible from the phone):
-`Privileged`, `PidMode`, `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`,
-`Sysctls`, `Devices`. If you need any of these, you're outside what nub is
-trying to be.
+Every request needs `Authorization: Bearer <token>`.
 
-If `--config` is omitted, nub looks for `./nub.toml` then `/etc/nub/config.toml`.
-
-## HTTP usage
-
-Unary ops via POST to `/op`:
+Unary ops go to `POST /op`:
 
 ```sh
 TOKEN=$(awk -F'"' '/^token/{print $2}' nub.toml)
 
 curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
   -d '{"op":"host_info"}'
 
 curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"op":"list_containers","all":true}'
-
-curl -sS http://127.0.0.1:8080/op \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"op":"inspect_container","id":"<id>"}'
-
-curl -sS http://127.0.0.1:8080/op \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{"op":"container_action","id":"<id>","action":{"kind":"stop","timeout":5}}'
-
-curl -sS http://127.0.0.1:8080/op \
-  -H "Authorization: Bearer $TOKEN" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "op":"create_container",
-    "image":"nginx:latest",
-    "name":"web",
-    "ports":[{"container":"80/tcp","host":"127.0.0.1:8080"}],
-    "restart":{"kind":"unless_stopped"},
-    "start":true
-  }'
+  -d '{"op":"container_action","id":"<id>","action":{"kind":"stop"}}'
 ```
 
-A streaming op over `/op` returns 400 — use `/ws`.
-
-## WebSocket usage
-
-`websocat` example (any client that lets you set headers works):
+Streaming ops upgrade to `/ws`. Any WebSocket client that lets you set headers
+works (`websocat`, `wsta`, your phone client):
 
 ```sh
-TOKEN=$(awk -F'"' '/^token/{print $2}' nub.toml)
-
 websocat -H "Authorization: Bearer $TOKEN" ws://127.0.0.1:8080/ws
 ```
 
 Then send framed JSON requests, one per line:
 
 ```json
-{"kind":"request","id":1,"op":{"op":"host_info"}}
-{"kind":"request","id":2,"op":{"op":"list_containers","all":true}}
-{"kind":"request","id":3,"op":{"op":"stream_logs","id":"<container-id>","follow":true,"tail":100}}
-{"kind":"request","id":4,"op":{"op":"stream_stats","id":"<container-id>"}}
-{"kind":"request","id":5,"op":{"op":"exec","id":"<container-id>","cmd":["sh","-c","echo hi"],"tty":false}}
-{"kind":"request","id":6,"op":{"op":"pull_image","reference":"alpine:latest"}}
+{"kind":"request","id":1,"op":{"op":"stream_logs","id":"<id>","follow":true,"tail":100}}
+{"kind":"request","id":2,"op":{"op":"stream_stats","id":"<id>"}}
+{"kind":"request","id":3,"op":{"op":"pull_image","reference":"alpine:latest"}}
+{"kind":"request","id":4,"op":{"op":"exec","id":"<id>","cmd":["sh"],"tty":true}}
 ```
 
-Replies:
+Replies come back framed:
 
-- Unary: one `{"kind":"response","id":N,"result":...}`.
-- Stream: one `{"kind":"response","id":N,"result":{"type":"stream_started"}}`,
-  followed by zero or more `{"kind":"stream","id":N,"chunk":...}` frames,
-  terminated by `{"kind":"stream","id":N,"chunk":{"type":"end","ok":true}}`.
-- Backpressure: if the writer can't keep up, dropped chunks are summarized as
-  `{"chunk":{"type":"lagging","dropped":N}}`.
-- For `exec`, the client may send `Frame::Stream` upstream:
-  `{"kind":"stream","id":N,"chunk":{"type":"stdin","data":"ls\n"}}` for
-  keystrokes, and `{"chunk":{"type":"stdin_close"}}` to send EOF.
+- **Unary:** one `{"kind":"response","id":N,"result":{"type":"...","data":...}}`
+- **Stream:** one `{"kind":"response","id":N,"result":{"type":"stream_started"}}`,
+  then zero or more `{"kind":"stream","id":N,"chunk":...}` frames, terminated
+  by an `end` chunk.
+- **Backpressure:** if the client can't keep up, dropped chunks are summarized
+  as `{"chunk":{"type":"lagging","dropped":N}}`.
+- **Exec:** send `stdin` chunks upstream over the same WebSocket
+  (`{"kind":"stream","id":N,"chunk":{"type":"stdin","data":"ls\n"}}`).
 
-## Design
+### What you can do
 
-See the project handoff brief for philosophy and the `OpHandler` seam. Short version:
-the wrapper is the security boundary; list endpoints are compact, detail endpoints
-are full; one trait sits between transports and Docker so HTTP, WS, and the future
-hub-mode dial-out all share the same handler.
+- **Host** — `host_info`
+- **Containers** — `list_containers`, `inspect_container`, `container_action`
+  (start / stop / restart / kill / remove), `create_container`, `stream_logs`,
+  `stream_stats`, `exec`
+- **Images** — `list_images`, `remove_image`, `pull_image` (streams progress)
+- **Volumes** — `list_volumes`, `remove_volume`
+- **Networks** — `list_networks`, `remove_network`
+
+## Modes
+
+The same binary runs in three modes, picked by config:
+
+**Standalone.** Bind locally, phone connects directly. Dev / home lab.
+
+```toml
+bind  = "127.0.0.1:8080"
+token = "..."
+```
+
+**Fleet node.** Dial out to a hub. No inbound port. The phone talks to the
+hub; the hub multiplexes to registered nodes. The node trusts the hub fully.
+
+```toml
+[hub]
+url        = "wss://hub.example.com/node"
+node_token = "long-lived-token-from-enrollment"
+```
+
+**Hub.** *(in progress)* Public-facing endpoint that holds the node registry
+and routes phone requests to nodes.
+
+You can set both `bind` and `[hub]` to run both transports against the same
+local Docker socket.
+
+## Security
+
+The Docker socket is root-equivalent. Anyone with the token can do everything
+Docker can. The wrapper deliberately exposes less than Docker's full API to
+shrink the blast radius:
+
+- `create_container` rejects `network = "host"` and `network = "container:..."`.
+- `create_container` rejects bind-mount sources outside the configured
+  `allowed_binds` allowlist. Default is empty — only named volumes work out of
+  the box.
+- Never exposed in the wire format, no opt-in possible: `Privileged`,
+  `PidMode`, `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`,
+  `Sysctls`, `Devices`. If you need any of these, `nub` is the wrong tool.
+
+To let specific host paths through:
+
+```toml
+allowed_binds = ["/data/nub", "/var/lib/nub"]
+```
+
+TLS support is recognized in config (`tls_cert`, `tls_key`) but not yet wired
+into serving — `nub` will warn and serve plaintext if those are set. For now,
+bind to localhost behind an SSH tunnel, or terminate TLS at a reverse proxy.
+Hub-mode dial-out uses TLS via `wss://` natively.
+
+## Status
+
+Early. The node side of v1 is implemented end-to-end:
+
+- 15 ops covering containers, images, volumes, networks, exec, host info
+- HTTP + WebSocket transports against the same handler trait
+- Hub-mode dial-out with exponential backoff and heartbeat
+- Constrained `create_container` with allowlisted bind mounts
+
+The hub itself and an official phone client are in progress. The wire format
+may still shift before 1.0.
+
+## Maintainers
+
+[@TerryTsai](https://github.com/TerryTsai)
+
+## Contributing
+
+Issues and PRs welcome. Before opening either, please skim the
+[Background](#background) — `nub` is opinionated and many "obvious" features
+have been deliberately left out.
+
+A few house rules the build enforces:
+
+- 250-line-per-file limit (`build.rs` fails the build over)
+- `cargo fmt` and `cargo clippy` clean (strict lints in `Cargo.toml [lints]`)
+- `unsafe` is forbidden
+- New dependencies need a justification — the stack is locked
+
+## License
+
+MIT OR Apache-2.0
