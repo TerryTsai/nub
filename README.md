@@ -2,22 +2,21 @@
 
 > Manage containers from your phone. One small Rust binary, mobile-shaped API.
 
-`nub` is a Docker/Podman control plane built around two roles: a **nub** runs
-on each Docker host and exposes a deliberately tiny JSON+WebSocket API; a
-**hub** sits in front of a fleet of nubs and routes phone traffic to them.
-Both roles are the same binary, picked by config. A standalone host playing
-both roles is a **hubnub** — perfect for a single home-lab box.
+`nub` runs on a Docker or Podman host and exposes a deliberately tiny
+JSON+WebSocket API designed for a phone client to drive: list containers,
+tail logs, stream stats, exec a shell, pull images, create containers under a
+strict policy. Per-token permissions; no orchestration; no fleet management
+yet — just a server with a trust list.
 
 It's an experiment in suckless minimalism. Every endpoint earns its place,
 list views are compact, detail views are full, and streaming things stream.
-The whole codebase is about 1.7k lines of Rust.
 
 ## Table of Contents
 
 - [Background](#background)
 - [Install](#install)
 - [Usage](#usage)
-- [Roles](#roles)
+- [Configuration](#configuration)
 - [Security](#security)
 - [Status](#status)
 - [Maintainers](#maintainers)
@@ -62,30 +61,18 @@ or Podman running.
 
 ## Usage
 
-The smallest useful config — a hubnub serving a phone directly:
-
-```toml
-bind  = "127.0.0.1:8080"
-token = "use-a-long-random-string"
-```
-
-Run it:
+The fastest start needs no config file at all:
 
 ```sh
-nub --config ./nub.toml
+$ nub --id host1 --bind 127.0.0.1:8080
+admin token: 7a9e4b...c4f1   (regenerates each restart, allows everything)
+nub host1 listening on 127.0.0.1:8080
 ```
 
-If `--config` is omitted, `nub` looks for `./nub.toml` then
-`/etc/nub/config.toml`.
-
-### Talking to a hubnub
-
-Every request needs `Authorization: Bearer <token>`.
-
-Unary ops go to `POST /op`:
+Copy the admin token from stdout, then poke the host:
 
 ```sh
-TOKEN=$(awk -F'"' '/^token/{print $2}' nub.toml)
+TOKEN=7a9e4b...c4f1
 
 curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
@@ -93,11 +80,15 @@ curl -sS http://127.0.0.1:8080/op \
 
 curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
-  -d '{"op":"container_action","id":"<id>","action":{"kind":"stop"}}'
+  -d '{"op":"list_containers","all":true}'
 ```
 
-Streaming ops upgrade to `/ws`. Any WebSocket client that lets you set headers
-works (`websocat`, `wsta`, your phone client):
+The admin token is regenerated on every restart and authorizes everything —
+it's there so the operator on the host can always poke their own nub for
+debugging. For phones and other long-lived clients, define `[[trust]]` entries
+in a config file (see below).
+
+### Streaming ops over WebSocket
 
 ```sh
 websocat -H "Authorization: Bearer $TOKEN" ws://127.0.0.1:8080/ws
@@ -133,96 +124,88 @@ Replies come back framed:
 - **Volumes** — `list_volumes`, `remove_volume`
 - **Networks** — `list_networks`, `remove_network`
 
-## Roles
+## Configuration
 
-Three ways to run the binary, picked by config sections present.
+Config can come from a TOML file, CLI flags, or both (CLI overrides file).
+With `--config` omitted, `nub` looks for `./nub.toml` then
+`/etc/nub/config.toml`. With no file at all, CLI flags are enough.
 
-**Hubnub** — single process, both roles collapsed. Phone connects directly.
-Dev / home lab.
-
-```toml
-bind  = "127.0.0.1:8080"
-token = "..."
-```
-
-**Fleet nub** — a worker on a Docker host that dials *out* to a hub. No
-inbound port. The phone never talks to it directly; the hub does.
+The full schema:
 
 ```toml
-[nub]
-hub_url   = "wss://hub.example.com/nub"
-nub_token = "long-lived-token-from-enrollment"
+id   = "host1"                         # also: --id host1
+bind = "127.0.0.1:8080"                # also: --bind 127.0.0.1:8080
+# tls_cert = "/etc/nub/cert.pem"       # also: --tls-cert (recognized; not wired yet)
+# tls_key  = "/etc/nub/key.pem"        # also: --tls-key  (recognized; not wired yet)
+
+[engine]
+allowed_binds = ["/data/nub"]          # only when relaxing bind-mount restrictions
+
+[[trust]]
+id      = "phone1"
+token   = "use-a-long-random-string"
+allowed = ["host_info", "list_containers", "stream_logs", "stream_stats"]
+
+[[trust]]
+id      = "admin-laptop"
+token   = "..."
+allowed = ["*"]                        # everything
 ```
 
-**Hub** — public-facing router. Holds the registry of allowed nubs and
-proxies phone traffic to them. Runs on its own host with no Docker socket.
+Trust entries each pair an `id` (operator-facing label, shown in deny logs),
+a `token` (bearer secret), and `allowed` (list of op names this caller may
+invoke; `"*"` for all). Authentication is constant-time bearer compare; an
+unrecognized bearer is 401, a recognized bearer asking for a disallowed op
+is 403.
 
-```toml
-[hub]
-bind        = "0.0.0.0:8443"
-phone_token = "..."
-
-[[hub.nubs]]
-id    = "host-a"
-token = "..."   # the nub presents this in its dial-out
-
-[[hub.nubs]]
-id    = "host-b"
-token = "..."
-```
-
-Phone hits `GET /nubs` to see which configured nubs are currently online,
-and `POST /nubs/{id}/op` to proxy a unary op to a specific nub:
-
-```sh
-curl -sS https://hub.example.com/nubs/host-a/op \
-  -H "Authorization: Bearer $PHONE_TOKEN" \
-  -d '{"op":"list_containers","all":true}'
-```
-
-WebSocket streaming through the hub (logs / stats / exec / pull progress) is
-on the roadmap; for now the hub proxies only unary ops.
-
-You can mix sections — e.g. `bind` + `[hub]` to act as a hub that's also
-addressable directly via its own Docker socket. Practically rare.
+A trust list isn't required to start — without one, only the random admin
+token works. Most useful for first-run; add real entries when you have a
+phone client to authorize.
 
 ## Security
 
 The Docker socket is root-equivalent. Anyone with a valid token can do
-everything Docker can. The wrapper deliberately exposes less than Docker's
-full API to shrink the blast radius:
+everything Docker can within their `allowed` list. Two layers of protection:
 
-- `create_container` rejects `network = "host"` and `network = "container:..."`.
-- `create_container` rejects bind-mount sources outside the configured
-  `allowed_binds` allowlist. Default is empty — only named volumes work out of
-  the box.
-- Never exposed in the wire format, no opt-in possible: `Privileged`,
-  `PidMode`, `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`,
-  `Sysctls`, `Devices`. If you need any of these, `nub` is the wrong tool.
+1. **Per-token op allowlist.** Each `[[trust]]` entry constrains which ops
+   that token may invoke. Grant `host_info` to a read-only viewer; grant
+   `["*"]` only to operators you'd give SSH to.
+2. **Constrained `create_container`.** Even with `create_container` allowed,
+   the binary rejects:
+   - `network = "host"` and `network = "container:..."`
+   - bind-mount sources outside the configured `engine.allowed_binds` list
+     (default empty — only named volumes work out of the box)
+   - Never exposed in the wire format at all: `Privileged`, `PidMode`,
+     `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`, `Sysctls`,
+     `Devices`. If you need any of these, `nub` is the wrong tool.
 
-To let specific host paths through:
+To allow specific host paths as bind sources:
 
 ```toml
+[engine]
 allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
 
 TLS support is recognized in config (`tls_cert`, `tls_key`) but not yet wired
 into serving — the binary will warn and serve plaintext if those are set. For
 now, bind to localhost behind an SSH tunnel or terminate TLS at a reverse
-proxy. Nub-to-hub dial-out uses TLS via `wss://` natively.
+proxy.
 
 ## Status
 
-Early. The nub side of v1 is implemented end-to-end:
+Early. End-to-end:
 
 - 15 ops covering containers, images, volumes, networks, exec, host info
 - HTTP + WebSocket transports against the same handler trait
-- Nub-to-hub dial-out with exponential backoff and heartbeat
+- Per-token permission enforcement
+- Random admin token at startup for first-run / debugging
 - Constrained `create_container` with allowlisted bind mounts
-- Hub: routes phones to nubs for unary ops (config-listed registry, no DB yet)
 
-In progress: streaming through the hub, persistent nub registry, and the
-official phone client. The wire format may still shift before 1.0.
+Cut in the most recent slice (had been added then redesigned out): hub-of-many
+fleet routing. The model coming next is "phone has a list of nubs it knows
+about and talks to each directly." If multi-host aggregation through a single
+endpoint becomes necessary, it'll come back as a deliberate design rather
+than a static-config registry.
 
 ## Maintainers
 

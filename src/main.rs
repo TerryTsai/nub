@@ -6,8 +6,10 @@ mod proto;
 mod wire;
 mod ws;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::Parser;
+use config::TrustEntry;
+use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tracing_subscriber::EnvFilter;
@@ -62,7 +64,15 @@ async fn main() -> Result<()> {
         allowed_binds: cfg.engine.allowed_binds,
     };
     let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::DockerHandler::connect(policy)?);
-    let auth = Arc::new(auth::AuthState { trust: cfg.trust });
+
+    let admin = admin_entry()?;
+    println!(
+        "admin token: {}   (regenerates each restart, allows everything)",
+        admin.token
+    );
+    let mut trust = vec![admin];
+    trust.extend(cfg.trust);
+    let auth = Arc::new(auth::AuthState { trust });
     let app = http::router(handler, auth);
 
     let listener = tokio::net::TcpListener::bind(&bind).await?;
@@ -71,6 +81,20 @@ async fn main() -> Result<()> {
         tracing::error!("axum serve failed: {e}");
     }
     Ok(())
+}
+
+fn admin_entry() -> Result<TrustEntry> {
+    let mut buf = [0u8; 16];
+    std::fs::File::open("/dev/urandom")
+        .context("opening /dev/urandom")?
+        .read_exact(&mut buf)
+        .context("reading /dev/urandom")?;
+    let token = buf.iter().map(|b| format!("{b:02x}")).collect();
+    Ok(TrustEntry {
+        id: "admin".into(),
+        token,
+        allowed: vec!["*".into()],
+    })
 }
 
 fn init_tracing() -> Result<()> {
