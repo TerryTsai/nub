@@ -47,17 +47,28 @@ human does on their phone at 11pm.
 
 ## Install
 
-Builds with stable Rust:
+Pre-built binaries (Linux x86_64 / aarch64, macOS Intel / Apple Silicon):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/TerryTsai/nub/main/install.sh | sh
+```
+
+Pin a version with `NUB_VERSION=v0.0.1`; install elsewhere with
+`NUB_PREFIX=$HOME/.local/bin`. The binary uses rustls (not OpenSSL) and is
+statically linked against musl on Linux — works on any glibc/musl distro.
+
+From source (for development):
 
 ```sh
 git clone https://github.com/TerryTsai/nub
 cd nub
-cargo build --release
+cd ui && npm install && npm run build && cd ..
+cargo build --release --features embed-ui
 sudo install -m 0755 target/release/nub /usr/local/bin/nub
 ```
 
-The binary uses rustls, not OpenSSL — drop it on any Linux host with Docker
-or Podman running.
+Drop `--features embed-ui` (and the `npm` step) if you don't want the UI
+baked in — the binary is API-only and any web server can serve `ui/dist`.
 
 ## Usage
 
