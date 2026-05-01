@@ -3,6 +3,7 @@ mod config;
 mod handler;
 mod http;
 mod proto;
+mod ui;
 mod wire;
 mod ws;
 
@@ -73,7 +74,10 @@ async fn main() -> Result<()> {
     let mut trust = vec![admin];
     trust.extend(cfg.trust);
     let auth = Arc::new(auth::AuthState { trust });
-    let app = http::router(handler, auth);
+    let mut app = http::router(handler, auth);
+    if let Some(ui) = ui::ui_fallback() {
+        app = app.merge(ui);
+    }
 
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     tracing::info!("nub {id} listening on {bind}");

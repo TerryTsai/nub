@@ -2,6 +2,12 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct WhoamiInfo {
+    pub id: String,
+    pub allowed: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct HostInfo {
     pub engine: String,
     pub version: String,

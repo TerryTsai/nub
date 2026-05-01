@@ -18,6 +18,7 @@ pub enum Frame {
 #[serde(tag = "op", rename_all = "snake_case")]
 pub enum Op {
     HostInfo,
+    Whoami,
 
     ListContainers {
         all: bool,
@@ -75,6 +76,7 @@ impl Op {
     pub fn name(&self) -> &'static str {
         match self {
             Op::HostInfo => "host_info",
+            Op::Whoami => "whoami",
             Op::ListContainers { .. } => "list_containers",
             Op::InspectContainer { .. } => "inspect_container",
             Op::ContainerAction { .. } => "container_action",
@@ -121,6 +123,7 @@ pub enum Action {
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum OpResult {
     HostInfo(HostInfo),
+    Whoami(WhoamiInfo),
     Containers(Vec<ContainerSummary>),
     ContainerDetail(Box<ContainerDetail>),
     Images(Vec<ImageSummary>),

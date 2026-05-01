@@ -47,6 +47,17 @@ async fn dispatch(text: &str, h: &Shared, caller: &TrustEntry, out: &mpsc::Sende
 }
 
 fn start_request(id: u64, op: Op, h: &Shared, caller: &TrustEntry, out: &mpsc::Sender<String>, routes: &Routes) {
+    if matches!(op, Op::Whoami) {
+        let out = out.clone();
+        let info = OpResult::Whoami(WhoamiInfo {
+            id: caller.id.clone(),
+            allowed: caller.allowed.clone(),
+        });
+        tokio::spawn(async move {
+            send_frame(&out, response(id, info)).await;
+        });
+        return;
+    }
     if !caller.allows(op.name()) {
         tracing::warn!("caller {} denied op {}", caller.id, op.name());
         let out = out.clone();

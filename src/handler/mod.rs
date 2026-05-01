@@ -61,6 +61,8 @@ impl OpHandler for DockerHandler {
     async fn handle(&self, op: Op, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         match op {
             Op::HostInfo => unary(self.host_info().await, OpResult::HostInfo),
+            // Whoami is auth-layer info; transport short-circuits before reaching here.
+            Op::Whoami => unreachable!("Whoami handled by transport layer"),
 
             Op::ListContainers { all } => unary(self.list_containers(all).await, OpResult::Containers),
             Op::InspectContainer { id } => unary(self.inspect_container(id).await, OpResult::ContainerDetail),
