@@ -1,5 +1,8 @@
 # nub
 
+[![release](https://img.shields.io/github/actions/workflow/status/TerryTsai/nub/release.yml?label=release)](https://github.com/TerryTsai/nub/actions/workflows/release.yml)
+[![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
+
 > Manage containers from your phone. One small Rust binary, mobile-shaped API.
 
 `nub` runs on a Docker or Podman host and exposes a deliberately tiny
