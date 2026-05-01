@@ -10,8 +10,8 @@ pub struct Config {
     pub tls_key: Option<PathBuf>,
     #[serde(default)]
     pub allowed_binds: Vec<PathBuf>,
-    pub hub: Option<crate::hub_client::Config>,
-    pub hub_server: Option<crate::hub_server::Config>,
+    pub nub: Option<crate::hub_client::Config>,
+    pub hub: Option<crate::hub::Config>,
 }
 
 impl Config {
@@ -30,9 +30,9 @@ impl Config {
         if cfg.bind.is_some() && cfg.token.as_deref().unwrap_or("").is_empty() {
             return Err(anyhow!("`token` required when `bind` is set"));
         }
-        if cfg.bind.is_none() && cfg.hub.is_none() && cfg.hub_server.is_none() {
+        if cfg.bind.is_none() && cfg.nub.is_none() && cfg.hub.is_none() {
             return Err(anyhow!(
-                "config must set at least one of `bind`, `hub`, or `hub_server`"
+                "config must set at least one of `bind` (hubnub), `[nub]` (fleet nub), or `[hub]` (hub)"
             ));
         }
         Ok(cfg)

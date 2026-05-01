@@ -14,8 +14,8 @@ use tokio_tungstenite::{connect_async, MaybeTlsStream, WebSocketStream};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub url: String,
-    pub node_token: String,
+    pub hub_url: String,
+    pub nub_token: String,
 }
 
 const RECONNECT_INITIAL: Duration = Duration::from_secs(1);
@@ -57,14 +57,14 @@ fn next_backoff(result: &Result<()>, current: Duration) -> Duration {
 }
 
 async fn connect_and_serve(handler: &Arc<dyn OpHandler>, cfg: &Config) -> Result<()> {
-    let mut req = cfg.url.as_str().into_client_request().context("invalid hub URL")?;
-    let bearer = format!("Bearer {}", cfg.node_token)
+    let mut req = cfg.hub_url.as_str().into_client_request().context("invalid hub URL")?;
+    let bearer = format!("Bearer {}", cfg.nub_token)
         .parse()
         .map_err(|_| anyhow!("token contains invalid header bytes"))?;
     req.headers_mut().insert("Authorization", bearer);
 
     let (ws, _resp) = connect_async(req).await.context("connect failed")?;
-    tracing::info!(url = %cfg.url, "hub connected");
+    tracing::info!(hub = %cfg.hub_url, "nub connected to hub");
     let (sink, stream) = ws.split();
 
     let (in_tx, in_rx) = mpsc::channel::<String>(WS_BUF);

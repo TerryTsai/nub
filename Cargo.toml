@@ -2,7 +2,7 @@
 name = "nub"
 version = "0.1.0"
 edition = "2021"
-description = "Minimal Docker/Podman control plane node"
+description = "Minimal Docker/Podman control plane: hub + nub"
 license = "MIT OR Apache-2.0"
 
 [[bin]]

@@ -2,21 +2,22 @@
 
 > Manage containers from your phone. One small Rust binary, mobile-shaped API.
 
-`nub` runs on each Docker or Podman host. It exposes a deliberately tiny
-JSON+WebSocket API designed to be driven from a phone: list containers, tail
-logs, stream stats, exec a shell, pull images, create containers under a strict
-policy. Run it standalone or wire it into a fleet behind a hub.
+`nub` is a Docker/Podman control plane built around two roles: a **nub** runs
+on each Docker host and exposes a deliberately tiny JSON+WebSocket API; a
+**hub** sits in front of a fleet of nubs and routes phone traffic to them.
+Both roles are the same binary, picked by config. A standalone host playing
+both roles is a **hubnub** — perfect for a single home-lab box.
 
-It's an experiment in suckless minimalism — every endpoint earns its place,
+It's an experiment in suckless minimalism. Every endpoint earns its place,
 list views are compact, detail views are full, and streaming things stream.
-The whole node is about 1.6k lines of Rust.
+The whole codebase is about 1.7k lines of Rust.
 
 ## Table of Contents
 
 - [Background](#background)
 - [Install](#install)
 - [Usage](#usage)
-- [Modes](#modes)
+- [Roles](#roles)
 - [Security](#security)
 - [Status](#status)
 - [Maintainers](#maintainers)
@@ -47,7 +48,7 @@ human does on their phone at 11pm.
 
 ## Install
 
-`nub` builds with stable Rust:
+Builds with stable Rust:
 
 ```sh
 git clone https://github.com/TerryTsai/nub
@@ -61,7 +62,7 @@ or Podman running.
 
 ## Usage
 
-Create `nub.toml`:
+The smallest useful config — a hubnub serving a phone directly:
 
 ```toml
 bind  = "127.0.0.1:8080"
@@ -77,7 +78,7 @@ nub --config ./nub.toml
 If `--config` is omitted, `nub` looks for `./nub.toml` then
 `/etc/nub/config.toml`.
 
-### Talking to nub
+### Talking to a hubnub
 
 Every request needs `Authorization: Bearer <token>`.
 
@@ -132,59 +133,64 @@ Replies come back framed:
 - **Volumes** — `list_volumes`, `remove_volume`
 - **Networks** — `list_networks`, `remove_network`
 
-## Modes
+## Roles
 
-The same binary runs in three modes, picked by config:
+Three ways to run the binary, picked by config sections present.
 
-**Standalone.** Bind locally, phone connects directly. Dev / home lab.
+**Hubnub** — single process, both roles collapsed. Phone connects directly.
+Dev / home lab.
 
 ```toml
 bind  = "127.0.0.1:8080"
 token = "..."
 ```
 
-**Fleet node.** Dial out to a hub. No inbound port. The phone talks to the
-hub; the hub multiplexes to registered nodes. The node trusts the hub fully.
+**Fleet nub** — a worker on a Docker host that dials *out* to a hub. No
+inbound port. The phone never talks to it directly; the hub does.
+
+```toml
+[nub]
+hub_url   = "wss://hub.example.com/nub"
+nub_token = "long-lived-token-from-enrollment"
+```
+
+**Hub** — public-facing router. Holds the registry of allowed nubs and
+proxies phone traffic to them. Runs on its own host with no Docker socket.
 
 ```toml
 [hub]
-url        = "wss://hub.example.com/node"
-node_token = "long-lived-token-from-enrollment"
-```
-
-**Hub.** Public-facing endpoint that holds the node registry and routes phone
-requests to nodes. Same binary; runs on a separate host with no Docker socket.
-
-```toml
-[hub_server]
 bind        = "0.0.0.0:8443"
 phone_token = "..."
 
-[[hub_server.nodes]]
+[[hub.nubs]]
 id    = "host-a"
-token = "..."   # nodes present this token in their dial-out
+token = "..."   # the nub presents this in its dial-out
+
+[[hub.nubs]]
+id    = "host-b"
+token = "..."
 ```
 
-Phone hits `GET /nodes` to see which configured nodes are currently online,
-and `POST /nodes/{id}/op` to proxy a unary op to a specific node:
+Phone hits `GET /nubs` to see which configured nubs are currently online,
+and `POST /nubs/{id}/op` to proxy a unary op to a specific nub:
 
 ```sh
-curl -sS https://hub.example.com/nodes/host-a/op \
+curl -sS https://hub.example.com/nubs/host-a/op \
   -H "Authorization: Bearer $PHONE_TOKEN" \
   -d '{"op":"list_containers","all":true}'
 ```
 
-WebSocket streaming via the hub (logs / stats / exec / pull progress) is on
-the roadmap; for now the hub proxies only unary ops.
+WebSocket streaming through the hub (logs / stats / exec / pull progress) is
+on the roadmap; for now the hub proxies only unary ops.
 
-You can set both `bind` and `[hub]` to run both transports against the same
-local Docker socket.
+You can mix sections — e.g. `bind` + `[hub]` to act as a hub that's also
+addressable directly via its own Docker socket. Practically rare.
 
 ## Security
 
-The Docker socket is root-equivalent. Anyone with the token can do everything
-Docker can. The wrapper deliberately exposes less than Docker's full API to
-shrink the blast radius:
+The Docker socket is root-equivalent. Anyone with a valid token can do
+everything Docker can. The wrapper deliberately exposes less than Docker's
+full API to shrink the blast radius:
 
 - `create_container` rejects `network = "host"` and `network = "container:..."`.
 - `create_container` rejects bind-mount sources outside the configured
@@ -201,21 +207,22 @@ allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
 
 TLS support is recognized in config (`tls_cert`, `tls_key`) but not yet wired
-into serving — `nub` will warn and serve plaintext if those are set. For now,
-bind to localhost behind an SSH tunnel, or terminate TLS at a reverse proxy.
-Hub-mode dial-out uses TLS via `wss://` natively.
+into serving — the binary will warn and serve plaintext if those are set. For
+now, bind to localhost behind an SSH tunnel or terminate TLS at a reverse
+proxy. Nub-to-hub dial-out uses TLS via `wss://` natively.
 
 ## Status
 
-Early. The node side of v1 is implemented end-to-end:
+Early. The nub side of v1 is implemented end-to-end:
 
 - 15 ops covering containers, images, volumes, networks, exec, host info
 - HTTP + WebSocket transports against the same handler trait
-- Hub-mode dial-out with exponential backoff and heartbeat
+- Nub-to-hub dial-out with exponential backoff and heartbeat
 - Constrained `create_container` with allowlisted bind mounts
+- Hub: routes phones to nubs for unary ops (config-listed registry, no DB yet)
 
-The hub itself and an official phone client are in progress. The wire format
-may still shift before 1.0.
+In progress: streaming through the hub, persistent nub registry, and the
+official phone client. The wire format may still shift before 1.0.
 
 ## Maintainers
 

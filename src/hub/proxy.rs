@@ -8,16 +8,16 @@ use tokio::sync::oneshot;
 
 const PROXY_TIMEOUT: Duration = Duration::from_secs(30);
 
-pub(super) async fn list_nodes(State(state): State<super::State>) -> Json<Vec<String>> {
+pub(super) async fn list_nubs(State(state): State<super::State>) -> Json<Vec<String>> {
     Json(state.registry.lock().unwrap().keys().cloned().collect())
 }
 
 pub(super) async fn op(
-    Path(node_id): Path<String>,
+    Path(nub_id): Path<String>,
     State(state): State<super::State>,
     Json(op): Json<Op>,
 ) -> Result<Json<OpResult>, StatusCode> {
-    let conn = state.registry.lock().unwrap().get(&node_id).cloned();
+    let conn = state.registry.lock().unwrap().get(&nub_id).cloned();
     let Some(conn) = conn else {
         return Err(StatusCode::NOT_FOUND);
     };
