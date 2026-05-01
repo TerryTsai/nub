@@ -8,9 +8,9 @@ mod util;
 mod volumes;
 
 use crate::proto::*;
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
-use bollard::Docker;
+use bollard::{Docker, API_DEFAULT_VERSION};
 use futures::stream::BoxStream;
 use std::path::PathBuf;
 use tokio::sync::mpsc;
@@ -50,10 +50,44 @@ pub struct DockerHandler {
 impl DockerHandler {
     pub fn connect(policy: Policy) -> Result<Self> {
         Ok(Self {
-            docker: Docker::connect_with_local_defaults()?,
+            docker: connect_engine()?,
             policy,
         })
     }
+}
+
+/// Auto-detect a container engine socket. Honors `DOCKER_HOST` if set;
+/// otherwise tries common rootless then root paths for Docker and Podman.
+fn connect_engine() -> Result<Docker> {
+    if std::env::var_os("DOCKER_HOST").is_some() {
+        return Docker::connect_with_local_defaults().context("DOCKER_HOST connect");
+    }
+    for path in candidate_sockets() {
+        if !path.exists() {
+            continue;
+        }
+        let s = path.to_string_lossy();
+        tracing::info!("connecting to {s}");
+        // bollard's connect_with_socket is lazy — it returns Ok immediately if
+        // the socket file exists; the actual TCP/IO error surfaces per-op.
+        return Docker::connect_with_socket(&s, 120, API_DEFAULT_VERSION).with_context(|| format!("connecting to {s}"));
+    }
+    Err(anyhow!(
+        "no docker or podman socket found in $XDG_RUNTIME_DIR, /var/run, or /run/podman; \
+         set DOCKER_HOST to override"
+    ))
+}
+
+fn candidate_sockets() -> Vec<PathBuf> {
+    let mut out = Vec::with_capacity(4);
+    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
+        let xdg = PathBuf::from(xdg);
+        out.push(xdg.join("docker.sock")); // rootless docker
+        out.push(xdg.join("podman/podman.sock")); // rootless podman
+    }
+    out.push(PathBuf::from("/var/run/docker.sock")); // rootful docker
+    out.push(PathBuf::from("/run/podman/podman.sock")); // rootful podman
+    out
 }
 
 #[async_trait]
