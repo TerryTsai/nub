@@ -73,8 +73,12 @@ fn connect_engine() -> Result<Docker> {
         return Docker::connect_with_socket(&s, 120, API_DEFAULT_VERSION).with_context(|| format!("connecting to {s}"));
     }
     Err(anyhow!(
-        "no docker or podman socket found in $XDG_RUNTIME_DIR, /var/run, or /run/podman; \
-         set DOCKER_HOST to override"
+        "no docker or podman socket found.\n\n\
+         if podman is installed, enable its socket (it's daemonless and not started by default):\n  \
+         rootless: systemctl --user enable --now podman.socket\n  \
+         rootful:  sudo systemctl enable --now podman.socket\n\n\
+         if docker is installed, ensure the daemon is running.\n\n\
+         override with DOCKER_HOST."
     ))
 }
 
