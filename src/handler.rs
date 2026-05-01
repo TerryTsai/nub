@@ -40,6 +40,7 @@ impl OpHandler for DockerHandler {
             Op::StreamLogs { id, follow, tail } => {
                 HandlerOutput::Stream(self.stream_logs(id, follow, tail))
             }
+            Op::StreamStats { id } => HandlerOutput::Stream(self.stream_stats(id)),
         }
     }
 }
@@ -136,5 +137,76 @@ impl DockerHandler {
         Box::pin(futures::stream::unfold(rx, |mut rx| async move {
             rx.recv().await.map(|c| (c, rx))
         }))
+    }
+
+    fn stream_stats(&self, id: String) -> BoxStream<'static, StreamChunk> {
+        use bollard::container::StatsOptions;
+        let docker = self.docker.clone();
+        let (tx, rx) = tokio::sync::mpsc::channel::<StreamChunk>(32);
+        tokio::spawn(async move {
+            let opts = StatsOptions {
+                stream: true,
+                one_shot: false,
+            };
+            let stats = docker.stats(&id, Some(opts));
+            futures::pin_mut!(stats);
+            let mut err: Option<String> = None;
+            while let Some(item) = stats.next().await {
+                let chunk = match item {
+                    Ok(s) => to_stats_chunk(&s),
+                    Err(e) => {
+                        err = Some(e.to_string());
+                        break;
+                    }
+                };
+                if tx.send(chunk).await.is_err() {
+                    return;
+                }
+            }
+            let _ = tx
+                .send(StreamChunk::End { ok: err.is_none(), err })
+                .await;
+        });
+        Box::pin(futures::stream::unfold(rx, |mut rx| async move {
+            rx.recv().await.map(|c| (c, rx))
+        }))
+    }
+}
+
+fn to_stats_chunk(s: &bollard::container::Stats) -> StreamChunk {
+    let cpu_delta =
+        s.cpu_stats.cpu_usage.total_usage as i128 - s.precpu_stats.cpu_usage.total_usage as i128;
+    let sys_delta = s.cpu_stats.system_cpu_usage.unwrap_or(0) as i128
+        - s.precpu_stats.system_cpu_usage.unwrap_or(0) as i128;
+    let online = s.cpu_stats.online_cpus.unwrap_or_else(|| {
+        s.cpu_stats
+            .cpu_usage
+            .percpu_usage
+            .as_ref()
+            .map(|p| p.len() as u64)
+            .unwrap_or(1)
+    });
+    let cpu_pct = if sys_delta > 0 && cpu_delta > 0 {
+        (cpu_delta as f64 / sys_delta as f64) * online as f64 * 100.0
+    } else {
+        0.0
+    };
+    let mem_used = s.memory_stats.usage.unwrap_or(0);
+    let mem_limit = s.memory_stats.limit.unwrap_or(0);
+    let (net_rx, net_tx) = s
+        .networks
+        .as_ref()
+        .map(|nets| {
+            nets.values().fold((0u64, 0u64), |(rx, tx), n| {
+                (rx.saturating_add(n.rx_bytes), tx.saturating_add(n.tx_bytes))
+            })
+        })
+        .unwrap_or((0, 0));
+    StreamChunk::Stats {
+        cpu_pct,
+        mem_used,
+        mem_limit,
+        net_rx,
+        net_tx,
     }
 }

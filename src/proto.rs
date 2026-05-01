@@ -20,6 +20,9 @@ pub enum Op {
         #[serde(default)]
         tail: Option<u32>,
     },
+    StreamStats {
+        id: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -35,6 +38,13 @@ pub enum OpResult {
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum StreamChunk {
     Log { stderr: bool, data: String },
+    Stats {
+        cpu_pct: f64,
+        mem_used: u64,
+        mem_limit: u64,
+        net_rx: u64,
+        net_tx: u64,
+    },
     Lagging { dropped: u32 },
     End { ok: bool, err: Option<String> },
 }
