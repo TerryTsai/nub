@@ -152,8 +152,30 @@ url        = "wss://hub.example.com/node"
 node_token = "long-lived-token-from-enrollment"
 ```
 
-**Hub.** *(in progress)* Public-facing endpoint that holds the node registry
-and routes phone requests to nodes.
+**Hub.** Public-facing endpoint that holds the node registry and routes phone
+requests to nodes. Same binary; runs on a separate host with no Docker socket.
+
+```toml
+[hub_server]
+bind        = "0.0.0.0:8443"
+phone_token = "..."
+
+[[hub_server.nodes]]
+id    = "host-a"
+token = "..."   # nodes present this token in their dial-out
+```
+
+Phone hits `GET /nodes` to see which configured nodes are currently online,
+and `POST /nodes/{id}/op` to proxy a unary op to a specific node:
+
+```sh
+curl -sS https://hub.example.com/nodes/host-a/op \
+  -H "Authorization: Bearer $PHONE_TOKEN" \
+  -d '{"op":"list_containers","all":true}'
+```
+
+WebSocket streaming via the hub (logs / stats / exec / pull progress) is on
+the roadmap; for now the hub proxies only unary ops.
 
 You can set both `bind` and `[hub]` to run both transports against the same
 local Docker socket.
