@@ -4,8 +4,9 @@ use async_trait::async_trait;
 use bollard::container::LogOutput;
 use bollard::errors::Error as BollardError;
 use bollard::models::{
-    ContainerInspectResponse, ContainerSummary as RawSummary, EndpointSettings as RawEndpoint,
-    MountPoint as RawMount, PortBinding,
+    ContainerInspectResponse, ContainerSummary as RawSummary, CreateImageInfo,
+    EndpointSettings as RawEndpoint, ImageSummary as RawImage, MountPoint as RawMount,
+    Network as RawNetwork, PortBinding, Volume as RawVolume,
 };
 use bollard::Docker;
 use futures::stream::{BoxStream, Stream, StreamExt};
@@ -137,6 +138,53 @@ impl DockerHandler {
     ) -> BoxStream<'static, StreamChunk> {
         let docker = self.docker.clone();
         spawn_chunked(move |tx| run_exec(docker, id, cmd, tty, input, tx))
+    }
+
+    async fn list_images(&self) -> Result<Vec<ImageSummary>> {
+        let imgs = self.docker.list_images::<String>(None).await?;
+        Ok(imgs.into_iter().map(summarize_image).collect())
+    }
+
+    async fn remove_image(&self, id: String, force: bool) -> Result<()> {
+        use bollard::image::RemoveImageOptions;
+        let opts = RemoveImageOptions {
+            force,
+            noprune: false,
+        };
+        self.docker.remove_image(&id, Some(opts), None).await?;
+        Ok(())
+    }
+
+    fn pull_image(&self, reference: String) -> BoxStream<'static, StreamChunk> {
+        let docker = self.docker.clone();
+        spawn_chunked(move |tx| run_pull(docker, reference, tx))
+    }
+
+    async fn list_volumes(&self) -> Result<Vec<VolumeSummary>> {
+        let resp = self.docker.list_volumes::<String>(None).await?;
+        Ok(resp
+            .volumes
+            .unwrap_or_default()
+            .into_iter()
+            .map(summarize_volume)
+            .collect())
+    }
+
+    async fn remove_volume(&self, name: String, force: bool) -> Result<()> {
+        use bollard::volume::RemoveVolumeOptions;
+        let opts = RemoveVolumeOptions { force };
+        self.docker.remove_volume(&name, Some(opts)).await?;
+        Ok(())
+    }
+
+    async fn list_networks(&self) -> Result<Vec<NetworkSummary>> {
+        let nets = self.docker.list_networks::<String>(None).await?;
+        Ok(nets.into_iter().map(summarize_network).collect())
+    }
+
+    async fn remove_network(&self, id: String) -> Result<()> {
+        self.docker.remove_network(&id).await?;
+        Ok(())
     }
 }
 
@@ -295,6 +343,17 @@ impl OpHandler for DockerHandler {
             Op::ContainerAction { id, action } => {
                 unary(self.container_action(id, action).await, |()| OpResult::Ok)
             }
+            Op::ListImages => unary(self.list_images().await, OpResult::Images),
+            Op::RemoveImage { id, force } => {
+                unary(self.remove_image(id, force).await, |()| OpResult::Ok)
+            }
+            Op::PullImage { reference } => HandlerOutput::Stream(self.pull_image(reference)),
+            Op::ListVolumes => unary(self.list_volumes().await, OpResult::Volumes),
+            Op::RemoveVolume { name, force } => {
+                unary(self.remove_volume(name, force).await, |()| OpResult::Ok)
+            }
+            Op::ListNetworks => unary(self.list_networks().await, OpResult::Networks),
+            Op::RemoveNetwork { id } => unary(self.remove_network(id).await, |()| OpResult::Ok),
         }
     }
 }
@@ -332,7 +391,7 @@ where
 
 fn summarize(c: RawSummary) -> ContainerSummary {
     ContainerSummary {
-        id: c.id.unwrap_or_default().chars().take(12).collect(),
+        id: short_id(&c.id.unwrap_or_default()),
         name: c
             .names
             .and_then(|n| n.into_iter().next())
@@ -342,6 +401,86 @@ fn summarize(c: RawSummary) -> ContainerSummary {
         state: c.state.unwrap_or_default(),
         status: c.status.unwrap_or_default(),
         created: c.created.unwrap_or(0),
+    }
+}
+
+fn summarize_image(i: RawImage) -> ImageSummary {
+    ImageSummary {
+        id: short_id(&i.id),
+        repo_tag: i
+            .repo_tags
+            .into_iter()
+            .next()
+            .unwrap_or_else(|| "<none>".into()),
+        created: i.created,
+        size: i.size,
+        containers: i.containers,
+    }
+}
+
+fn summarize_volume(v: RawVolume) -> VolumeSummary {
+    VolumeSummary {
+        name: v.name,
+        driver: v.driver,
+        mountpoint: v.mountpoint,
+        created_at: v.created_at.map(|d| d.to_string()).unwrap_or_default(),
+        scope: v.scope.map(|s| s.to_string()).unwrap_or_default(),
+    }
+}
+
+fn summarize_network(n: RawNetwork) -> NetworkSummary {
+    NetworkSummary {
+        id: short_id(&n.id.unwrap_or_default()),
+        name: n.name.unwrap_or_default(),
+        driver: n.driver.unwrap_or_default(),
+        scope: n.scope.unwrap_or_default(),
+        created: n.created.map(|d| d.to_string()).unwrap_or_default(),
+        internal: n.internal.unwrap_or(false),
+    }
+}
+
+fn short_id(id: &str) -> String {
+    id.strip_prefix("sha256:")
+        .unwrap_or(id)
+        .chars()
+        .take(12)
+        .collect()
+}
+
+async fn run_pull(
+    docker: Docker,
+    reference: String,
+    tx: mpsc::Sender<StreamChunk>,
+) -> std::result::Result<(), String> {
+    use bollard::image::CreateImageOptions;
+    let opts = CreateImageOptions::<String> {
+        from_image: reference,
+        ..Default::default()
+    };
+    let stream = docker.create_image(Some(opts), None, None);
+    futures::pin_mut!(stream);
+    while let Some(item) = stream.next().await {
+        let info = item.map_err(|e| e.to_string())?;
+        if let Some(err) = info.error {
+            return Err(err);
+        }
+        if tx.send(pull_chunk(info)).await.is_err() {
+            return Ok(());
+        }
+    }
+    Ok(())
+}
+
+fn pull_chunk(info: CreateImageInfo) -> StreamChunk {
+    let (current, total) = info
+        .progress_detail
+        .map(|d| (d.current.unwrap_or(0) as u64, d.total.unwrap_or(0) as u64))
+        .unwrap_or((0, 0));
+    StreamChunk::PullProgress {
+        id: info.id.unwrap_or_default(),
+        status: info.status.unwrap_or_default(),
+        current,
+        total,
     }
 }
 

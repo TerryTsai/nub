@@ -39,6 +39,25 @@ pub enum Op {
         id: String,
         action: Action,
     },
+    ListImages,
+    RemoveImage {
+        id: String,
+        #[serde(default)]
+        force: bool,
+    },
+    PullImage {
+        reference: String,
+    },
+    ListVolumes,
+    RemoveVolume {
+        name: String,
+        #[serde(default)]
+        force: bool,
+    },
+    ListNetworks,
+    RemoveNetwork {
+        id: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -71,6 +90,9 @@ pub enum OpResult {
     HostInfo(HostInfo),
     Containers(Vec<ContainerSummary>),
     ContainerDetail(Box<ContainerDetail>),
+    Images(Vec<ImageSummary>),
+    Volumes(Vec<VolumeSummary>),
+    Networks(Vec<NetworkSummary>),
     Ok,
     StreamStarted,
     Err { message: String },
@@ -97,6 +119,12 @@ pub enum StreamChunk {
         data: String,
     },
     StdinClose,
+    PullProgress {
+        id: String,
+        status: String,
+        current: u64,
+        total: u64,
+    },
     End {
         ok: bool,
         err: Option<String>,
@@ -177,4 +205,32 @@ pub struct PortMapping {
     pub container_port: String,
     pub host_ip: String,
     pub host_port: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImageSummary {
+    pub id: String,
+    pub repo_tag: String,
+    pub created: i64,
+    pub size: i64,
+    pub containers: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VolumeSummary {
+    pub name: String,
+    pub driver: String,
+    pub mountpoint: String,
+    pub created_at: String,
+    pub scope: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NetworkSummary {
+    pub id: String,
+    pub name: String,
+    pub driver: String,
+    pub scope: String,
+    pub created: String,
+    pub internal: bool,
 }

@@ -10,7 +10,9 @@ Implemented:
 - WebSocket transport (`/ws`) with framed request/response/stream protocol
 - Bearer-token auth (constant-time compare) on all endpoints
 - Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`,
-  `inspect_container`, `container_action` (start/stop/restart/kill/remove)
+  `inspect_container`, `container_action` (start/stop/restart/kill/remove),
+  `list_images`, `remove_image`, `pull_image` (streaming),
+  `list_volumes`, `remove_volume`, `list_networks`, `remove_network`
 
 Not yet: TLS, hub mode, exec/stats/inspect/actions, image/volume/network ops, constrained create.
 
@@ -83,6 +85,7 @@ Then send framed JSON requests, one per line:
 {"kind":"request","id":3,"op":{"op":"stream_logs","id":"<container-id>","follow":true,"tail":100}}
 {"kind":"request","id":4,"op":{"op":"stream_stats","id":"<container-id>"}}
 {"kind":"request","id":5,"op":{"op":"exec","id":"<container-id>","cmd":["sh","-c","echo hi"],"tty":false}}
+{"kind":"request","id":6,"op":{"op":"pull_image","reference":"alpine:latest"}}
 ```
 
 Replies:
