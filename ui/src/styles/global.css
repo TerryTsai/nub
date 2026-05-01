@@ -62,3 +62,54 @@ body {
 .mono {
   font-family: "SF Mono", ui-monospace, "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
 }
+
+/* Form controls */
+.input {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input:focus { border-color: var(--accent); }
+
+/* Buttons */
+.btn {
+  font: inherit;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  border: 0;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-spring), opacity 0.15s var(--ease-out);
+}
+.btn:disabled, .btn[aria-disabled="true"] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btn:not(:disabled):not([aria-disabled="true"]):active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+}
+.btn-destructive { background: var(--error); color: #fff; }
+
+/* State dots */
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-running { background: var(--success); }
+.dot-paused, .dot-restarting { background: var(--warn); }
+.dot-exited, .dot-dead { background: var(--error); }
+.dot-created, .dot-removing { background: var(--text-tertiary); }
+
