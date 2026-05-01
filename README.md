@@ -8,6 +8,7 @@ Implemented:
 
 - Standalone HTTP server (`/op`) for unary ops
 - WebSocket transport (`/ws`) with framed request/response/stream protocol
+- Hub-mode dial-out (outbound WebSocket to a hub; no inbound port required)
 - Bearer-token auth (constant-time compare) on all endpoints
 - Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`,
   `inspect_container`, `container_action` (start/stop/restart/kill/remove),
@@ -38,7 +39,17 @@ token = "replace-with-a-long-random-string"
 # Host paths permitted as bind-mount sources in `create_container`.
 # Empty (default) = no host bind mounts allowed; only named volumes.
 # allowed_binds = ["/data/nub", "/var/lib/nub"]
+
+# Fleet mode: dial out to a hub instead of (or in addition to) binding locally.
+# In pure hub mode, omit `bind` and `token` -- the node opens no inbound port.
+# [hub]
+# url = "wss://hub.example.com/node"
+# node_token = "long-lived-token-issued-at-enrollment"
 ```
+
+`bind` and `hub` are each optional, but at least one must be set. Standalone
+dev nodes typically set just `bind`; fleet nodes typically set just `hub`.
+Setting both runs both transports against the same handler.
 
 ## Security: `create_container` constraints
 

@@ -4,12 +4,19 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub bind: String,
-    pub token: String,
+    pub bind: Option<String>,
+    pub token: Option<String>,
     pub tls_cert: Option<PathBuf>,
     pub tls_key: Option<PathBuf>,
     #[serde(default)]
     pub allowed_binds: Vec<PathBuf>,
+    pub hub: Option<HubConfig>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct HubConfig {
+    pub url: String,
+    pub node_token: String,
 }
 
 impl Config {
@@ -28,8 +35,13 @@ impl Config {
         let s = std::fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
         let cfg: Config = toml::from_str(&s)?;
-        if cfg.token.is_empty() {
-            return Err(anyhow!("token must not be empty"));
+        if cfg.bind.is_some() && cfg.token.as_deref().unwrap_or("").is_empty() {
+            return Err(anyhow!("`token` required when `bind` is set"));
+        }
+        if cfg.bind.is_none() && cfg.hub.is_none() {
+            return Err(anyhow!(
+                "config must set `bind` (standalone), `hub` (fleet), or both"
+            ));
         }
         Ok(cfg)
     }
