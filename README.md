@@ -9,7 +9,8 @@ Implemented:
 - Standalone HTTP server (`/op`) for unary ops
 - WebSocket transport (`/ws`) with framed request/response/stream protocol
 - Bearer-token auth (constant-time compare) on all endpoints
-- Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`
+- Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`,
+  `inspect_container`, `container_action` (start/stop/restart/kill/remove)
 
 Not yet: TLS, hub mode, exec/stats/inspect/actions, image/volume/network ops, constrained create.
 
@@ -50,6 +51,16 @@ curl -sS http://127.0.0.1:8080/op \
   -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"op":"list_containers","all":true}'
+
+curl -sS http://127.0.0.1:8080/op \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"op":"inspect_container","id":"<id>"}'
+
+curl -sS http://127.0.0.1:8080/op \
+  -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"op":"container_action","id":"<id>","action":{"kind":"stop","timeout":5}}'
 ```
 
 A streaming op over `/op` returns 400 — use `/ws`.

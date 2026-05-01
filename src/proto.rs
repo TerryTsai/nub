@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
@@ -31,6 +32,37 @@ pub enum Op {
         #[serde(default)]
         tty: bool,
     },
+    InspectContainer {
+        id: String,
+    },
+    ContainerAction {
+        id: String,
+        action: Action,
+    },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum Action {
+    Start,
+    Stop {
+        #[serde(default)]
+        timeout: Option<i64>,
+    },
+    Restart {
+        #[serde(default)]
+        timeout: Option<i64>,
+    },
+    Kill {
+        #[serde(default)]
+        signal: Option<String>,
+    },
+    Remove {
+        #[serde(default)]
+        force: bool,
+        #[serde(default)]
+        volumes: bool,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -38,6 +70,8 @@ pub enum Op {
 pub enum OpResult {
     HostInfo(HostInfo),
     Containers(Vec<ContainerSummary>),
+    ContainerDetail(Box<ContainerDetail>),
+    Ok,
     StreamStarted,
     Err { message: String },
 }
@@ -91,4 +125,56 @@ pub struct ContainerSummary {
     pub state: String,
     pub status: String,
     pub created: i64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ContainerDetail {
+    pub id: String,
+    pub name: String,
+    pub image: String,
+    pub image_id: String,
+    pub created: String,
+    pub state: String,
+    pub running: bool,
+    pub started_at: String,
+    pub finished_at: String,
+    pub exit_code: i64,
+    pub error: String,
+    pub restart_count: i64,
+    pub cmd: Vec<String>,
+    pub entrypoint: Vec<String>,
+    pub env: Vec<String>,
+    pub working_dir: String,
+    pub user: String,
+    pub labels: HashMap<String, String>,
+    pub network_mode: String,
+    pub restart_policy: String,
+    pub privileged: bool,
+    pub memory_limit: i64,
+    pub mounts: Vec<MountPoint>,
+    pub networks: HashMap<String, NetworkEndpoint>,
+    pub ports: Vec<PortMapping>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MountPoint {
+    pub kind: String,
+    pub source: String,
+    pub destination: String,
+    pub mode: String,
+    pub rw: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NetworkEndpoint {
+    pub ip_address: String,
+    pub gateway: String,
+    pub mac_address: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PortMapping {
+    pub container_port: String,
+    pub host_ip: String,
+    pub host_port: String,
 }
