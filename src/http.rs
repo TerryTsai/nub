@@ -1,5 +1,5 @@
 use crate::auth::{require_token, AuthState};
-use crate::handler::{HandlerOutput, OpHandler};
+use crate::handler::{closed_input, HandlerOutput, OpHandler};
 use crate::proto::*;
 use crate::ws::ws_handler;
 use axum::{
@@ -22,7 +22,7 @@ pub fn router(handler: Shared, auth: Arc<AuthState>) -> Router {
 }
 
 async fn op(State(h): State<Shared>, Json(op): Json<Op>) -> Result<Json<OpResult>, StatusCode> {
-    match h.handle(op).await {
+    match h.handle(op, closed_input()).await {
         HandlerOutput::Unary(r) => Ok(Json(r)),
         HandlerOutput::Stream(_) => Err(StatusCode::BAD_REQUEST),
     }

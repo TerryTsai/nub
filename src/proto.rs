@@ -25,6 +25,12 @@ pub enum Op {
     StreamStats {
         id: String,
     },
+    Exec {
+        id: String,
+        cmd: Vec<String>,
+        #[serde(default)]
+        tty: bool,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -53,6 +59,10 @@ pub enum StreamChunk {
     Lagging {
         dropped: u32,
     },
+    Stdin {
+        data: String,
+    },
+    StdinClose,
     End {
         ok: bool,
         err: Option<String>,

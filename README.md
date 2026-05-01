@@ -9,7 +9,7 @@ Implemented:
 - Standalone HTTP server (`/op`) for unary ops
 - WebSocket transport (`/ws`) with framed request/response/stream protocol
 - Bearer-token auth (constant-time compare) on all endpoints
-- Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`
+- Ops: `host_info`, `list_containers`, `stream_logs`, `stream_stats`, `exec`
 
 Not yet: TLS, hub mode, exec/stats/inspect/actions, image/volume/network ops, constrained create.
 
@@ -71,6 +71,7 @@ Then send framed JSON requests, one per line:
 {"kind":"request","id":2,"op":{"op":"list_containers","all":true}}
 {"kind":"request","id":3,"op":{"op":"stream_logs","id":"<container-id>","follow":true,"tail":100}}
 {"kind":"request","id":4,"op":{"op":"stream_stats","id":"<container-id>"}}
+{"kind":"request","id":5,"op":{"op":"exec","id":"<container-id>","cmd":["sh","-c","echo hi"],"tty":false}}
 ```
 
 Replies:
@@ -81,6 +82,9 @@ Replies:
   terminated by `{"kind":"stream","id":N,"chunk":{"type":"end","ok":true}}`.
 - Backpressure: if the writer can't keep up, dropped chunks are summarized as
   `{"chunk":{"type":"lagging","dropped":N}}`.
+- For `exec`, the client may send `Frame::Stream` upstream:
+  `{"kind":"stream","id":N,"chunk":{"type":"stdin","data":"ls\n"}}` for
+  keystrokes, and `{"chunk":{"type":"stdin_close"}}` to send EOF.
 
 ## Design
 
