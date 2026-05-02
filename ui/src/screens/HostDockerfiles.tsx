@@ -37,9 +37,11 @@ export function HostDockerfiles() {
           : undefined
       }
     >
+      {session.loading && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
+      {session.error && <p className="text-[var(--error)] text-xs">Couldn't connect: {session.error}</p>}
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {files === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+      {session.session && files === null && !error && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading dockerfiles…</p>
       )}
       {files?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">

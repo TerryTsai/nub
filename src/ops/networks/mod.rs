@@ -3,23 +3,74 @@
 //! endpoint. Use libpod on Podman; compat on Docker. Inspect is split
 //! into a sibling module since it has its own engine-specific decoders.
 
+use std::collections::HashMap;
+use std::collections::HashSet;
+
 use anyhow::Result;
 use serde::Deserialize;
 
-use crate::client::{short_id, EngineKind, Req};
+use crate::client::{short_id, EngineKind, Query, Req};
 use crate::proto::{NetworkDetail, NetworkSummary};
 
-use super::usage;
 use super::EngineHandler;
 
 mod inspect;
 
 pub(super) async fn list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
-    let (mut nets, used) = tokio::try_join!(fetch_list(h), usage::compute(h))?;
+    let (mut nets, used) = tokio::try_join!(fetch_list(h), probe_attached(h))?;
     for n in &mut nets {
-        n.in_use = used.networks.contains(&n.name);
+        n.in_use = used.contains(&n.name);
     }
     Ok(nets)
+}
+
+/// Walk container network attachments (libpod string array OR compat
+/// `NetworkSettings.Networks` map) and collect names. Sub-second on both
+/// engines — cheap enough to pair with every list call.
+async fn probe_attached(h: &EngineHandler) -> Result<HashSet<String>> {
+    let mut q = Query::new();
+    q.push_bool("all", true);
+    let path = format!("{}{}", containers_path(h.engine.kind()), q.finish());
+    let raw: Vec<ContainerNets> = h
+        .engine
+        .conn()
+        .await?
+        .send_unary(Req::get(path).build()?)
+        .await?
+        .json()?;
+    let mut out = HashSet::new();
+    for c in raw {
+        for n in c.networks {
+            out.insert(n);
+        }
+        for n in c.network_settings.networks.into_keys() {
+            out.insert(n);
+        }
+    }
+    Ok(out)
+}
+
+fn containers_path(kind: EngineKind) -> &'static str {
+    match kind {
+        EngineKind::Podman => "/v4.0.0/libpod/containers/json",
+        EngineKind::Docker => "/containers/json",
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct ContainerNets {
+    #[serde(default)]
+    networks: Vec<String>,
+    #[serde(default)]
+    network_settings: RawNetSettings,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RawNetSettings {
+    #[serde(default)]
+    networks: HashMap<String, serde_json::Value>,
 }
 
 async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
