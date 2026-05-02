@@ -5,10 +5,10 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
+import { FAB } from "@/components/FAB";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { Section } from "@/components/Section";
-import { RunSheet } from "./RunSheet";
 
 export function HostHome() {
   const { hid } = useParams<{ hid: string }>();
@@ -21,7 +21,6 @@ export function HostHome() {
   const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [runOpen, setRunOpen] = useState(false);
 
   async function refresh() {
     if (!host) return;
@@ -44,20 +43,20 @@ export function HostHome() {
 
   if (!saved) {
     return (
-      <Page title="?">
+      <Page>
         <p>Unknown host. <Link to="/" className="underline">Back to hosts</Link></p>
       </Page>
     );
   }
 
-  const back = (
-    <Link to="/" aria-label="Back to hosts">
-      <Button variant="ghost" className="text-sm">←</Button>
-    </Link>
-  );
+  const crumbs = [{ label: saved.label }];
+  const canCreate = session.session?.can("create_container") ?? false;
 
   return (
-    <Page title={saved.label} right={back}>
+    <Page
+      crumbs={crumbs}
+      fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
+    >
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
 
       {session.error && (
@@ -72,24 +71,11 @@ export function HostHome() {
 
       {session.session && (
         <Section
-          label="Containers"
+          label={`Containers${containers ? ` (${containers.length})` : ""}`}
           right={
-            <div className="flex gap-2">
-              <Button
-                variant="primary"
-                onClick={() => setRunOpen(true)}
-                disallowReason={
-                  session.session.can("create_container")
-                    ? undefined
-                    : "your token doesn't allow create_container"
-                }
-              >
-                ▶ Run
-              </Button>
-              <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-                {refreshing ? "…" : "Refresh"}
-              </Button>
-            </div>
+            <Button variant="ghost" onClick={refresh} disabled={refreshing}>
+              {refreshing ? "…" : "Refresh"}
+            </Button>
           }
         >
           {error && <p className="text-[var(--error)] text-xs">{error}</p>}
@@ -116,19 +102,6 @@ export function HostHome() {
         </Section>
       )}
 
-      {host && session.session && (
-        <RunSheet
-          host={host}
-          open={runOpen}
-          onOpenChange={setRunOpen}
-          onCreated={(id) => nav(`/h/${hid}/c/${id}`)}
-          disallowReason={
-            session.session.can("create_container")
-              ? undefined
-              : "your token doesn't allow create_container"
-          }
-        />
-      )}
     </Page>
   );
 }

@@ -1,10 +1,15 @@
 import { useState } from "react";
-import * as Dialog from "@radix-ui/react-dialog";
+import { useNavigate, useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
+import { useHosts } from "@/state/hosts";
+import { useSession } from "@/state/session";
 import { SEEDED_TEMPLATES, type Template } from "@/state/templates";
 import type { PortPublish, RestartPolicySpec } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
+import { Heading } from "@/components/Heading";
+import { Page } from "@/components/Page";
+import { Section } from "@/components/Section";
 
 type LayerProgress = { status: string; current: number; total: number };
 interface PullState {
@@ -30,29 +35,23 @@ const EMPTY_FORM: FormState = {
   start: true,
 };
 
-export function RunSheet({
-  host,
-  open,
-  onOpenChange,
-  onCreated,
-  disallowReason,
-}: {
-  host: Host;
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  onCreated: (id: string) => void;
-  disallowReason?: string;
-}) {
+export function RunContainer() {
+  const { hid } = useParams<{ hid: string }>();
+  const nav = useNavigate();
+  const { hosts } = useHosts();
+  const saved = hosts.find((h) => h.hid === hid);
+  const host: Host | undefined = saved && { url: saved.url, token: saved.token };
+  const session = useSession(host);
+
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pull, setPull] = useState<PullState | null>(null);
 
-  function reset() {
-    setForm(EMPTY_FORM);
-    setError(null);
-    setPull(null);
-  }
+  const denyReason =
+    session.session && !session.session.can("create_container")
+      ? "your token doesn't allow create_container"
+      : undefined;
 
   function applyTemplate(t: Template) {
     setForm({
@@ -67,13 +66,14 @@ export function RunSheet({
   }
 
   async function onRun(e: React.FormEvent) {
+    if (!host) return;
     e.preventDefault();
     setPending(true);
     setError(null);
     const image = form.image.trim();
     try {
-      // Pull first — Podman's compat API doesn't auto-pull on create like
-      // dockerd does, and showing progress is better UX than a silent hang.
+      // Pull first — Podman's compat API doesn't auto-pull on create, and
+      // showing progress is better UX than a silent hang.
       setPull({ layers: {}, lastStatus: "starting pull…" });
       await streamOp(host, { op: "pull_image", reference: image }, (chunk) => {
         if (chunk.type !== "pull_progress") return;
@@ -85,18 +85,19 @@ export function RunSheet({
           return { layers, lastStatus: chunk.status || prev?.lastStatus || "" };
         });
       });
-      const r = unwrap(await call(host, {
-        op: "create_container",
-        image,
-        name: form.name.trim() || undefined,
-        ports: form.ports.length ? form.ports : undefined,
-        env: form.env.length ? form.env : undefined,
-        restart: form.restart,
-        start: form.start,
-      }), "container_created");
-      onOpenChange(false);
-      reset();
-      onCreated(r.data.id);
+      const r = unwrap(
+        await call(host, {
+          op: "create_container",
+          image,
+          name: form.name.trim() || undefined,
+          ports: form.ports.length ? form.ports : undefined,
+          env: form.env.length ? form.env : undefined,
+          restart: form.restart,
+          start: form.start,
+        }),
+        "container_created",
+      );
+      nav(`/h/${hid}/c/${r.data.id}`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
       setPull(null);
@@ -105,121 +106,120 @@ export function RunSheet({
     }
   }
 
+  if (!saved) {
+    return <Page><p>Unknown host.</p></Page>;
+  }
+
+  const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
+
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <Dialog.Portal>
-        <Dialog.Overlay className="sheet-overlay" />
-        <Dialog.Content className="sheet">
-          <div className="sheet-handle" />
-          <Dialog.Title className="text-xl font-semibold px-1">Run a container</Dialog.Title>
-          <Dialog.Description className="sr-only">
-            Pick a template or fill the form to create a new container.
-          </Dialog.Description>
+    <Page crumbs={crumbs}>
+      <Heading category="Run" title="New container" />
 
-          {disallowReason && (
-            <p className="text-sm text-[var(--warn)] px-1">{disallowReason}</p>
-          )}
+      {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
-          {/* Templates */}
-          <div className="-mx-5 px-5 overflow-x-auto">
-            <div className="flex gap-2 pb-1">
-              {SEEDED_TEMPLATES.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => applyTemplate(t)}
-                  className="template-chip"
-                >
-                  <div className="font-medium">{t.name}</div>
-                  <div className="text-xs text-[var(--text-tertiary)] mono truncate">{t.image}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <form onSubmit={onRun} className="flex flex-col gap-3">
-            <Field label="Image" hint="e.g. nginx:alpine, postgres:16, ghcr.io/...">
-              <input
-                className="input mono"
-                type="text"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="image:tag"
-                value={form.image}
-                onChange={(e) => setForm({ ...form, image: e.target.value })}
-                required
-              />
-            </Field>
-
-            <Field label="Name" hint="optional — Docker auto-names if blank">
-              <input
-                className="input mono"
-                type="text"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="my-app"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-              />
-            </Field>
-
-            <Field label="Ports" hint="container → host. e.g. 80/tcp → 8080">
-              <PairList
-                pairs={form.ports.map((p) => [p.container, p.host])}
-                placeholder={["80/tcp", "8080"]}
-                onChange={(rows) =>
-                  setForm({ ...form, ports: rows.map(([container, host]) => ({ container, host })) })
-                }
-              />
-            </Field>
-
-            <Field label="Environment" hint="one KEY=value per row">
-              <StringList
-                values={form.env}
-                placeholder="KEY=value"
-                onChange={(env) => setForm({ ...form, env })}
-              />
-            </Field>
-
-            <Field label="Restart policy">
-              <RestartPicker
-                value={form.restart}
-                onChange={(restart) => setForm({ ...form, restart })}
-              />
-            </Field>
-
-            <label className="flex items-center gap-2 px-1 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.start}
-                onChange={(e) => setForm({ ...form, start: e.target.checked })}
-              />
-              <span className="text-sm">Start after create</span>
-            </label>
-
-            {pull && <PullProgress pull={pull} />}
-
-            {error && <div className="text-[var(--error)] text-sm px-1">{error}</div>}
-
-            <div className="flex gap-2 mt-1">
-              <Button variant="ghost" onClick={() => onOpenChange(false)} className="flex-1">
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={pending || !form.image.trim()}
-                disallowReason={disallowReason}
-                className="flex-1"
+      <Section label="Templates">
+        <div className="-mx-5 px-5 overflow-x-auto">
+          <div className="flex gap-2 pb-1">
+            {SEEDED_TEMPLATES.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => applyTemplate(t)}
+                className="template-chip"
               >
-                {pending ? "…" : "Run"}
-              </Button>
-            </div>
-          </form>
-        </Dialog.Content>
-      </Dialog.Portal>
-    </Dialog.Root>
+                <div className="text-xs font-medium">{t.name}</div>
+                <div className="text-[11px] text-[var(--text-tertiary)] mono truncate">{t.image}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </Section>
+
+      <form onSubmit={onRun} className="contents">
+        <Section label="Container">
+          <Field label="Image" hint="e.g. nginx:alpine, postgres:16, ghcr.io/...">
+            <input
+              className="input mono"
+              type="text"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="image:tag"
+              value={form.image}
+              onChange={(e) => setForm({ ...form, image: e.target.value })}
+              required
+            />
+          </Field>
+          <Field label="Name" hint="optional — engine auto-names if blank">
+            <input
+              className="input mono"
+              type="text"
+              autoCapitalize="off"
+              autoCorrect="off"
+              spellCheck={false}
+              placeholder="my-app"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+            />
+          </Field>
+        </Section>
+
+        <Section label="Ports">
+          <PairList
+            pairs={form.ports.map((p) => [p.container, p.host])}
+            placeholder={["80/tcp", "8080"]}
+            onChange={(rows) =>
+              setForm({ ...form, ports: rows.map(([container, host]) => ({ container, host })) })
+            }
+          />
+        </Section>
+
+        <Section label="Environment">
+          <StringList
+            values={form.env}
+            placeholder="KEY=value"
+            onChange={(env) => setForm({ ...form, env })}
+          />
+        </Section>
+
+        <Section label="Restart policy">
+          <RestartPicker value={form.restart} onChange={(restart) => setForm({ ...form, restart })} />
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.checked })}
+            />
+            <span className="text-xs">Start after create</span>
+          </label>
+        </Section>
+
+        {pull && (
+          <Section label="Pull progress">
+            <PullProgress pull={pull} />
+          </Section>
+        )}
+
+        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+        <Section label="Actions">
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={pending || !form.image.trim()}
+              disallowReason={denyReason}
+              className="flex-1"
+            >
+              {pending ? "…" : "Run"}
+            </Button>
+          </div>
+        </Section>
+      </form>
+    </Page>
   );
 }
 
@@ -259,7 +259,7 @@ function PairList({
           </Button>
         </div>
       ))}
-      <Button variant="ghost" onClick={() => onChange([...pairs, ["", ""]])}>
+      <Button variant="ghost" onClick={() => onChange([...pairs, ["", ""]])} className="self-start">
         + Add port
       </Button>
     </div>
@@ -290,7 +290,7 @@ function StringList({
           </Button>
         </div>
       ))}
-      <Button variant="ghost" onClick={() => onChange([...values, ""])}>
+      <Button variant="ghost" onClick={() => onChange([...values, ""])} className="self-start">
         + Add row
       </Button>
     </div>
@@ -319,7 +319,7 @@ function RestartPicker({
             key={o.kind}
             type="button"
             onClick={() => onChange({ kind: o.kind } as RestartPolicySpec)}
-            className={`btn ${active ? "btn-primary" : "btn-ghost"} text-sm`}
+            className={`btn ${active ? "btn-primary" : "btn-ghost"}`}
           >
             {o.label}
           </button>
@@ -332,14 +332,14 @@ function RestartPicker({
 function PullProgress({ pull }: { pull: PullState }) {
   const layers = Object.entries(pull.layers);
   return (
-    <div className="px-1 text-sm flex flex-col gap-2">
+    <div className="text-xs flex flex-col gap-2">
       <div className="text-[var(--text-secondary)]">{pull.lastStatus || "pulling…"}</div>
       {layers.length > 0 && (
         <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
           {layers.map(([id, p]) => {
             const pct = p.total > 0 ? Math.min(100, Math.round((p.current / p.total) * 100)) : null;
             return (
-              <div key={id} className="flex items-center gap-2 text-xs">
+              <div key={id} className="flex items-center gap-2">
                 <span className="mono text-[var(--text-tertiary)] w-16 truncate">{id.slice(0, 12)}</span>
                 <span className="flex-1 truncate">{p.status}</span>
                 {pct !== null && <span className="mono text-[var(--text-tertiary)]">{pct}%</span>}

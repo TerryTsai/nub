@@ -4,6 +4,7 @@ import { ApiError, call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
+import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
 
 // One-shot read of `#t=<token>` from the URL. The host URL is taken from
@@ -55,7 +56,8 @@ export function AddHost() {
   }
 
   return (
-    <Page title="Add host" right={<Button variant="ghost" onClick={() => nav(-1)}>Cancel</Button>}>
+    <Page>
+      <Heading category="Add" title="New host" />
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
         <Field label="URL" hint="e.g. http://192.168.1.10:8080">
           <input
@@ -97,9 +99,14 @@ export function AddHost() {
           />
         </Field>
         {error && <div className="text-[var(--error)] text-xs">{error}</div>}
-        <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="self-start">
-          {pending ? "Connecting…" : "Connect & save"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="ghost" onClick={() => nav(-1)} className="flex-1">
+            Cancel
+          </Button>
+          <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="flex-1">
+            {pending ? "Connecting…" : "Connect & save"}
+          </Button>
+        </div>
       </form>
     </Page>
   );

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
+import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
 
 const TAIL_LINES = 200;
@@ -30,10 +31,17 @@ export function ContainerLogs() {
   useStream(host, cid, follow, setLines, setError, !!session.session);
   const { paneRef, onScroll } = useAutoscroll(lines);
 
-  if (!saved) return <Page title="?"><p>Unknown host.</p></Page>;
+  if (!saved) return <Page><p>Unknown host.</p></Page>;
+
+  const containerName = name || cid?.slice(0, 12) || "?";
+  const crumbs = [
+    { label: saved.label, to: `/h/${hid}` },
+    { label: containerName, to: `/h/${hid}/c/${cid}` },
+  ];
 
   return (
-    <Page title={`Logs · ${name || cid?.slice(0, 12) || "?"}`} right={backLink(hid, cid)}>
+    <Page crumbs={crumbs}>
+      <Heading category="Logs" title={containerName} />
       <div className="flex gap-2 items-center">
         <Button
           variant={follow ? "primary" : "ghost"}
@@ -51,14 +59,6 @@ export function ContainerLogs() {
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       <LogPane paneRef={paneRef} onScroll={onScroll} lines={lines} />
     </Page>
-  );
-}
-
-function backLink(hid: string | undefined, cid: string | undefined) {
-  return (
-    <Link to={`/h/${hid}/c/${cid}`} aria-label="Back">
-      <Button variant="ghost" className="text-sm">←</Button>
-    </Link>
   );
 }
 

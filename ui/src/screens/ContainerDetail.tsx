@@ -6,8 +6,9 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
 import { Button } from "@/components/Button";
-import { Row } from "@/components/Row";
+import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
+import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -53,37 +54,80 @@ export function ContainerDetail() {
     }
   }
 
-  const back = (
-    <Link to={`/h/${hid}`} aria-label="Back">
-      <Button variant="ghost" className="text-sm">←</Button>
-    </Link>
-  );
-
   if (!saved) {
-    return <Page title="?" right={back}><p>Unknown host.</p></Page>;
+    return <Page><p>Unknown host.</p></Page>;
   }
 
+  const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
   const can = (op: string) => session.session?.can(op) ?? false;
   const denyReason = (op: string) =>
     session.session && !can(op) ? `your token doesn't allow ${op}` : undefined;
 
   return (
-    <Page title={detail?.name || cid?.slice(0, 12) || "?"} right={back}>
+    <Page crumbs={crumbs}>
+      <Heading
+        category="Container"
+        title={detail?.name || cid?.slice(0, 12) || "?"}
+        right={detail && <StatusBadge status={detail.state} />}
+      />
+
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
       {session.error && <p className="text-[var(--error)] text-sm">{session.error}</p>}
 
       {detail && (
         <>
-          <Section right={<StatusBadge status={detail.state} />}>
+          <Section>
             <div className="flex flex-col gap-2">
               <Row label="Image" value={detail.image} mono />
               <Row label="Created" value={detail.created} mono />
               {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
               {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
+              {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
               {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
               {detail.network_mode && <Row label="Network" value={detail.network_mode} />}
               {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
-              {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
+            </div>
+          </Section>
+
+          {detail.cmd.length > 0 && (
+            <Section label="Process">
+              <div className="flex flex-col gap-2">
+                <Row label="Cmd" value={detail.cmd.join(" ")} mono />
+                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+                {detail.user && <Row label="User" value={detail.user} mono />}
+              </div>
+            </Section>
+          )}
+
+          {detail.env.length > 0 && (
+            <Section label="Environment">
+              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
+                {detail.env.join("\n")}
+              </pre>
+            </Section>
+          )}
+
+          <Section label="View">
+            <div className="grid grid-cols-2 gap-2">
+              <Link to={`/h/${hid}/c/${cid}/logs`}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disallowReason={denyReason("stream_logs")}
+                >
+                  Logs →
+                </Button>
+              </Link>
+              <Link to={`/h/${hid}/c/${cid}/stats`}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disallowReason={denyReason("stream_stats")}
+                >
+                  Stats →
+                </Button>
+              </Link>
             </div>
           </Section>
 
@@ -122,48 +166,6 @@ export function ContainerDetail() {
             </div>
             {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           </Section>
-
-          <Section label="View">
-            <div className="grid grid-cols-2 gap-2">
-              <Link to={`/h/${hid}/c/${cid}/logs`}>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disallowReason={denyReason("stream_logs")}
-                >
-                  Logs →
-                </Button>
-              </Link>
-              <Link to={`/h/${hid}/c/${cid}/stats`}>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disallowReason={denyReason("stream_stats")}
-                >
-                  Stats →
-                </Button>
-              </Link>
-            </div>
-          </Section>
-
-          {detail.cmd.length > 0 && (
-            <Section label="Process">
-              <div className="flex flex-col gap-2">
-                <Row label="Cmd" value={detail.cmd.join(" ")} mono />
-                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-                {detail.user && <Row label="User" value={detail.user} mono />}
-              </div>
-            </Section>
-          )}
-
-          {detail.env.length > 0 && (
-            <Section label="Environment">
-              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
-                {detail.env.join("\n")}
-              </pre>
-            </Section>
-          )}
         </>
       )}
     </Page>
@@ -196,7 +198,7 @@ function RemoveButton({
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 bg-black/60" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,360px)] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 flex flex-col gap-3 z-50">
-            <Dialog.Title className="text-lg font-semibold">Remove container?</Dialog.Title>
+            <Dialog.Title className="text-base font-semibold font-display">Remove container?</Dialog.Title>
             <Dialog.Description className="text-sm text-[var(--text-secondary)]">
               {running
                 ? "This container is running. Use force to stop and remove it."

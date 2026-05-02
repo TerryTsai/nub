@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Button } from "@/components/Button";
+import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
 
 interface Snapshot {
@@ -34,22 +34,21 @@ export function ContainerStats() {
   useTitle(host, cid, setName);
   useStatsStream(host, cid, !!session.session, setSnap, setRates, setError);
 
-  if (!saved) return <Page title="?"><p>Unknown host.</p></Page>;
+  if (!saved) return <Page><p>Unknown host.</p></Page>;
+
+  const containerName = name || cid?.slice(0, 12) || "?";
+  const crumbs = [
+    { label: saved.label, to: `/h/${hid}` },
+    { label: containerName, to: `/h/${hid}/c/${cid}` },
+  ];
 
   return (
-    <Page title={`Stats · ${name || cid?.slice(0, 12) || "?"}`} right={backLink(hid, cid)}>
+    <Page crumbs={crumbs}>
+      <Heading category="Stats" title={containerName} />
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
       {snap && <StatsView snap={snap} rates={rates} />}
     </Page>
-  );
-}
-
-function backLink(hid: string | undefined, cid: string | undefined) {
-  return (
-    <Link to={`/h/${hid}/c/${cid}`} aria-label="Back">
-      <Button variant="ghost" className="text-sm">←</Button>
-    </Link>
   );
 }
 

@@ -105,45 +105,7 @@ input, textarea, select, button {
   color: var(--error);
 }
 
-/* Bottom sheet (Radix Dialog). Restyled to match foundry — flat black, no
- * blur, subtle border. */
-.sheet-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 40;
-  animation: fadeIn 0.2s var(--ease-out);
-}
-.sheet {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  background: var(--bg-base);
-  border-top: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
-  padding: 12px 20px max(20px, env(safe-area-inset-bottom));
-  max-height: 92vh;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  animation: slideUp 0.3s var(--ease-spring);
-}
-.sheet-handle {
-  width: 32px;
-  height: 3px;
-  background: var(--text-tertiary);
-  border-radius: 2px;
-  align-self: center;
-  margin-bottom: 4px;
-  opacity: 0.4;
-}
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-
-/* Template chips (horizontal scroll in RunSheet) */
+/* Template chips (horizontal scroll in RunContainer) */
 .template-chip {
   flex-shrink: 0;
   background: transparent;
