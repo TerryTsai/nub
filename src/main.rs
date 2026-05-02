@@ -12,6 +12,7 @@ use config::TrustEntry;
 use std::io::Read;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tokio_rustls::rustls;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser)]
@@ -77,27 +78,48 @@ async fn serve(args: Args) -> Result<()> {
     let cfg = resolve_config(&args)?;
     let id = cfg.id.clone().unwrap_or_else(init::hostname);
     let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let tls = resolve_tls(&cfg)?;
     let admin = admin_entry()?;
     println!(
         "admin token: {}   (regenerates each restart, allows everything)",
         admin.token
     );
     if cfg!(feature = "embed-ui") {
-        println!("connect:     http://{}/add#t={}", display_authority(&bind), admin.token);
+        let scheme = if tls.is_some() { "https" } else { "http" };
+        println!(
+            "connect:     {scheme}://{}/add#t={}",
+            display_authority(&bind),
+            admin.token
+        );
     }
     let app = build_app(cfg, admin).await?;
     let listener = tokio::net::TcpListener::bind(&bind).await?;
-    tracing::info!("nub {id} listening on {bind}");
-    if let Err(e) = axum::serve(listener, app).await {
+    let scheme = if tls.is_some() { "https" } else { "http" };
+    tracing::info!("nub {id} listening on {bind} ({scheme})");
+    if let Some(tls) = tls {
+        if let Err(e) = server::tls::serve(listener, app, tls).await {
+            tracing::error!("tls serve failed: {e}");
+        }
+    } else if let Err(e) = axum::serve(listener, app).await {
         tracing::error!("axum serve failed: {e}");
     }
     Ok(())
 }
 
-async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Router> {
-    if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
-        tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
+/// Loads the TLS config when both cert and key paths are set. Half-set
+/// is a misconfiguration — fail loudly rather than silently drop to
+/// plaintext, since users would think TLS was on.
+fn resolve_tls(cfg: &config::Config) -> Result<Option<Arc<rustls::ServerConfig>>> {
+    match (&cfg.tls_cert, &cfg.tls_key) {
+        (Some(cert), Some(key)) => Ok(Some(server::tls::load_config(cert, key)?)),
+        (None, None) => Ok(None),
+        _ => Err(anyhow::anyhow!(
+            "tls_cert and tls_key must be set together (got one of two)"
+        )),
     }
+}
+
+async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Router> {
     let policy = ops::Policy {
         allowed_binds: cfg.allowed_binds,
         dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),

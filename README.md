@@ -259,10 +259,17 @@ To allow specific host paths as bind sources:
 allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
 
-TLS support is recognized in config (`tls_cert`, `tls_key`) but not yet wired
-into serving — the binary will warn and serve plaintext if those are set. For
-now, bind to localhost behind an SSH tunnel or terminate TLS at a reverse
-proxy.
+### TLS
+
+Set `tls_cert` and `tls_key` to PEM file paths and nub serves HTTPS (and
+`wss://` for the WebSocket transport). rustls + ring; TLS 1.2 minimum,
+1.3 preferred. Both fields must be set together — a half-configured TLS
+fails at startup rather than silently serving plaintext.
+
+The cert and key are loaded once at startup; rotation requires a restart.
+Provisioning is out of scope: bring your own files from wherever (Let's
+Encrypt, mkcert, your CA, …). Without TLS configured, nub serves
+plaintext as before.
 
 ## Status
 

@@ -1,3 +1,4 @@
+pub mod tls;
 pub mod ui;
 mod wire;
 mod ws;
