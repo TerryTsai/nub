@@ -7,7 +7,7 @@ import { useSession } from "@/state/session";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Card, Row } from "@/components/Card";
-import { Page } from "./Hosts";
+import { Page } from "@/components/Page";
 
 export function ContainerDetail() {
   const { hid, cid } = useParams<{ hid: string; cid: string }>();
@@ -192,8 +192,8 @@ function RemoveButton({
       </Button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,360px)] glass-strong rounded-[var(--radius-sheet)] p-5 flex flex-col gap-3 z-50">
+          <Dialog.Overlay className="fixed inset-0 bg-black/60" />
+          <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,360px)] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] p-5 flex flex-col gap-3 z-50">
             <Dialog.Title className="text-lg font-semibold">Remove container?</Dialog.Title>
             <Dialog.Description className="text-sm text-[var(--text-secondary)]">
               {running

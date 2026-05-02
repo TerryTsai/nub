@@ -6,7 +6,8 @@ import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { Page } from "./Hosts";
+import { ListRow } from "@/components/ListRow";
+import { Page } from "@/components/Page";
 import { RunSheet } from "./RunSheet";
 
 export function HostHome() {
@@ -101,26 +102,18 @@ export function HostHome() {
             <p className="text-sm text-[var(--text-tertiary)]">No containers.</p>
           )}
           {containers !== null && containers.length > 0 && (
-            <ul className="flex flex-col gap-1 -mx-1">
+            <div className="flex flex-col -mx-4">
               {containers.map((c) => (
-                <li key={c.id}>
-                  <button
-                    type="button"
-                    onClick={() => nav(`/h/${hid}/c/${c.id}`)}
-                    className="w-full text-left p-2 rounded-[var(--radius-md)] hover:bg-[var(--border-subtle)] transition-colors flex flex-col gap-0.5"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className={`dot dot-${c.state}`} aria-label={c.state} />
-                      <span className="font-medium truncate flex-1">{c.name || "(unnamed)"}</span>
-                      <span className="text-xs text-[var(--text-tertiary)] mono">{c.id}</span>
-                    </div>
-                    <div className="text-xs text-[var(--text-secondary)] truncate pl-4">
-                      {c.image} · {c.status}
-                    </div>
-                  </button>
-                </li>
+                <div key={c.id} className="px-4">
+                  <ListRow
+                    title={c.name || "(unnamed)"}
+                    subtitle={`${c.image} · ${c.status}`}
+                    status={c.state}
+                    onPress={() => nav(`/h/${hid}/c/${c.id}`)}
+                  />
+                </div>
               ))}
-            </ul>
+            </div>
           )}
         </Card>
       )}

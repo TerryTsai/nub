@@ -5,7 +5,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { Page } from "./Hosts";
+import { Page } from "@/components/Page";
 
 interface Snapshot {
   cpu_pct: number;

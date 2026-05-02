@@ -1,97 +1,41 @@
-/* Design tokens. Tool-agnostic — pure CSS custom properties.
- * Themes: light by default, dark when html[data-theme="dark"] OR
- * (prefers-color-scheme: dark) when no explicit override is set.
+/* Design tokens — pure black background, zinc grays, sky/amber/red/emerald
+ * accents. Mirrors the foundry site's palette. Single dark-mode theme;
+ * we no longer follow prefers-color-scheme.
  */
 
 :root {
-  /* Light theme defaults */
-  --bg-base:        #f2f2f7;
-  --bg-elevated:    #ffffff;
-  --surface-glass:  rgba(255, 255, 255, 0.72);
-  --surface-glass-strong: rgba(255, 255, 255, 0.86);
-  --border-subtle:  rgba(0, 0, 0, 0.08);
-  --border-strong:  rgba(0, 0, 0, 0.16);
+  /* Surfaces */
+  --bg-base:        #000000;
+  --bg-elevated:    #000000;
+  --border-subtle:  rgb(39 39 42 / 0.6);  /* zinc-800/60 */
+  --border-strong:  rgb(63 63 70);        /* zinc-700 */
 
-  --text-primary:   #1c1c1e;
-  --text-secondary: rgba(60, 60, 67, 0.72);
-  --text-tertiary:  rgba(60, 60, 67, 0.48);
-  --text-mono:      #1c1c1e;
+  /* Text */
+  --text-primary:   rgb(228 228 231);     /* zinc-200 */
+  --text-secondary: rgb(161 161 170);     /* zinc-400 */
+  --text-tertiary:  rgb(113 113 122);     /* zinc-500 */
 
-  --accent:         #007aff;
-  --accent-fg:      #ffffff;
-  --success:        #34c759;
-  --warn:           #ff9500;
-  --error:          #ff3b30;
+  /* Accents */
+  --accent:         rgb(56 189 248);      /* sky-400 — primary action */
+  --accent-soft:    rgb(56 189 248 / 0.15);
+  --accent-border:  rgb(56 189 248 / 0.25);
+  --accent-fg:      rgb(9 9 11);          /* zinc-950 (text on solid sky-400) */
+  --id-color:       rgb(251 191 36);      /* amber-400 — IDs, mono links */
 
-  --radius-sm:  6px;
-  --radius-md:  10px;
-  --radius-lg:  16px;
-  --radius-xl:  20px;
-  --radius-sheet: 28px;
+  --success:        rgb(52 211 153);      /* emerald-400 */
+  --warn:           rgb(251 191 36);      /* amber-400 */
+  --error:          rgb(248 113 113);     /* red-400 */
+  --error-soft:     rgb(239 68 68 / 0.10);
+  --error-border:   rgb(239 68 68 / 0.25);
 
-  --blur-glass: 40px;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
+  /* Geometry */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg:  8px;
+  --radius-xl:  12px;
+  --radius-pill: 9999px;
+  --radius-sheet: 16px;
 
   --ease-spring: cubic-bezier(0.25, 1.5, 0.5, 1);
   --ease-out:    cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-base:        #000000;
-    --bg-elevated:    #1c1c1e;
-    --surface-glass:  rgba(28, 28, 30, 0.72);
-    --surface-glass-strong: rgba(28, 28, 30, 0.86);
-    --border-subtle:  rgba(255, 255, 255, 0.08);
-    --border-strong:  rgba(255, 255, 255, 0.16);
-
-    --text-primary:   #ffffff;
-    --text-secondary: rgba(235, 235, 245, 0.72);
-    --text-tertiary:  rgba(235, 235, 245, 0.48);
-    --text-mono:      #ffffff;
-
-    --accent:         #0a84ff;
-    --success:        #30d158;
-    --warn:           #ff9f0a;
-    --error:          #ff453a;
-
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
-  }
-}
-
-/* Explicit overrides win over prefers-color-scheme. */
-:root[data-theme="light"] {
-  --bg-base:        #f2f2f7;
-  --bg-elevated:    #ffffff;
-  --surface-glass:  rgba(255, 255, 255, 0.72);
-  --surface-glass-strong: rgba(255, 255, 255, 0.86);
-  --border-subtle:  rgba(0, 0, 0, 0.08);
-  --border-strong:  rgba(0, 0, 0, 0.16);
-  --text-primary:   #1c1c1e;
-  --text-secondary: rgba(60, 60, 67, 0.72);
-  --text-tertiary:  rgba(60, 60, 67, 0.48);
-  --text-mono:      #1c1c1e;
-  --accent:         #007aff;
-  --success:        #34c759;
-  --warn:           #ff9500;
-  --error:          #ff3b30;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-}
-
-:root[data-theme="dark"] {
-  --bg-base:        #000000;
-  --bg-elevated:    #1c1c1e;
-  --surface-glass:  rgba(28, 28, 30, 0.72);
-  --surface-glass-strong: rgba(28, 28, 30, 0.86);
-  --border-subtle:  rgba(255, 255, 255, 0.08);
-  --border-strong:  rgba(255, 255, 255, 0.16);
-  --text-primary:   #ffffff;
-  --text-secondary: rgba(235, 235, 245, 0.72);
-  --text-tertiary:  rgba(235, 235, 245, 0.48);
-  --text-mono:      #ffffff;
-  --accent:         #0a84ff;
-  --success:        #30d158;
-  --warn:           #ff9f0a;
-  --error:          #ff453a;
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.6), 0 8px 24px rgba(0, 0, 0, 0.4);
 }

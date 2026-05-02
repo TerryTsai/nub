@@ -5,7 +5,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
 import { Card } from "@/components/Card";
-import { Page } from "./Hosts";
+import { Page } from "@/components/Page";
 
 const TAIL_LINES = 200;
 const MAX_LINES = 4000;
@@ -83,7 +83,7 @@ function LogPane({
     <div
       ref={paneRef}
       onScroll={onScroll}
-      className="mono text-xs overflow-auto bg-black/30 p-3 rounded-[var(--radius-md)]"
+      className="mono text-xs overflow-auto border border-[var(--border-subtle)] p-3 rounded-[var(--radius-md)]"
       style={{ maxHeight: "60vh", whiteSpace: "pre-wrap" }}
     >
       {lines.length === 0 ? (

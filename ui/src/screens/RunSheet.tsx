@@ -109,7 +109,7 @@ export function RunSheet({
     <Dialog.Root open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="sheet-overlay" />
-        <Dialog.Content className="sheet glass-strong">
+        <Dialog.Content className="sheet">
           <div className="sheet-handle" />
           <Dialog.Title className="text-xl font-semibold px-1">Run a container</Dialog.Title>
           <Dialog.Description className="sr-only">
