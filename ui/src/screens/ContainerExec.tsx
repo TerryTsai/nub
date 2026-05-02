@@ -3,9 +3,10 @@ import { useParams, useSearchParams } from "react-router-dom";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
-import { bidiStream, call, unwrap, type BidiStream, type Host } from "@/api/client";
+import { bidiStream, type BidiStream, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { useContainerName } from "@/state/containerName";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
@@ -21,18 +22,16 @@ export function ContainerExec() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [name, setName] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const termRef = useRef<HTMLDivElement>(null);
 
-  useTitle(host, cid, setName);
+  const containerName = useContainerName(host, cid);
   useExecTerminal(termRef, host, cid, cmd, !!session.session, setError);
 
   const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const containerName = name || cid?.slice(0, 12) || "?";
   const crumbs: Crumb[] = [
     hostCrumb,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
@@ -54,20 +53,6 @@ export function ContainerExec() {
 }
 
 // ---- Hooks --------------------------------------------------------------
-
-function useTitle(host: Host | undefined, cid: string | undefined, set: (n: string) => void) {
-  useEffect(() => {
-    if (!host || !cid) return;
-    let cancelled = false;
-    call(host, { op: "inspect_container", id: cid })
-      .then((r) => {
-        if (cancelled) return;
-        set(unwrap(r, "container_detail").data.name);
-      })
-      .catch(() => { /* keep id-as-title fallback */ });
-    return () => { cancelled = true; };
-  }, [host?.url, host?.token, cid, set]);
-}
 
 function useExecTerminal(
   ref: React.RefObject<HTMLDivElement | null>,

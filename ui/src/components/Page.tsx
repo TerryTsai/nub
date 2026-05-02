@@ -32,17 +32,19 @@ export function Page({
 }
 
 /** Renders the breadcrumb header. Lives in Layout; exported for Layout
- * only — pages never instantiate it directly. */
+ * only — pages never instantiate it directly.
+ *
+ * Position is `fixed` (not sticky) so it stays glued to the viewport
+ * regardless of how the document scrolls. Sticky on iOS Safari has
+ * intermittent offset bugs during scroll restoration; fixed avoids them.
+ *
+ * `top: env(safe-area-inset-top)` keeps the header below the notch —
+ * body already has matching safe-area padding so the notch region shows
+ * the body bg. */
 export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
   const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
-  // translateZ(0) puts the header on its own compositing layer so iOS
-  // Safari paints it cleanly over scrolling content rather than peek-
-  // through-flickering during the first frame of a route change.
   return (
-    <header
-      className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]"
-      style={{ transform: "translateZ(0)" }}
-    >
+    <header className="fixed top-[env(safe-area-inset-top)] left-0 right-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
       <div className="flex items-center h-11 px-5 gap-2">
         <NubMark />
         <nav className="flex items-center gap-1 min-w-0 text-xs">

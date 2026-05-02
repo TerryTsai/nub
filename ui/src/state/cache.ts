@@ -99,3 +99,9 @@ export function invalidate(key: string) {
   cache.delete(key);
   notify(key);
 }
+
+/** Read a cache entry without subscribing. Used by detail pages to seed a
+ * placeholder name from the parent list before the detail fetch lands. */
+export function peek<T>(key: string): T | null {
+  return read<T>(key).data;
+}

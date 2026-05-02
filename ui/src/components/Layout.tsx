@@ -39,23 +39,26 @@ export function usePageConfig(config: LayoutConfig) {
 /** Mounted once at app boot. Stays mounted across all route changes —
  * only the <Outlet/> swaps. Fixes the "header flickers / page goes black
  * for a moment" jank that comes from unmounting the chrome on every nav.
- */
+ *
+ * AppHeader is `position: fixed` (out of flow) so we reserve its height
+ * here as padding-top: 44px alone, 84px when a subnav row is present
+ * (44 header + 40 subnav). */
 export function Layout() {
   const [config, setConfig] = useState<LayoutConfig>({});
   const { crumbs, subnav, fab, fill } = config;
+  const padTop = subnav ? "pt-[84px]" : "pt-[44px]";
   return (
     <LayoutContext.Provider value={{ config, setConfig }}>
+      <AppHeader crumbs={crumbs} subnav={subnav} />
       {fill ? (
-        <div className="h-full flex flex-col overflow-hidden">
-          <AppHeader crumbs={crumbs} subnav={subnav} />
-          <main className="flex-1 min-h-0 flex flex-col">
+        <div className={`h-full overflow-hidden ${padTop}`}>
+          <main className="h-full flex flex-col">
             <Outlet />
           </main>
           {fab}
         </div>
       ) : (
-        <div className="min-h-full">
-          <AppHeader crumbs={crumbs} subnav={subnav} />
+        <div className={`min-h-full ${padTop}`}>
           <main className="max-w-2xl mx-auto px-5 pt-3 pb-24 flex flex-col gap-4">
             <Outlet />
           </main>

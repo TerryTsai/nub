@@ -4,8 +4,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { invalidate, useQuery } from "@/state/cache";
-import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
+import { invalidate, peek, useQuery } from "@/state/cache";
+import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
@@ -55,9 +55,13 @@ export function ContainerDetail() {
     return <Page><p>Unknown host.</p></Page>;
   }
 
+  const seedName = host && cid
+    ? peek<ContainerSummary[]>(`${host.url}:list_containers`)?.find((c) => c.id === cid)?.name
+    : undefined;
+  const displayName = detail?.name || seedName || cid?.slice(0, 12) || "?";
   const crumbs: Crumb[] = [
     hostCrumb,
-    { kind: "link", label: detail?.name || cid?.slice(0, 12) || "?" },
+    { kind: "link", label: displayName },
   ];
   const can = (op: string) => session.session?.can(op) ?? false;
   const denyReason = (op: string) =>
@@ -67,7 +71,7 @@ export function ContainerDetail() {
     <Page crumbs={crumbs}>
       <Heading
         category="Container"
-        title={detail?.name || cid?.slice(0, 12) || "?"}
+        title={displayName}
         right={detail && <StatusBadge status={detail.state} />}
       />
 

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { call, streamOp, unwrap, type Host } from "@/api/client";
+import { streamOp, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { useContainerName } from "@/state/containerName";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
@@ -29,16 +30,14 @@ export function ContainerStats() {
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [rates, setRates] = useState<Rates>({ rx_per_s: 0, tx_per_s: 0 });
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState<string | null>(null);
 
-  useTitle(host, cid, setName);
+  const containerName = useContainerName(host, cid);
   useStatsStream(host, cid, !!session.session, setSnap, setRates, setError);
 
   const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const containerName = name || cid?.slice(0, 12) || "?";
   const crumbs: Crumb[] = [
     hostCrumb,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
@@ -120,20 +119,6 @@ function formatBytes(n: number): string {
 }
 
 // ---- Hooks --------------------------------------------------------------
-
-function useTitle(host: Host | undefined, cid: string | undefined, set: (n: string) => void) {
-  useEffect(() => {
-    if (!host || !cid) return;
-    let cancelled = false;
-    call(host, { op: "inspect_container", id: cid })
-      .then((r) => {
-        if (cancelled) return;
-        set(unwrap(r, "container_detail").data.name);
-      })
-      .catch(() => { /* keep id-as-title fallback */ });
-    return () => { cancelled = true; };
-  }, [host?.url, host?.token, cid, set]);
-}
 
 function useStatsStream(
   host: Host | undefined,

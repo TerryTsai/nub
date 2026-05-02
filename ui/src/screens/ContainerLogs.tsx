@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { call, streamOp, unwrap, type Host } from "@/api/client";
+import { streamOp, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { useContainerName } from "@/state/containerName";
 import { Button } from "@/components/Button";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -25,9 +26,8 @@ export function ContainerLogs() {
   const [lines, setLines] = useState<Line[]>([]);
   const [follow, setFollow] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [name, setName] = useState<string | null>(null);
 
-  useTitle(host, cid, setName);
+  const containerName = useContainerName(host, cid);
   useStream(host, cid, follow, setLines, setError, !!session.session);
   const { paneRef, onScroll } = useAutoscroll(lines);
 
@@ -35,7 +35,6 @@ export function ContainerLogs() {
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const containerName = name || cid?.slice(0, 12) || "?";
   const crumbs: Crumb[] = [
     hostCrumb,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
@@ -97,21 +96,6 @@ function LogPane({
 }
 
 // ---- Hooks --------------------------------------------------------------
-
-function useTitle(host: Host | undefined, cid: string | undefined, set: (n: string) => void) {
-  useEffect(() => {
-    if (!host || !cid) return;
-    let cancelled = false;
-    call(host, { op: "inspect_container", id: cid })
-      .then((r) => {
-        if (cancelled) return;
-        const d = unwrap(r, "container_detail");
-        set(d.data.name);
-      })
-      .catch(() => { /* keep id-as-title fallback */ });
-    return () => { cancelled = true; };
-  }, [host?.url, host?.token, cid, set]);
-}
 
 function useStream(
   host: Host | undefined,
