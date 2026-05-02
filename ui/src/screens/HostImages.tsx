@@ -67,13 +67,15 @@ export function HostImages() {
   ) : undefined;
 
   const visible = images?.filter((i) => matchesImageFilter(i, filter)) ?? null;
-  const canPull = session.session?.can("pull_image") ?? false;
+  const canCreate =
+    (session.session?.can("pull_image") ?? false) ||
+    (session.session?.can("build_image") ?? false);
 
   return (
     <Page
       crumbs={crumbs}
       subnav={subnav}
-      fab={session.session && canPull ? <FAB to={`/h/${hid}/images/pull`} label="pull" /> : undefined}
+      fab={session.session && canCreate ? <FAB to={`/h/${hid}/images/create`} label="image" /> : undefined}
     >
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {images === null && !error && (

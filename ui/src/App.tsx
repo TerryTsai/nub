@@ -15,7 +15,7 @@ import { HostNetworks } from "./screens/HostNetworks";
 import { HostVolumes } from "./screens/HostVolumes";
 import { ImageDetail } from "./screens/ImageDetail";
 import { NetworkDetail } from "./screens/NetworkDetail";
-import { PullImage } from "./screens/PullImage";
+import { CreateImage } from "./screens/CreateImage";
 import { RunContainer } from "./screens/RunContainer";
 import { VolumeDetail } from "./screens/VolumeDetail";
 
@@ -35,7 +35,7 @@ export default function App() {
           <Route path="/add" element={<AddHost />} />
           <Route path="/h/:hid" element={<HostHome />} />
           <Route path="/h/:hid/images" element={<HostImages />} />
-          <Route path="/h/:hid/images/pull" element={<PullImage />} />
+          <Route path="/h/:hid/images/create" element={<CreateImage />} />
           <Route path="/h/:hid/images/:iid" element={<ImageDetail />} />
           <Route path="/h/:hid/volumes" element={<HostVolumes />} />
           <Route path="/h/:hid/volumes/:vname" element={<VolumeDetail />} />

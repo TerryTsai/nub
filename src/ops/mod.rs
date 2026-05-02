@@ -87,6 +87,11 @@ impl OpHandler for EngineHandler {
             Op::ListImages => unary(images::list::run(self).await, OpResult::Images),
             Op::RemoveImage { id, force } => unary(images::remove::run(self, id, force).await, ok),
             Op::PullImage { reference } => stream(images::pull::run(self, reference)),
+            Op::BuildImage {
+                dockerfile,
+                tag,
+                build_args,
+            } => stream(images::build::run(self, dockerfile, tag, build_args)),
 
             Op::ListVolumes => unary(volumes::list(self).await, OpResult::Volumes),
             Op::RemoveVolume { name, force } => unary(volumes::remove(self, name, force).await, ok),

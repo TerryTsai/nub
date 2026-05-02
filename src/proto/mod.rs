@@ -57,6 +57,15 @@ pub enum Op {
     PullImage {
         reference: String,
     },
+    BuildImage {
+        /// Filename inside the configured dockerfiles directory.
+        dockerfile: String,
+        /// Tag to apply to the built image, e.g. `nginx:dev`.
+        tag: String,
+        /// `--build-arg` values. Empty map is fine.
+        #[serde(default)]
+        build_args: std::collections::HashMap<String, String>,
+    },
 
     ListVolumes,
     RemoveVolume {
@@ -99,6 +108,7 @@ impl Op {
             Op::ListImages => "list_images",
             Op::RemoveImage { .. } => "remove_image",
             Op::PullImage { .. } => "pull_image",
+            Op::BuildImage { .. } => "build_image",
             Op::ListVolumes => "list_volumes",
             Op::RemoveVolume { .. } => "remove_volume",
             Op::ListNetworks => "list_networks",
@@ -179,6 +189,12 @@ pub enum StreamChunk {
         status: String,
         current: u64,
         total: u64,
+    },
+    BuildProgress {
+        /// Engine output line. Newline-terminated; UI concatenates as-is.
+        stream: String,
+        /// Final image ID (sha256:…) on the last `aux` chunk, otherwise None.
+        image_id: Option<String>,
     },
     End {
         ok: bool,

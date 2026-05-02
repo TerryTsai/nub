@@ -83,3 +83,56 @@ pub fn xdg_data_home() -> PathBuf {
 pub fn default_dockerfiles_dir() -> PathBuf {
     xdg_data_home().join("nub/dockerfiles")
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_flat_schema() {
+        let s = r#"
+            id   = "host1"
+            bind = "127.0.0.1:8080"
+            allowed_binds = ["/data/nub"]
+            dockerfiles = "/srv/nub/dockerfiles"
+        "#;
+        let cfg: Config = toml::from_str(s).unwrap();
+        assert_eq!(cfg.id.as_deref(), Some("host1"));
+        assert_eq!(cfg.bind.as_deref(), Some("127.0.0.1:8080"));
+        assert_eq!(cfg.allowed_binds, vec![PathBuf::from("/data/nub")]);
+        assert_eq!(cfg.dockerfiles, Some(PathBuf::from("/srv/nub/dockerfiles")));
+    }
+
+    #[test]
+    fn rejects_unknown_field() {
+        // The pre-0.0.10 `[engine]` and `[dockerfiles]` sections are now
+        // unknown keys; `deny_unknown_fields` makes that a load-time error
+        // rather than a silently-ignored stale section.
+        let s = r#"
+            id = "x"
+            [engine]
+            allowed_binds = []
+        "#;
+        let err = toml::from_str::<Config>(s).unwrap_err().to_string();
+        assert!(err.contains("unknown field"), "got: {err}");
+    }
+
+    #[test]
+    fn trust_allows_star_and_explicit() {
+        let t = TrustEntry {
+            id: "phone".into(),
+            token: "x".into(),
+            allowed: vec!["host_info".into(), "list_containers".into()],
+        };
+        assert!(t.allows("host_info"));
+        assert!(t.allows("list_containers"));
+        assert!(!t.allows("create_container"));
+
+        let admin = TrustEntry {
+            id: "admin".into(),
+            token: "x".into(),
+            allowed: vec!["*".into()],
+        };
+        assert!(admin.allows("anything"));
+    }
+}

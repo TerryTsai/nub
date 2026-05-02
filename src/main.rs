@@ -47,13 +47,22 @@ enum Cmd {
         #[arg(long)]
         force: bool,
     },
+    /// Remove nub's config and data directories ($XDG_CONFIG_HOME/nub
+    /// and $XDG_DATA_HOME/nub). The binary itself stays put.
+    Uninstall {
+        /// Skip the confirmation prompt.
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 fn main() -> Result<()> {
     init_tracing()?;
     let args = Args::parse();
-    if let Some(Cmd::Init { path, force }) = args.cmd {
-        return init::run(path, force);
+    match args.cmd {
+        Some(Cmd::Init { path, force }) => return init::run(path, force),
+        Some(Cmd::Uninstall { yes }) => return init::uninstall(yes),
+        None => {}
     }
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()

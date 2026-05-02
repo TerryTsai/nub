@@ -14,6 +14,7 @@ export type Op =
   | { op: "list_images" }
   | { op: "remove_image"; id: string; force?: boolean }
   | { op: "pull_image"; reference: string }
+  | { op: "build_image"; dockerfile: string; tag: string; build_args: Record<string, string> }
   | { op: "list_volumes" }
   | { op: "remove_volume"; name: string; force?: boolean }
   | { op: "list_networks" }
@@ -96,6 +97,7 @@ export type StreamChunk =
   | { type: "stdin"; data: string }
   | { type: "stdin_close" }
   | { type: "pull_progress"; id: string; status: string; current: number; total: number }
+  | { type: "build_progress"; stream: string; image_id: string | null }
   | { type: "end"; ok: boolean; err: string | null };
 
 // Frame (internally tagged with `kind`).

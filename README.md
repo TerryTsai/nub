@@ -163,13 +163,13 @@ Replies come back framed:
 - **Containers** — `list_containers`, `inspect_container`, `container_action`
   (start / stop / restart / kill / remove), `create_container`, `stream_logs`,
   `stream_stats`, `exec`
-- **Images** — `list_images`, `remove_image`, `pull_image` (streams progress)
+- **Images** — `list_images`, `remove_image`, `pull_image` (streams progress),
+  `build_image` (streams /build progress; reads a stored Dockerfile, applies a tag)
 - **Volumes** — `list_volumes`, `remove_volume`
 - **Networks** — `list_networks`, `remove_network`
 - **Dockerfiles** — `list_dockerfiles`, `read_dockerfile`, `write_dockerfile`,
   `delete_dockerfile` (CRUD on text files in a configured flat directory; not
-  compose, not orchestration — just stored build inputs for a future
-  `build_image` op)
+  compose, not orchestration — just stored build inputs for `build_image`)
 
 ## Configuration
 
@@ -232,8 +232,9 @@ phone client to authorize.
 | Config file | `$XDG_CONFIG_HOME/nub/nub.toml` | `--config <path>` or any of the lookup paths above |
 | Dockerfiles directory | `$XDG_DATA_HOME/nub/dockerfiles` | `dockerfiles = "<path>"` in the config |
 
-To wipe all nub state on a host: `rm -rf ~/.config/nub ~/.local/share/nub`
-(adjust if `$XDG_*_HOME` differ from the defaults).
+To wipe all nub state on a host, run `nub uninstall` (prompts for
+confirmation; pass `--yes` to skip). The binary itself stays put — `rm
+/usr/local/bin/nub` if you also want the binary gone.
 
 ## Security
 

@@ -123,7 +123,7 @@ fn entry_path(h: &EngineHandler, name: &str) -> Result<PathBuf> {
 /// Allow a deliberately small character set: letters, digits, `.`, `_`, `-`.
 /// Bans path separators, parent-dir traversal, leading dot/hyphen, and any
 /// embedded NULs. Length capped to keep filesystems happy.
-fn valid_name(name: &str) -> bool {
+pub(super) fn valid_name(name: &str) -> bool {
     if name.is_empty() || name.len() > 128 {
         return false;
     }
@@ -192,6 +192,20 @@ mod tests {
         assert!(!valid_name("a\0b"));
         assert!(!valid_name("x y"));
         assert!(!valid_name(&"a".repeat(129)));
+    }
+
+    #[test]
+    fn valid_name_accepts_leading_digit_and_max_length() {
+        assert!(valid_name("1nginx"));
+        assert!(valid_name("9up"));
+        // Exact boundary at 128 chars.
+        assert!(valid_name(&"a".repeat(128)));
+    }
+
+    #[test]
+    fn valid_name_rejects_unicode() {
+        assert!(!valid_name("café"));
+        assert!(!valid_name("nginx™"));
     }
 
     #[test]

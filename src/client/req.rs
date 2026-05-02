@@ -49,6 +49,12 @@ impl Req {
         Ok(self)
     }
 
+    pub(crate) fn bytes(mut self, content_type: &'static str, body: Bytes) -> Self {
+        self.body = Body::Bytes(body);
+        self.content_type = Some(content_type);
+        self
+    }
+
     #[allow(dead_code)]
     pub(crate) fn header(mut self, name: HeaderName, value: HeaderValue) -> Self {
         self.extra_headers.push((name, value));
