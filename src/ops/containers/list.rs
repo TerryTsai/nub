@@ -39,7 +39,10 @@ fn query(all: bool) -> String {
 
 /// Field set is the union of compat and libpod shapes; both use PascalCase
 /// so a single struct decodes both. `Created` differs (Unix int vs ISO
-/// string) so we accept either via `serde_json::Value`.
+/// string) so we accept either via `serde_json::Value`. ExitCode comes from
+/// libpod; Docker compat omits it on the list response (defaults to 0,
+/// which falls into the "Stopped" bucket — accept the loss of fidelity
+/// rather than parsing the free-form Status string).
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct RawListItem {
@@ -55,6 +58,8 @@ struct RawListItem {
     status: String,
     #[serde(default)]
     created: serde_json::Value,
+    #[serde(default)]
+    exit_code: i32,
 }
 
 impl RawListItem {
@@ -66,6 +71,7 @@ impl RawListItem {
             state: self.state,
             status: self.status,
             created: created_to_string(self.created),
+            exit_code: self.exit_code,
         }
     }
 }

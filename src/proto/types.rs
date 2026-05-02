@@ -31,6 +31,9 @@ pub struct ContainerSummary {
     /// ISO 8601 string from libpod, or Unix-as-string from compat. Wire-stable
     /// across both engines without forcing nub to do timestamp math.
     pub created: String,
+    /// Last exit code. 0 by default — also when the container hasn't exited or
+    /// when the engine doesn't include the field on the list response.
+    pub exit_code: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -101,6 +104,25 @@ pub struct VolumeSummary {
     pub mountpoint: String,
     pub created_at: String,
     pub scope: String,
+    /// True if at least one container (running or stopped) mounts this volume.
+    pub in_use: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DockerfileSummary {
+    pub name: String,
+    /// File size in bytes.
+    pub size: u64,
+    /// ISO 8601 mtime, or empty when the FS doesn't expose one.
+    pub modified_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DockerfileContent {
+    pub name: String,
+    pub content: String,
+    pub size: u64,
+    pub modified_at: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -111,4 +133,6 @@ pub struct NetworkSummary {
     pub scope: String,
     pub created: String,
     pub internal: bool,
+    /// True if at least one container (running or stopped) is attached.
+    pub in_use: bool,
 }

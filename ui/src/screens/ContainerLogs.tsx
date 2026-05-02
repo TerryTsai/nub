@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { streamOp, type Host } from "@/api/client";
+import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
+import { useResilientStream } from "@/state/resilientStream";
 import { Button } from "@/components/Button";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -25,10 +26,15 @@ export function ContainerLogs() {
 
   const [lines, setLines] = useState<Line[]>([]);
   const [follow, setFollow] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const containerName = useContainerName(host, cid);
-  useStream(host, cid, follow, setLines, setError, !!session.session);
+  const op = host && cid && session.session && follow
+    ? ({ op: "stream_logs" as const, id: cid, follow: true, tail: TAIL_LINES })
+    : null;
+  const { state: connState, error } = useResilientStream(host, op, (chunk) => {
+    if (chunk.type !== "log") return;
+    setLines((prev) => prev.concat({ stderr: chunk.stderr, data: chunk.data }).slice(-MAX_LINES));
+  });
   const { paneRef, onScroll } = useAutoscroll(lines);
 
   const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
@@ -44,7 +50,7 @@ export function ContainerLogs() {
   const subnav = (
     <>
       <span className="text-[11px] text-[var(--text-tertiary)] mr-auto truncate">
-        {containerName}
+        {connState === "reconnecting" ? "reconnecting…" : containerName}
       </span>
       <Button size="sm" variant={follow ? "primary" : "ghost"} onClick={() => setFollow((f) => !f)}>
         {follow ? "pause" : "follow"}
@@ -96,31 +102,6 @@ function LogPane({
 }
 
 // ---- Hooks --------------------------------------------------------------
-
-function useStream(
-  host: Host | undefined,
-  cid: string | undefined,
-  follow: boolean,
-  setLines: React.Dispatch<React.SetStateAction<Line[]>>,
-  setError: (e: string | null) => void,
-  ready: boolean,
-) {
-  useEffect(() => {
-    if (!host || !cid || !follow || !ready) return;
-    setError(null);
-    const controller = new AbortController();
-    streamOp(
-      host,
-      { op: "stream_logs", id: cid, follow: true, tail: TAIL_LINES },
-      (chunk) => {
-        if (chunk.type !== "log") return;
-        setLines((prev) => prev.concat({ stderr: chunk.stderr, data: chunk.data }).slice(-MAX_LINES));
-      },
-      controller.signal,
-    ).catch((e) => setError((e as Error).message));
-    return () => controller.abort();
-  }, [host?.url, host?.token, cid, follow, ready, setLines, setError]);
-}
 
 function useAutoscroll(lines: Line[]) {
   const paneRef = useRef<HTMLDivElement>(null);

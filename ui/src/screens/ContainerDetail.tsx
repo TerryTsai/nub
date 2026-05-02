@@ -6,6 +6,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
+import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
@@ -72,7 +73,7 @@ export function ContainerDetail() {
       <Heading
         category="Container"
         title={displayName}
-        right={detail && <StatusBadge status={detail.state} />}
+        right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code)} />}
       />
 
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}

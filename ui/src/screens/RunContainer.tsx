@@ -3,20 +3,16 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { SEEDED_TEMPLATES, type Template } from "@/state/templates";
-import type { PortPublish, RestartPolicySpec } from "@/api/types";
+import { useQuery } from "@/state/cache";
+import type { ImageSummary, PortPublish, RestartPolicySpec } from "@/api/types";
 import { Button } from "@/components/Button";
+import { Combobox } from "@/components/Combobox";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
+import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
 import { Section } from "@/components/Section";
-
-type LayerProgress = { status: string; current: number; total: number };
-interface PullState {
-  layers: Record<string, LayerProgress>;
-  lastStatus: string;
-}
 
 interface FormState {
   image: string;
@@ -49,22 +45,17 @@ export function RunContainer() {
   const [error, setError] = useState<string | null>(null);
   const [pull, setPull] = useState<PullState | null>(null);
 
+  const imagesKey = host && session.session ? `${host.url}:list_images` : null;
+  const { data: images } = useQuery<ImageSummary[]>(imagesKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_images" }), "images");
+    return r.data;
+  });
+  const localTags = imageTags(images);
+
   const denyReason =
     session.session && !session.session.can("create_container")
       ? "your token doesn't allow create_container"
       : undefined;
-
-  function applyTemplate(t: Template) {
-    setForm({
-      image: t.image,
-      name: t.containerName ?? "",
-      ports: [...t.ports],
-      env: [...t.env],
-      restart: t.restart ?? { kind: "unless_stopped" },
-      start: true,
-    });
-    setError(null);
-  }
 
   async function onRun(e: React.FormEvent) {
     if (!host) return;
@@ -73,19 +64,15 @@ export function RunContainer() {
     setError(null);
     const image = form.image.trim();
     try {
-      // Pull first — Podman's compat API doesn't auto-pull on create, and
-      // showing progress is better UX than a silent hang.
-      setPull({ layers: {}, lastStatus: "starting pull…" });
-      await streamOp(host, { op: "pull_image", reference: image }, (chunk) => {
-        if (chunk.type !== "pull_progress") return;
-        setPull((prev) => {
-          const layers = { ...(prev?.layers ?? {}) };
-          if (chunk.id) {
-            layers[chunk.id] = { status: chunk.status, current: chunk.current, total: chunk.total };
-          }
-          return { layers, lastStatus: chunk.status || prev?.lastStatus || "" };
+      // Pull only if the image isn't already local. Podman's compat API
+      // doesn't auto-pull on create, and a silent stall on a missing
+      // image looks like a hang.
+      if (!localTags.has(image)) {
+        setPull({ layers: {}, lastStatus: "starting pull…" });
+        await streamOp(host, { op: "pull_image", reference: image }, (chunk) => {
+          setPull((prev) => reducePull(prev ?? { layers: {}, lastStatus: "" }, chunk));
         });
-      });
+      }
       const r = unwrap(
         await call(host, {
           op: "create_container",
@@ -121,37 +108,24 @@ export function RunContainer() {
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
-      <Section label="Templates">
-        <div className="-mx-5 px-5 overflow-x-auto">
-          <div className="flex gap-2 pb-1">
-            {SEEDED_TEMPLATES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => applyTemplate(t)}
-                className="template-chip"
-              >
-                <div className="text-xs font-medium">{t.name}</div>
-                <div className="text-[11px] text-[var(--text-tertiary)] mono truncate">{t.image}</div>
-              </button>
-            ))}
-          </div>
-        </div>
-      </Section>
-
       <form onSubmit={onRun} className="contents">
         <Section label="Container">
-          <Field label="Image" hint="e.g. nginx:alpine, postgres:16, ghcr.io/...">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="image:tag"
+          <Field
+            label="Image"
+            hint={
+              localTags.size > 0
+                ? "pick a pulled image, or type a reference (will pull on create)"
+                : "e.g. nginx:alpine, postgres:16, ghcr.io/..."
+            }
+          >
+            <Combobox
               value={form.image}
-              onChange={(e) => setForm({ ...form, image: e.target.value })}
-              required
+              onChange={(v) => setForm({ ...form, image: v })}
+              placeholder="image:tag"
+              freeText
+              freeTextHint="type or pick"
+              mono
+              options={Array.from(localTags).sort().map((t) => ({ value: t }))}
             />
           </Field>
           <Field label="Name" hint="optional — engine auto-names if blank">
@@ -224,6 +198,15 @@ export function RunContainer() {
       </form>
     </Page>
   );
+}
+
+function imageTags(images: ImageSummary[] | null): Set<string> {
+  const out = new Set<string>();
+  if (!images) return out;
+  for (const i of images) {
+    if (i.repo_tag && !i.repo_tag.startsWith("<none>")) out.add(i.repo_tag);
+  }
+  return out;
 }
 
 function PairList({
@@ -332,25 +315,3 @@ function RestartPicker({
   );
 }
 
-function PullProgress({ pull }: { pull: PullState }) {
-  const layers = Object.entries(pull.layers);
-  return (
-    <div className="text-xs flex flex-col gap-2">
-      <div className="text-[var(--text-secondary)]">{pull.lastStatus || "pulling…"}</div>
-      {layers.length > 0 && (
-        <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
-          {layers.map(([id, p]) => {
-            const pct = p.total > 0 ? Math.min(100, Math.round((p.current / p.total) * 100)) : null;
-            return (
-              <div key={id} className="flex items-center gap-2">
-                <span className="mono text-[var(--text-tertiary)] w-16 truncate">{id.slice(0, 12)}</span>
-                <span className="flex-1 truncate">{p.status}</span>
-                {pct !== null && <span className="mono text-[var(--text-tertiary)]">{pct}%</span>}
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}

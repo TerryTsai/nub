@@ -1,0 +1,133 @@
+import { useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { call, unwrap, type Host } from "@/api/client";
+import type { ImageSummary } from "@/api/types";
+import { useHosts } from "@/state/hosts";
+import { useSession } from "@/state/session";
+import { invalidate, useQuery } from "@/state/cache";
+import { imageStatus } from "@/state/status";
+import { Button } from "@/components/Button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Heading } from "@/components/Heading";
+import { useHostCrumb } from "@/components/HostCrumbs";
+import { Page, type Crumb } from "@/components/Page";
+import { Row } from "@/components/Row";
+import { Section } from "@/components/Section";
+import { StatusBadge } from "@/components/StatusBadge";
+
+export function ImageDetail() {
+  const { hid, iid } = useParams<{ hid: string; iid: string }>();
+  const nav = useNavigate();
+  const { hosts } = useHosts();
+  const saved = hosts.find((h) => h.hid === hid);
+  const host: Host | undefined = saved && { url: saved.url, token: saved.token };
+  const session = useSession(host);
+
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const queryKey = host && session.session ? `${host.url}:list_images` : null;
+  const { data: images } = useQuery<ImageSummary[]>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_images" }), "images");
+    return r.data;
+  });
+  const image = images?.find((i) => i.id === iid);
+
+  async function onRemove(force: boolean) {
+    if (!host || !iid) return;
+    setPending(true);
+    setError(null);
+    try {
+      unwrap(await call(host, { op: "remove_image", id: iid, force }), "ok");
+      if (queryKey) invalidate(queryKey);
+      nav(`/h/${hid}/images`, { replace: true });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+
+  if (!saved) return <Page><p>Unknown host.</p></Page>;
+
+  const title = image?.repo_tag && !image.repo_tag.startsWith("<none>") ? image.repo_tag : iid ?? "?";
+  const crumbs: Crumb[] = [
+    hostCrumb,
+    { kind: "link", label: "images", to: `/h/${hid}/images` },
+    { kind: "link", label: title },
+  ];
+  const denyReason =
+    session.session && !session.session.can("remove_image")
+      ? "your token doesn't allow remove_image"
+      : undefined;
+
+  return (
+    <Page crumbs={crumbs}>
+      <Heading
+        category="Image"
+        title={title}
+        right={image && <StatusBadge status={imageStatus(image.containers)} />}
+      />
+
+      {!image && session.session && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+      )}
+
+      {image && (
+        <>
+          <Section>
+            <div className="flex flex-col gap-2">
+              <Row label="ID" value={image.id} mono />
+              <Row label="Tag" value={image.repo_tag} mono />
+              <Row label="Size" value={formatBytes(image.size)} />
+              <Row label="Created" value={formatTimestamp(image.created)} />
+              <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
+            </div>
+          </Section>
+
+          <Section label="Actions">
+            <Button
+              variant="destructive"
+              disallowReason={denyReason}
+              disabled={pending}
+              onClick={() => setConfirmOpen(true)}
+            >
+              {pending ? "…" : "Remove"}
+            </Button>
+            {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+          </Section>
+
+          <ConfirmDialog
+            open={confirmOpen}
+            onOpenChange={setConfirmOpen}
+            title={`Remove ${title}?`}
+            description={image.containers > 0
+              ? `In use by ${image.containers} container${image.containers === 1 ? "" : "s"}. Remove with force?`
+              : "This will delete the image."}
+            confirmLabel={image.containers > 0 ? "Force remove" : "Remove"}
+            destructive
+            onConfirm={() => onRemove(image.containers > 0)}
+          />
+        </>
+      )}
+    </Page>
+  );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let v = n / 1024;
+  for (const u of units) {
+    if (v < 1024) return `${v.toFixed(v < 10 ? 1 : 0)} ${u}`;
+    v /= 1024;
+  }
+  return `${v.toFixed(0)} PB`;
+}
+
+function formatTimestamp(secs: number): string {
+  return new Date(secs * 1000).toISOString().replace("T", " ").replace(/\.\d+Z$/, "Z");
+}

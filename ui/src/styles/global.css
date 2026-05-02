@@ -120,21 +120,6 @@ input, textarea, select, button {
   padding: 3px 10px;
 }
 
-/* Template chips (horizontal scroll in RunContainer) */
-.template-chip {
-  flex-shrink: 0;
-  background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 8px 10px;
-  text-align: left;
-  min-width: 140px;
-  max-width: 200px;
-  cursor: pointer;
-  transition: border-color 0.15s var(--ease-out);
-}
-.template-chip:active { border-color: var(--accent); }
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -147,9 +132,9 @@ input, textarea, select, button {
   border: 0;
 }
 
-/* Container state dots — colors map to docker container states.
- * `running` is healthy (emerald), exited/dead are bad (red), in-flight states
- * are warn (amber), pre-running is muted. */
+/* Status dots — four universal tones. Same color always means the same
+ * thing across entity types. Mapping from raw entity state to tone +
+ * label lives in `state/status.ts`. */
 .dot {
   display: inline-block;
   width: 6px;
@@ -157,11 +142,10 @@ input, textarea, select, button {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot-running, .dot-active { background: var(--success); }
-.dot-paused, .dot-restarting, .dot-claimed { background: var(--warn); }
-.dot-exited, .dot-dead, .dot-failed { background: var(--error); }
-.dot-created, .dot-removing, .dot-cancelled, .dot-archived { background: var(--text-tertiary); }
-.dot-opened, .dot-running-status { background: var(--accent); }
+.dot-active  { background: var(--success); }       /* engaged / running / in use */
+.dot-pending { background: var(--warn); }          /* in-flight transition */
+.dot-failed  { background: var(--error); }         /* broken, dead, errored */
+.dot-idle    { background: var(--text-tertiary); } /* exists but not engaged */
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }

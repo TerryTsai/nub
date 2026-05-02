@@ -3,33 +3,29 @@ use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
 fn auto_paths() -> Vec<PathBuf> {
-    let mut out = Vec::with_capacity(3);
-    if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
-        out.push(PathBuf::from(x).join("nub/nub.toml"));
-    } else if let Some(h) = std::env::var_os("HOME") {
-        out.push(PathBuf::from(h).join(".config/nub/nub.toml"));
-    }
-    out.push(PathBuf::from("./nub.toml"));
-    out.push(PathBuf::from("/etc/nub/config.toml"));
-    out
+    vec![
+        xdg_config_home().join("nub/nub.toml"),
+        PathBuf::from("./nub.toml"),
+        PathBuf::from("/etc/nub/config.toml"),
+    ]
 }
 
 #[derive(Debug, Default, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub id: Option<String>,
     pub bind: Option<String>,
     pub tls_cert: Option<PathBuf>,
     pub tls_key: Option<PathBuf>,
-    #[serde(default)]
-    pub engine: Engine,
-    #[serde(default)]
-    pub trust: Vec<TrustEntry>,
-}
-
-#[derive(Debug, Default, Deserialize)]
-pub struct Engine {
+    /// Host paths permitted as bind-mount sources in CreateContainer.
+    /// Empty (default) = no host bind mounts allowed.
     #[serde(default)]
     pub allowed_binds: Vec<PathBuf>,
+    /// Flat directory holding Dockerfile text files. When unset, falls
+    /// back to `$XDG_DATA_HOME/nub/dockerfiles` (created on first write).
+    pub dockerfiles: Option<PathBuf>,
+    #[serde(default)]
+    pub trust: Vec<TrustEntry>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -59,4 +55,31 @@ impl Config {
         let cfg: Config = toml::from_str(&s).with_context(|| format!("parsing {}", path.display()))?;
         Ok(Some(cfg))
     }
+}
+
+/// `$XDG_CONFIG_HOME` if set, else `$HOME/.config`, else `./.config`.
+pub fn xdg_config_home() -> PathBuf {
+    if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
+        return PathBuf::from(x);
+    }
+    if let Some(h) = std::env::var_os("HOME") {
+        return PathBuf::from(h).join(".config");
+    }
+    PathBuf::from(".config")
+}
+
+/// `$XDG_DATA_HOME` if set, else `$HOME/.local/share`, else `./.local/share`.
+pub fn xdg_data_home() -> PathBuf {
+    if let Some(x) = std::env::var_os("XDG_DATA_HOME") {
+        return PathBuf::from(x);
+    }
+    if let Some(h) = std::env::var_os("HOME") {
+        return PathBuf::from(h).join(".local/share");
+    }
+    PathBuf::from(".local/share")
+}
+
+/// Default dockerfiles directory: `$XDG_DATA_HOME/nub/dockerfiles`.
+pub fn default_dockerfiles_dir() -> PathBuf {
+    xdg_data_home().join("nub/dockerfiles")
 }

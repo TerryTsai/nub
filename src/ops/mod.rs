@@ -3,9 +3,11 @@
 //! No middle layer between proto and the socket.
 
 mod containers;
+mod dockerfiles;
 mod host;
 mod images;
 mod networks;
+mod usage;
 mod volumes;
 
 use std::path::PathBuf;
@@ -38,12 +40,15 @@ pub fn closed_input() -> mpsc::Receiver<StreamChunk> {
     rx
 }
 
-/// Security policy applied at op boundaries. Currently only constrains
-/// container creation.
+/// Security policy applied at op boundaries. Currently constrains
+/// container creation and locates the dockerfiles directory.
 pub struct Policy {
     /// Host paths permitted as bind-mount sources in CreateContainer.
     /// Empty = no host bind mounts allowed.
     pub allowed_binds: Vec<PathBuf>,
+    /// Flat directory holding Dockerfile text files. Always set — the
+    /// caller resolves it (config override or XDG default).
+    pub dockerfiles_root: PathBuf,
 }
 
 pub struct EngineHandler {
@@ -88,6 +93,11 @@ impl OpHandler for EngineHandler {
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
             Op::RemoveNetwork { id } => unary(networks::remove(self, id).await, ok),
+
+            Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),
+            Op::ReadDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),
+            Op::WriteDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
+            Op::DeleteDockerfile { name } => unary(dockerfiles::delete(self, &name).await, ok),
         }
     }
 }

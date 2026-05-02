@@ -69,6 +69,18 @@ pub enum Op {
     RemoveNetwork {
         id: String,
     },
+
+    ListDockerfiles,
+    ReadDockerfile {
+        name: String,
+    },
+    WriteDockerfile {
+        name: String,
+        content: String,
+    },
+    DeleteDockerfile {
+        name: String,
+    },
 }
 
 impl Op {
@@ -91,6 +103,10 @@ impl Op {
             Op::RemoveVolume { .. } => "remove_volume",
             Op::ListNetworks => "list_networks",
             Op::RemoveNetwork { .. } => "remove_network",
+            Op::ListDockerfiles => "list_dockerfiles",
+            Op::ReadDockerfile { .. } => "read_dockerfile",
+            Op::WriteDockerfile { .. } => "write_dockerfile",
+            Op::DeleteDockerfile { .. } => "delete_dockerfile",
         }
     }
 }
@@ -130,6 +146,8 @@ pub enum OpResult {
     Volumes(Vec<VolumeSummary>),
     Networks(Vec<NetworkSummary>),
     ContainerCreated(ContainerCreated),
+    Dockerfiles(Vec<DockerfileSummary>),
+    Dockerfile(DockerfileContent),
     Ok,
     StreamStarted,
     Err { message: String },

@@ -8,9 +8,18 @@ use serde::Deserialize;
 use crate::client::{short_id, EngineKind, Req};
 use crate::proto::NetworkSummary;
 
+use super::usage;
 use super::EngineHandler;
 
 pub(super) async fn list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
+    let (mut nets, used) = tokio::try_join!(fetch_list(h), usage::compute(h))?;
+    for n in &mut nets {
+        n.in_use = used.networks.contains(&n.name);
+    }
+    Ok(nets)
+}
+
+async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
     match h.engine.kind() {
         EngineKind::Podman => list_libpod(h).await,
         EngineKind::Docker => list_compat(h).await,
@@ -76,6 +85,8 @@ impl CompatNet {
             scope: self.scope,
             created: self.created,
             internal: self.internal,
+            // Filled in by `list()` after joining with the usage probe.
+            in_use: false,
         }
     }
 }
@@ -105,6 +116,7 @@ impl LibpodNet {
             scope: String::new(),
             created: self.created,
             internal: self.internal,
+            in_use: false,
         }
     }
 }

@@ -4,6 +4,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useQuery } from "@/state/cache";
 import type { ContainerSummary } from "@/api/types";
+import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
@@ -130,7 +131,7 @@ function ContainerList({
           <ListRow
             title={c.name || "(unnamed)"}
             subtitle={`${c.image} · ${c.status}`}
-            status={c.state}
+            status={containerStatus(c.state, c.exit_code)}
             onPress={() => onPick(c.id)}
           />
         </div>

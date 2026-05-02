@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { streamOp, type Host } from "@/api/client";
+import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
+import { useResilientStream } from "@/state/resilientStream";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
+import { Sparkline } from "@/components/Sparkline";
+
+const HISTORY = 60;
 
 interface Snapshot {
   cpu_pct: number;
@@ -20,6 +24,11 @@ interface Rates {
   tx_per_s: number;
 }
 
+interface History {
+  cpu: number[];
+  mem: number[];
+}
+
 export function ContainerStats() {
   const { hid, cid } = useParams<{ hid: string; cid: string }>();
   const { hosts } = useHosts();
@@ -29,10 +38,36 @@ export function ContainerStats() {
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [rates, setRates] = useState<Rates>({ rx_per_s: 0, tx_per_s: 0 });
-  const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<History>({ cpu: [], mem: [] });
+  const lastRef = useRef<{ rx: number; tx: number; t: number } | null>(null);
 
   const containerName = useContainerName(host, cid);
-  useStatsStream(host, cid, !!session.session, setSnap, setRates, setError);
+  const op = host && cid && session.session ? ({ op: "stream_stats" as const, id: cid }) : null;
+  const { state: connState, error } = useResilientStream(host, op, (chunk) => {
+    if (chunk.type !== "stats") return;
+    const now = performance.now();
+    const prev = lastRef.current;
+    if (prev) {
+      const dt = (now - prev.t) / 1000;
+      setRates({
+        rx_per_s: dt > 0 ? Math.max(0, (chunk.net_rx - prev.rx) / dt) : 0,
+        tx_per_s: dt > 0 ? Math.max(0, (chunk.net_tx - prev.tx) / dt) : 0,
+      });
+    }
+    lastRef.current = { rx: chunk.net_rx, tx: chunk.net_tx, t: now };
+    setSnap({
+      cpu_pct: chunk.cpu_pct,
+      mem_used: chunk.mem_used,
+      mem_limit: chunk.mem_limit,
+      net_rx: chunk.net_rx,
+      net_tx: chunk.net_tx,
+    });
+    const memPct = chunk.mem_limit > 0 ? (chunk.mem_used / chunk.mem_limit) * 100 : 0;
+    setHistory((h) => ({
+      cpu: append(h.cpu, chunk.cpu_pct),
+      mem: append(h.mem, memPct),
+    }));
+  });
 
   const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
 
@@ -45,7 +80,9 @@ export function ContainerStats() {
   ];
 
   const subnav = (
-    <span className="text-[11px] text-[var(--text-tertiary)] truncate">{containerName}</span>
+    <span className="text-[11px] text-[var(--text-tertiary)] truncate">
+      {connState === "reconnecting" ? "reconnecting…" : containerName}
+    </span>
   );
 
   return (
@@ -53,23 +90,29 @@ export function ContainerStats() {
       <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
         {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
-        {snap && <StatsView snap={snap} rates={rates} />}
+        {snap && <StatsView snap={snap} rates={rates} history={history} />}
       </div>
     </Page>
   );
 }
 
-function StatsView({ snap, rates }: { snap: Snapshot; rates: Rates }) {
+function StatsView({ snap, rates, history }: { snap: Snapshot; rates: Rates; history: History }) {
   const memPct = snap.mem_limit > 0 ? (snap.mem_used / snap.mem_limit) * 100 : 0;
   return (
     <div className="flex flex-col gap-4">
-      <BigNumber label="CPU" value={`${snap.cpu_pct.toFixed(1)}%`} />
-      <Bar
-        label="Memory"
-        primary={`${formatBytes(snap.mem_used)} / ${formatBytes(snap.mem_limit)}`}
-        secondary={`${memPct.toFixed(1)}%`}
-        pct={memPct}
-      />
+      <div className="flex flex-col gap-1">
+        <BigNumber label="CPU" value={`${snap.cpu_pct.toFixed(1)}%`} />
+        <Sparkline values={history.cpu} max={100} capacity={HISTORY} />
+      </div>
+      <div className="flex flex-col gap-1">
+        <Bar
+          label="Memory"
+          primary={`${formatBytes(snap.mem_used)} / ${formatBytes(snap.mem_limit)}`}
+          secondary={`${memPct.toFixed(1)}%`}
+          pct={memPct}
+        />
+        <Sparkline values={history.mem} max={100} capacity={HISTORY} />
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <BigNumber label="Net rx/s" value={formatBytes(rates.rx_per_s)} />
         <BigNumber label="Net tx/s" value={formatBytes(rates.tx_per_s)} />
@@ -118,48 +161,8 @@ function formatBytes(n: number): string {
   return `${v.toFixed(0)} PB`;
 }
 
-// ---- Hooks --------------------------------------------------------------
-
-function useStatsStream(
-  host: Host | undefined,
-  cid: string | undefined,
-  ready: boolean,
-  setSnap: (s: Snapshot) => void,
-  setRates: (r: Rates) => void,
-  setError: (e: string | null) => void,
-) {
-  const lastRef = useRef<{ rx: number; tx: number; t: number } | null>(null);
-
-  useEffect(() => {
-    if (!host || !cid || !ready) return;
-    setError(null);
-    lastRef.current = null;
-    const controller = new AbortController();
-    streamOp(
-      host,
-      { op: "stream_stats", id: cid },
-      (chunk) => {
-        if (chunk.type !== "stats") return;
-        const now = performance.now();
-        const prev = lastRef.current;
-        if (prev) {
-          const dt = (now - prev.t) / 1000;
-          setRates({
-            rx_per_s: dt > 0 ? Math.max(0, (chunk.net_rx - prev.rx) / dt) : 0,
-            tx_per_s: dt > 0 ? Math.max(0, (chunk.net_tx - prev.tx) / dt) : 0,
-          });
-        }
-        lastRef.current = { rx: chunk.net_rx, tx: chunk.net_tx, t: now };
-        setSnap({
-          cpu_pct: chunk.cpu_pct,
-          mem_used: chunk.mem_used,
-          mem_limit: chunk.mem_limit,
-          net_rx: chunk.net_rx,
-          net_tx: chunk.net_tx,
-        });
-      },
-      controller.signal,
-    ).catch((e) => setError((e as Error).message));
-    return () => controller.abort();
-  }, [host?.url, host?.token, cid, ready, setSnap, setRates, setError]);
+function append(buf: number[], v: number): number[] {
+  const next = buf.length >= HISTORY ? buf.slice(1) : buf.slice();
+  next.push(v);
+  return next;
 }

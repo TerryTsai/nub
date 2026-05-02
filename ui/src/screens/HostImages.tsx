@@ -1,11 +1,11 @@
-import { useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { invalidate, useQuery } from "@/state/cache";
-import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useQuery } from "@/state/cache";
+import { imageStatus } from "@/state/status";
+import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
@@ -30,13 +30,12 @@ function matchesImageFilter(img: ImageSummary, f: ImageFilter): boolean {
 
 export function HostImages() {
   const { hid } = useParams<{ hid: string }>();
+  const nav = useNavigate();
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [pending, setPending] = useState<ImageSummary | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const filter = asImageFilter(params.get("filter"));
   const setFilter = (v: ImageFilter) => {
@@ -45,22 +44,10 @@ export function HostImages() {
   };
 
   const queryKey = host && session.session ? `${host.url}:list_images` : null;
-  const { data: images, error: queryError, reload } = useQuery<ImageSummary[]>(queryKey, async () => {
+  const { data: images, error } = useQuery<ImageSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_images" }), "images");
     return r.data;
   });
-  const error = actionError ?? queryError;
-
-  async function removeImage(image: ImageSummary) {
-    if (!host) return;
-    try {
-      unwrap(await call(host, { op: "remove_image", id: image.id, force: false }), "ok");
-      if (queryKey) invalidate(queryKey);
-      reload();
-    } catch (e) {
-      setActionError((e as Error).message);
-    }
-  }
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "images");
 
@@ -80,9 +67,14 @@ export function HostImages() {
   ) : undefined;
 
   const visible = images?.filter((i) => matchesImageFilter(i, filter)) ?? null;
+  const canPull = session.session?.can("pull_image") ?? false;
 
   return (
-    <Page crumbs={crumbs} subnav={subnav}>
+    <Page
+      crumbs={crumbs}
+      subnav={subnav}
+      fab={session.session && canPull ? <FAB to={`/h/${hid}/images/pull`} label="pull" /> : undefined}
+    >
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {images === null && !error && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
@@ -99,33 +91,14 @@ export function HostImages() {
             <div key={img.id} className="px-1">
               <ListRow
                 title={img.repo_tag}
-                subtitle={`${img.id} · ${formatBytes(img.size)}${img.containers > 0 ? ` · in use by ${img.containers}` : ""}`}
-                right={
-                  <button
-                    type="button"
-                    onClick={() => setPending(img)}
-                    aria-label="Remove image"
-                    className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
-                  >
-                    remove
-                  </button>
-                }
+                subtitle={`${img.id} · ${formatBytes(img.size)}`}
+                status={imageStatus(img.containers)}
+                onPress={() => nav(`/h/${hid}/images/${img.id}`)}
               />
             </div>
           ))}
         </div>
       )}
-      <ConfirmDialog
-        open={pending !== null}
-        onOpenChange={(o) => { if (!o) setPending(null); }}
-        title={pending ? `Remove ${pending.repo_tag}?` : ""}
-        description={pending && pending.containers > 0
-          ? `In use by ${pending.containers} container${pending.containers > 1 ? "s" : ""}. Remove anyway?`
-          : undefined}
-        confirmLabel="Remove"
-        destructive
-        onConfirm={() => { if (pending) removeImage(pending); setPending(null); }}
-      />
     </Page>
   );
 }

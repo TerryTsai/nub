@@ -90,7 +90,8 @@ async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Route
         tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
     let policy = ops::Policy {
-        allowed_binds: cfg.engine.allowed_binds,
+        allowed_binds: cfg.allowed_binds,
+        dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
     };
     let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 

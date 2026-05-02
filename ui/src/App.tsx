@@ -8,10 +8,16 @@ import { HostHome } from "./screens/HostHome";
 import { ContainerDetail } from "./screens/ContainerDetail";
 import { ContainerLogs } from "./screens/ContainerLogs";
 import { ContainerStats } from "./screens/ContainerStats";
+import { DockerfileEdit } from "./screens/DockerfileEdit";
+import { HostDockerfiles } from "./screens/HostDockerfiles";
 import { HostImages } from "./screens/HostImages";
 import { HostNetworks } from "./screens/HostNetworks";
 import { HostVolumes } from "./screens/HostVolumes";
+import { ImageDetail } from "./screens/ImageDetail";
+import { NetworkDetail } from "./screens/NetworkDetail";
+import { PullImage } from "./screens/PullImage";
 import { RunContainer } from "./screens/RunContainer";
+import { VolumeDetail } from "./screens/VolumeDetail";
 
 // Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
 // initial bundle for users who never open a terminal.
@@ -29,8 +35,14 @@ export default function App() {
           <Route path="/add" element={<AddHost />} />
           <Route path="/h/:hid" element={<HostHome />} />
           <Route path="/h/:hid/images" element={<HostImages />} />
+          <Route path="/h/:hid/images/pull" element={<PullImage />} />
+          <Route path="/h/:hid/images/:iid" element={<ImageDetail />} />
           <Route path="/h/:hid/volumes" element={<HostVolumes />} />
+          <Route path="/h/:hid/volumes/:vname" element={<VolumeDetail />} />
           <Route path="/h/:hid/networks" element={<HostNetworks />} />
+          <Route path="/h/:hid/networks/:nid" element={<NetworkDetail />} />
+          <Route path="/h/:hid/dockerfiles" element={<HostDockerfiles />} />
+          <Route path="/h/:hid/dockerfiles/:name" element={<DockerfileEdit />} />
           <Route path="/h/:hid/run" element={<RunContainer />} />
           <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
           <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />

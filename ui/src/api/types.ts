@@ -17,7 +17,11 @@ export type Op =
   | { op: "list_volumes" }
   | { op: "remove_volume"; name: string; force?: boolean }
   | { op: "list_networks" }
-  | { op: "remove_network"; id: string };
+  | { op: "remove_network"; id: string }
+  | { op: "list_dockerfiles" }
+  | { op: "read_dockerfile"; name: string }
+  | { op: "write_dockerfile"; name: string; content: string }
+  | { op: "delete_dockerfile"; name: string };
 
 export type Action =
   | { kind: "start" }
@@ -44,6 +48,8 @@ export type OpResult =
   | { type: "volumes"; data: VolumeSummary[] }
   | { type: "networks"; data: NetworkSummary[] }
   | { type: "container_created"; data: ContainerCreated }
+  | { type: "dockerfiles"; data: DockerfileSummary[] }
+  | { type: "dockerfile"; data: DockerfileContent }
   | { type: "ok" }
   | { type: "stream_started" }
   | { type: "err"; data: { message: string } };
@@ -58,6 +64,7 @@ export interface HostInfo {
 
 export interface ContainerSummary {
   id: string; name: string; image: string; state: string; status: string; created: string;
+  exit_code: number;
 }
 
 export interface ContainerDetail {
@@ -75,9 +82,11 @@ export interface NetworkEndpoint { ip_address: string; gateway: string; mac_addr
 export interface PortMapping { container_port: string; host_ip: string; host_port: string }
 
 export interface ImageSummary { id: string; repo_tag: string; created: number; size: number; containers: number }
-export interface VolumeSummary { name: string; driver: string; mountpoint: string; created_at: string; scope: string }
-export interface NetworkSummary { id: string; name: string; driver: string; scope: string; created: string; internal: boolean }
+export interface VolumeSummary { name: string; driver: string; mountpoint: string; created_at: string; scope: string; in_use: boolean }
+export interface NetworkSummary { id: string; name: string; driver: string; scope: string; created: string; internal: boolean; in_use: boolean }
 export interface ContainerCreated { id: string; started: boolean; warnings: string[] }
+export interface DockerfileSummary { name: string; size: number; modified_at: string }
+export interface DockerfileContent { name: string; content: string; size: number; modified_at: string }
 
 // Stream chunks (internally tagged with `type`).
 export type StreamChunk =

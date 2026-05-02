@@ -1,7 +1,7 @@
 # nub
 
 [![release](https://img.shields.io/github/actions/workflow/status/TerryTsai/nub/release.yml?label=release)](https://github.com/TerryTsai/nub/actions/workflows/release.yml)
-[![version](https://img.shields.io/github/v/release/TerryTsai/nub?sort=semver)](https://github.com/TerryTsai/nub/releases)
+[![ci](https://img.shields.io/github/actions/workflow/status/TerryTsai/nub/ci.yml?label=ci&branch=main)](https://github.com/TerryTsai/nub/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
 > Manage containers from your phone. One small Rust binary, mobile-shaped API.
@@ -166,31 +166,39 @@ Replies come back framed:
 - **Images** — `list_images`, `remove_image`, `pull_image` (streams progress)
 - **Volumes** — `list_volumes`, `remove_volume`
 - **Networks** — `list_networks`, `remove_network`
+- **Dockerfiles** — `list_dockerfiles`, `read_dockerfile`, `write_dockerfile`,
+  `delete_dockerfile` (CRUD on text files in a configured flat directory; not
+  compose, not orchestration — just stored build inputs for a future
+  `build_image` op)
 
 ## Configuration
 
 Config can come from a TOML file, CLI flags, or neither (sane defaults
-fill in). CLI flags override file values. With `--config` omitted, `nub`
-searches in order:
+fill in). CLI flags override file values.
+
+### File lookup
+
+With `--config` given, that path is used. Otherwise `nub` searches in this
+order, taking the first that exists:
 
 1. `$XDG_CONFIG_HOME/nub/nub.toml` (typically `~/.config/nub/nub.toml`)
 2. `./nub.toml`
 3. `/etc/nub/config.toml`
 
 With no file in any of those, defaults apply: `id` from `/etc/hostname`,
-`bind` `0.0.0.0:8080`. `nub init` materializes a starter file in the
-default location.
+`bind` `0.0.0.0:8080`, `dockerfiles` at `$XDG_DATA_HOME/nub/dockerfiles`
+(typically `~/.local/share/nub/dockerfiles`). `nub init` materializes a
+starter file at path #1.
 
-The full schema:
+### Schema
 
 ```toml
-id   = "host1"                         # also: --id host1
-bind = "127.0.0.1:8080"                # also: --bind 127.0.0.1:8080
-# tls_cert = "/etc/nub/cert.pem"       # also: --tls-cert (recognized; not wired yet)
-# tls_key  = "/etc/nub/key.pem"        # also: --tls-key  (recognized; not wired yet)
-
-[engine]
-allowed_binds = ["/data/nub"]          # only when relaxing bind-mount restrictions
+id   = "host1"                              # also: --id host1
+bind = "127.0.0.1:8080"                     # also: --bind 127.0.0.1:8080
+# tls_cert = "/etc/nub/cert.pem"            # also: --tls-cert (recognized; not wired yet)
+# tls_key  = "/etc/nub/key.pem"             # also: --tls-key  (recognized; not wired yet)
+# allowed_binds = ["/data/nub"]             # host paths usable as bind-mount sources
+# dockerfiles   = "/srv/nub/dockerfiles"    # default: $XDG_DATA_HOME/nub/dockerfiles
 
 [[trust]]
 id      = "phone1"
@@ -200,10 +208,12 @@ allowed = ["host_info", "list_containers", "stream_logs", "stream_stats"]
 [[trust]]
 id      = "admin-laptop"
 token   = "..."
-allowed = ["*"]                        # everything
+allowed = ["*"]                             # everything
 ```
 
-Trust entries each pair an `id` (operator-facing label, shown in deny logs),
+### Trust entries
+
+Each `[[trust]]` pairs an `id` (operator-facing label, shown in deny logs),
 a `token` (bearer secret), and `allowed` (list of op names this caller may
 invoke; `"*"` for all). Authentication is constant-time bearer compare; an
 unrecognized bearer is 401, a recognized bearer asking for a disallowed op
@@ -212,6 +222,18 @@ is 403.
 A trust list isn't required to start — without one, only the random admin
 token works. Most useful for first-run; add real entries when you have a
 phone client to authorize.
+
+### File layout
+
+`nub` follows the [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html):
+
+| Purpose | Path | Override |
+|---------|------|----------|
+| Config file | `$XDG_CONFIG_HOME/nub/nub.toml` | `--config <path>` or any of the lookup paths above |
+| Dockerfiles directory | `$XDG_DATA_HOME/nub/dockerfiles` | `dockerfiles = "<path>"` in the config |
+
+To wipe all nub state on a host: `rm -rf ~/.config/nub ~/.local/share/nub`
+(adjust if `$XDG_*_HOME` differ from the defaults).
 
 ## Security
 
@@ -224,8 +246,8 @@ everything Docker can within their `allowed` list. Two layers of protection:
 2. **Constrained `create_container`.** Even with `create_container` allowed,
    the binary rejects:
    - `network = "host"` and `network = "container:..."`
-   - bind-mount sources outside the configured `engine.allowed_binds` list
-     (default empty — only named volumes work out of the box)
+   - bind-mount sources outside the configured `allowed_binds` list (default
+     empty — only named volumes work out of the box)
    - Never exposed in the wire format at all: `Privileged`, `PidMode`,
      `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`, `SecurityOpt`, `Sysctls`,
      `Devices`. If you need any of these, `nub` is the wrong tool.
@@ -233,7 +255,6 @@ everything Docker can within their `allowed` list. Two layers of protection:
 To allow specific host paths as bind sources:
 
 ```toml
-[engine]
 allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
 
