@@ -4,7 +4,6 @@ import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { Page } from "@/components/Page";
 
 interface Snapshot {
@@ -35,15 +34,13 @@ export function ContainerStats() {
   useTitle(host, cid, setName);
   useStatsStream(host, cid, !!session.session, setSnap, setRates, setError);
 
-  if (!saved) return <Page title="?"><Card><p>Unknown host.</p></Card></Page>;
+  if (!saved) return <Page title="?"><p>Unknown host.</p></Page>;
 
   return (
     <Page title={`Stats · ${name || cid?.slice(0, 12) || "?"}`} right={backLink(hid, cid)}>
-      <Card>
-        {error && <p className="text-[var(--error)] text-sm">{error}</p>}
-        {!snap && !error && <p className="text-sm text-[var(--text-tertiary)]">Connecting…</p>}
-        {snap && <StatsView snap={snap} rates={rates} />}
-      </Card>
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
+      {snap && <StatsView snap={snap} rates={rates} />}
     </Page>
   );
 }

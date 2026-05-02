@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { Field } from "@/components/Field";
 import { Page } from "@/components/Page";
 
@@ -57,53 +56,51 @@ export function AddHost() {
 
   return (
     <Page title="Add host" right={<Button variant="ghost" onClick={() => nav(-1)}>Cancel</Button>}>
-      <Card>
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <Field label="URL" hint="e.g. http://192.168.1.10:8080">
-            <input
-              className="input"
-              type="url"
-              inputMode="url"
-              autoComplete="off"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="http://10.0.0.5:8080"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Token" hint="paste the admin token printed by nub at startup">
-            <input
-              className="input mono"
-              type="password"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="bearer token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Label" hint="optional — what to call this host in the list">
-            <input
-              className="input"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              placeholder="m73a"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-            />
-          </Field>
-          {error && <div className="text-[var(--error)] text-sm px-1">{error}</div>}
-          <Button type="submit" disabled={pending} autoFocus={!!bootstrap}>
-            {pending ? "Connecting…" : "Connect & save"}
-          </Button>
-        </form>
-      </Card>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4">
+        <Field label="URL" hint="e.g. http://192.168.1.10:8080">
+          <input
+            className="input"
+            type="url"
+            inputMode="url"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="http://10.0.0.5:8080"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Token" hint="paste the admin token printed by nub at startup">
+          <input
+            className="input mono"
+            type="password"
+            autoComplete="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="bearer token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+          />
+        </Field>
+        <Field label="Label" hint="optional — what to call this host in the list">
+          <input
+            className="input"
+            type="text"
+            autoCapitalize="off"
+            autoCorrect="off"
+            placeholder="m73a"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+          />
+        </Field>
+        {error && <div className="text-[var(--error)] text-xs">{error}</div>}
+        <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="self-start">
+          {pending ? "Connecting…" : "Connect & save"}
+        </Button>
+      </form>
     </Page>
   );
 }

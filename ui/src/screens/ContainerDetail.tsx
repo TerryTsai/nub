@@ -6,8 +6,10 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
 import { Button } from "@/components/Button";
-import { Card, Row } from "@/components/Card";
+import { Row } from "@/components/Row";
 import { Page } from "@/components/Page";
+import { Section } from "@/components/Section";
+import { StatusBadge } from "@/components/StatusBadge";
 
 export function ContainerDetail() {
   const { hid, cid } = useParams<{ hid: string; cid: string }>();
@@ -58,7 +60,7 @@ export function ContainerDetail() {
   );
 
   if (!saved) {
-    return <Page title="?" right={back}><Card><p>Unknown host.</p></Card></Page>;
+    return <Page title="?" right={back}><p>Unknown host.</p></Page>;
   }
 
   const can = (op: string) => session.session?.can(op) ?? false;
@@ -67,26 +69,25 @@ export function ContainerDetail() {
 
   return (
     <Page title={detail?.name || cid?.slice(0, 12) || "?"} right={back}>
-      {session.loading && <Card><p className="text-[var(--text-secondary)]">Connecting…</p></Card>}
-      {session.error && <Card><p className="text-[var(--error)]">{session.error}</p></Card>}
+      {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
+      {session.error && <p className="text-[var(--error)] text-sm">{session.error}</p>}
 
       {detail && (
         <>
-          <Card>
-            <div className="flex items-center gap-2">
-              <span className={`dot dot-${detail.state}`} aria-label={detail.state} />
-              <span className="text-sm">{detail.state}{detail.exit_code !== 0 ? ` (exit ${detail.exit_code})` : ""}</span>
+          <Section right={<StatusBadge status={detail.state} />}>
+            <div className="flex flex-col gap-2">
+              <Row label="Image" value={detail.image} mono />
+              <Row label="Created" value={detail.created} mono />
+              {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
+              {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
+              {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
+              {detail.network_mode && <Row label="Network" value={detail.network_mode} />}
+              {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
+              {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
             </div>
-            <Row label="Image" value={detail.image} mono />
-            <Row label="Created" value={detail.created} mono />
-            {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
-            {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
-            {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
-            {detail.network_mode && <Row label="Network" value={detail.network_mode} />}
-            {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
-          </Card>
+          </Section>
 
-          <Card>
+          <Section label="Actions">
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="primary"
@@ -119,10 +120,10 @@ export function ContainerDetail() {
                 onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
               />
             </div>
-            {error && <p className="text-[var(--error)] text-sm">{error}</p>}
-          </Card>
+            {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+          </Section>
 
-          <Card>
+          <Section label="View">
             <div className="grid grid-cols-2 gap-2">
               <Link to={`/h/${hid}/c/${cid}/logs`}>
                 <Button
@@ -143,24 +144,25 @@ export function ContainerDetail() {
                 </Button>
               </Link>
             </div>
-          </Card>
+          </Section>
 
           {detail.cmd.length > 0 && (
-            <Card>
-              <Row label="Cmd" value={detail.cmd.join(" ")} mono />
-              {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-              {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-              {detail.user && <Row label="User" value={detail.user} mono />}
-            </Card>
+            <Section label="Process">
+              <div className="flex flex-col gap-2">
+                <Row label="Cmd" value={detail.cmd.join(" ")} mono />
+                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+                {detail.user && <Row label="User" value={detail.user} mono />}
+              </div>
+            </Section>
           )}
 
           {detail.env.length > 0 && (
-            <Card>
-              <h3 className="text-sm font-semibold">Environment</h3>
+            <Section label="Environment">
               <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
                 {detail.env.join("\n")}
               </pre>
-            </Card>
+            </Section>
           )}
         </>
       )}

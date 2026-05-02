@@ -5,9 +5,9 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { Section } from "@/components/Section";
 import { RunSheet } from "./RunSheet";
 
 export function HostHome() {
@@ -45,41 +45,38 @@ export function HostHome() {
   if (!saved) {
     return (
       <Page title="?">
-        <Card>
-          <p>Unknown host. <Link to="/" className="underline">Back to hosts</Link></p>
-        </Card>
+        <p>Unknown host. <Link to="/" className="underline">Back to hosts</Link></p>
       </Page>
     );
   }
 
-  const right = (
+  const back = (
     <Link to="/" aria-label="Back to hosts">
       <Button variant="ghost" className="text-sm">←</Button>
     </Link>
   );
 
   return (
-    <Page title={saved.label} right={right}>
-      {session.loading && <Card><p className="text-[var(--text-secondary)]">Connecting…</p></Card>}
+    <Page title={saved.label} right={back}>
+      {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
 
       {session.error && (
-        <Card>
-          <p className="text-[var(--error)]">Couldn't connect: {session.error}</p>
-          <p className="text-sm text-[var(--text-secondary)]">
+        <Section label="Connection">
+          <p className="text-[var(--error)] text-sm">Couldn't connect: {session.error}</p>
+          <p className="text-xs text-[var(--text-tertiary)]">
             The token may have rotated (admin tokens regenerate on every nub restart).
           </p>
-          <Link to="/add"><Button variant="ghost">Re-add host</Button></Link>
-        </Card>
+          <Link to="/add" className="self-start"><Button variant="ghost">Re-add host</Button></Link>
+        </Section>
       )}
 
       {session.session && (
-        <Card>
-          <div className="flex justify-between items-center">
-            <h2 className="text-base font-semibold">Containers</h2>
+        <Section
+          label="Containers"
+          right={
             <div className="flex gap-2">
               <Button
                 variant="primary"
-                className="text-sm"
                 onClick={() => setRunOpen(true)}
                 disallowReason={
                   session.session.can("create_container")
@@ -89,22 +86,23 @@ export function HostHome() {
               >
                 ▶ Run
               </Button>
-              <Button variant="ghost" className="text-sm" onClick={refresh} disabled={refreshing}>
+              <Button variant="ghost" onClick={refresh} disabled={refreshing}>
                 {refreshing ? "…" : "Refresh"}
               </Button>
             </div>
-          </div>
-          {error && <p className="text-[var(--error)] text-sm">{error}</p>}
+          }
+        >
+          {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           {containers === null && !error && (
-            <p className="text-sm text-[var(--text-tertiary)]">Loading…</p>
+            <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
           )}
           {containers !== null && containers.length === 0 && (
-            <p className="text-sm text-[var(--text-tertiary)]">No containers.</p>
+            <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
           )}
           {containers !== null && containers.length > 0 && (
-            <div className="flex flex-col -mx-4">
+            <div className="flex flex-col -mx-1">
               {containers.map((c) => (
-                <div key={c.id} className="px-4">
+                <div key={c.id} className="px-1">
                   <ListRow
                     title={c.name || "(unnamed)"}
                     subtitle={`${c.image} · ${c.status}`}
@@ -115,7 +113,7 @@ export function HostHome() {
               ))}
             </div>
           )}
-        </Card>
+        </Section>
       )}
 
       {host && session.session && (

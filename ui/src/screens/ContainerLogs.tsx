@@ -4,7 +4,6 @@ import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
-import { Card } from "@/components/Card";
 import { Page } from "@/components/Page";
 
 const TAIL_LINES = 200;
@@ -31,29 +30,26 @@ export function ContainerLogs() {
   useStream(host, cid, follow, setLines, setError, !!session.session);
   const { paneRef, onScroll } = useAutoscroll(lines);
 
-  if (!saved) return <Page title="?"><Card><p>Unknown host.</p></Card></Page>;
+  if (!saved) return <Page title="?"><p>Unknown host.</p></Page>;
 
   return (
     <Page title={`Logs · ${name || cid?.slice(0, 12) || "?"}`} right={backLink(hid, cid)}>
-      <Card>
-        <div className="flex gap-2 items-center">
-          <Button
-            variant={follow ? "primary" : "ghost"}
-            className="text-sm"
-            onClick={() => setFollow((f) => !f)}
-          >
-            {follow ? "⏸ Pause" : "▶ Follow"}
-          </Button>
-          <Button variant="ghost" className="text-sm" onClick={() => copyAll(lines)}>
-            Copy all
-          </Button>
-          <Button variant="ghost" className="text-sm" onClick={() => setLines([])}>
-            Clear
-          </Button>
-        </div>
-        {error && <p className="text-[var(--error)] text-sm">{error}</p>}
-        <LogPane paneRef={paneRef} onScroll={onScroll} lines={lines} />
-      </Card>
+      <div className="flex gap-2 items-center">
+        <Button
+          variant={follow ? "primary" : "ghost"}
+          onClick={() => setFollow((f) => !f)}
+        >
+          {follow ? "⏸ Pause" : "▶ Follow"}
+        </Button>
+        <Button variant="ghost" onClick={() => copyAll(lines)}>
+          Copy all
+        </Button>
+        <Button variant="ghost" onClick={() => setLines([])}>
+          Clear
+        </Button>
+      </div>
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      <LogPane paneRef={paneRef} onScroll={onScroll} lines={lines} />
     </Page>
   );
 }
