@@ -1,15 +1,32 @@
-//! Decoder for `/containers/{id}/json` inspect response. Both engines use
-//! the same compat-shaped body.
+//! `docker container inspect` — `GET /containers/{id}/json`. Compat shape;
+//! both engines return the same body for this endpoint.
 
 use std::collections::HashMap;
 
+use anyhow::Result;
 use serde::Deserialize;
 
-use super::types::{ContainerDetail, MountPoint, NetworkEndpoint, PortMapping};
+use crate::client::Req;
+use crate::ops::EngineHandler;
+use crate::proto::{ContainerDetail, MountPoint, NetworkEndpoint, PortMapping};
+
+pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<Box<ContainerDetail>> {
+    let path = format!("/containers/{id}/json");
+    let raw: RawInspect = h
+        .engine
+        .conn()
+        .await?
+        .send_unary(Req::get(path).build()?)
+        .await?
+        .json()?;
+    Ok(Box::new(raw.into_detail()))
+}
+
+// ---- Wire decoder --------------------------------------------------------
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct InspectResp {
+struct RawInspect {
     #[serde(rename = "Id", default)]
     id: String,
     #[serde(default)]
@@ -21,20 +38,20 @@ pub(super) struct InspectResp {
     #[serde(default)]
     restart_count: i64,
     #[serde(default)]
-    state: State,
+    state: RawState,
     #[serde(default)]
-    config: Config,
+    config: RawConfig,
     #[serde(default)]
-    host_config: HostConfig,
+    host_config: RawHostConfig,
     #[serde(default)]
-    network_settings: NetSettings,
+    network_settings: RawNetSettings,
     #[serde(default)]
-    mounts: Vec<Mount>,
+    mounts: Vec<RawMount>,
 }
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct State {
+struct RawState {
     #[serde(default)]
     status: String,
     #[serde(default)]
@@ -51,7 +68,7 @@ struct State {
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct Config {
+struct RawConfig {
     #[serde(default)]
     image: String,
     #[serde(default)]
@@ -70,11 +87,11 @@ struct Config {
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct HostConfig {
+struct RawHostConfig {
     #[serde(default)]
     network_mode: String,
     #[serde(default)]
-    restart_policy: RestartPolicyName,
+    restart_policy: RawRestartPolicy,
     #[serde(default)]
     privileged: bool,
     #[serde(default)]
@@ -83,23 +100,23 @@ struct HostConfig {
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct RestartPolicyName {
+struct RawRestartPolicy {
     #[serde(default)]
     name: String,
 }
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct NetSettings {
+struct RawNetSettings {
     #[serde(default)]
-    networks: HashMap<String, NetEndpoint>,
+    networks: HashMap<String, RawNetEndpoint>,
     #[serde(default)]
-    ports: HashMap<String, Option<Vec<PortBinding>>>,
+    ports: HashMap<String, Option<Vec<RawPortBinding>>>,
 }
 
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct NetEndpoint {
+struct RawNetEndpoint {
     #[serde(default, rename = "IPAddress")]
     ip_address: String,
     #[serde(default)]
@@ -110,7 +127,7 @@ struct NetEndpoint {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct PortBinding {
+struct RawPortBinding {
     #[serde(default, rename = "HostIp")]
     host_ip: String,
     #[serde(default, rename = "HostPort")]
@@ -119,7 +136,7 @@ struct PortBinding {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
-struct Mount {
+struct RawMount {
     #[serde(default, rename = "Type")]
     typ: String,
     #[serde(default)]
@@ -132,11 +149,13 @@ struct Mount {
     rw: bool,
 }
 
-impl InspectResp {
-    pub(super) fn into_detail(self) -> ContainerDetail {
+// ---- Translate to proto::ContainerDetail ---------------------------------
+
+impl RawInspect {
+    fn into_detail(self) -> ContainerDetail {
         let networks = self.network_settings.networks.into_iter().map(net_endpoint).collect();
         let ports = unwrap_ports(self.network_settings.ports);
-        let mounts = self.mounts.into_iter().map(mount_point).collect();
+        let mounts = self.mounts.into_iter().map(mount).collect();
         let image_id = self.image;
         let image = if self.config.image.is_empty() { image_id.clone() } else { self.config.image };
         ContainerDetail {
@@ -169,7 +188,7 @@ impl InspectResp {
     }
 }
 
-fn net_endpoint((k, v): (String, NetEndpoint)) -> (String, NetworkEndpoint) {
+fn net_endpoint((k, v): (String, RawNetEndpoint)) -> (String, NetworkEndpoint) {
     (
         k,
         NetworkEndpoint {
@@ -180,7 +199,7 @@ fn net_endpoint((k, v): (String, NetEndpoint)) -> (String, NetworkEndpoint) {
     )
 }
 
-fn unwrap_ports(map: HashMap<String, Option<Vec<PortBinding>>>) -> Vec<PortMapping> {
+fn unwrap_ports(map: HashMap<String, Option<Vec<RawPortBinding>>>) -> Vec<PortMapping> {
     let mut out = Vec::new();
     for (cport, bindings) in map {
         for b in bindings.unwrap_or_default() {
@@ -194,7 +213,7 @@ fn unwrap_ports(map: HashMap<String, Option<Vec<PortBinding>>>) -> Vec<PortMappi
     out
 }
 
-fn mount_point(m: Mount) -> MountPoint {
+fn mount(m: RawMount) -> MountPoint {
     MountPoint {
         kind: m.typ,
         source: m.source,

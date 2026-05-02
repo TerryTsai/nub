@@ -1,13 +1,10 @@
 mod auth;
+mod client;
 mod config;
-mod engine;
-mod handler;
-mod http;
 mod init;
+mod ops;
 mod proto;
-mod ui;
-mod wire;
-mod ws;
+mod server;
 
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -92,16 +89,16 @@ async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Route
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
         tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
-    let policy = handler::Policy {
+    let policy = ops::Policy {
         allowed_binds: cfg.engine.allowed_binds,
     };
-    let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::EngineHandler::connect(policy).await?);
+    let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 
     let mut trust = vec![admin];
     trust.extend(cfg.trust);
     let auth = Arc::new(auth::AuthState { trust });
-    let mut app = http::router(handler, auth);
-    if let Some(ui) = ui::ui_fallback() {
+    let mut app = server::router(handler, auth);
+    if let Some(ui) = server::ui::ui_fallback() {
         app = app.merge(ui);
     }
     Ok(app)

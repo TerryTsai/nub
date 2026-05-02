@@ -15,7 +15,7 @@ use serde::de::DeserializeOwned;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpStream, UnixStream};
 
-use crate::engine::Error;
+use super::Error;
 
 #[derive(Debug, Clone)]
 pub(crate) enum Address {

@@ -1,5 +1,5 @@
 use crate::config::TrustEntry;
-use crate::handler::{HandlerOutput, OpHandler};
+use crate::ops::{HandlerOutput, OpHandler};
 use crate::proto::*;
 use futures::stream::BoxStream;
 use futures::StreamExt;

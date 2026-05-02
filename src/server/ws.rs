@@ -1,6 +1,7 @@
 use crate::config::TrustEntry;
-use crate::handler::OpHandler;
-use crate::wire;
+use crate::ops::OpHandler;
+
+use super::wire;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::Response;

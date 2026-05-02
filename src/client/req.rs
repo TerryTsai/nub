@@ -7,7 +7,7 @@ use hyper::{Method, Request};
 use serde::Serialize;
 
 use super::conn::Body;
-use crate::engine::Error;
+use super::Error;
 
 pub(crate) struct Req {
     method: Method,

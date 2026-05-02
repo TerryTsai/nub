@@ -1,8 +1,11 @@
+mod ws;
+mod wire;
+pub mod ui;
+
 use crate::auth::{require_token, AuthState};
 use crate::config::TrustEntry;
-use crate::handler::{closed_input, HandlerOutput, OpHandler};
+use crate::ops::{closed_input, HandlerOutput, OpHandler};
 use crate::proto::*;
-use crate::ws::ws_handler;
 use axum::{
     extract::State,
     http::StatusCode,
@@ -11,6 +14,8 @@ use axum::{
     Extension, Json, Router,
 };
 use std::sync::Arc;
+
+use ws::ws_handler;
 
 pub type Shared = Arc<dyn OpHandler>;
 
