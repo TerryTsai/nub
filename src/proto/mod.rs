@@ -49,6 +49,9 @@ pub enum Op {
     },
 
     ListImages,
+    InspectImage {
+        id: String,
+    },
     RemoveImage {
         id: String,
         #[serde(default)]
@@ -68,6 +71,9 @@ pub enum Op {
     },
 
     ListVolumes,
+    InspectVolume {
+        name: String,
+    },
     RemoveVolume {
         name: String,
         #[serde(default)]
@@ -75,6 +81,9 @@ pub enum Op {
     },
 
     ListNetworks,
+    InspectNetwork {
+        id: String,
+    },
     RemoveNetwork {
         id: String,
     },
@@ -106,12 +115,15 @@ impl Op {
             Op::StreamStats { .. } => "stream_stats",
             Op::Exec { .. } => "exec",
             Op::ListImages => "list_images",
+            Op::InspectImage { .. } => "inspect_image",
             Op::RemoveImage { .. } => "remove_image",
             Op::PullImage { .. } => "pull_image",
             Op::BuildImage { .. } => "build_image",
             Op::ListVolumes => "list_volumes",
+            Op::InspectVolume { .. } => "inspect_volume",
             Op::RemoveVolume { .. } => "remove_volume",
             Op::ListNetworks => "list_networks",
+            Op::InspectNetwork { .. } => "inspect_network",
             Op::RemoveNetwork { .. } => "remove_network",
             Op::ListDockerfiles => "list_dockerfiles",
             Op::ReadDockerfile { .. } => "read_dockerfile",
@@ -156,6 +168,9 @@ pub enum OpResult {
     Volumes(Vec<VolumeSummary>),
     Networks(Vec<NetworkSummary>),
     ContainerCreated(ContainerCreated),
+    ImageDetail(Box<ImageDetail>),
+    VolumeDetail(Box<VolumeDetail>),
+    NetworkDetail(Box<NetworkDetail>),
     Dockerfiles(Vec<DockerfileSummary>),
     Dockerfile(DockerfileContent),
     Ok,

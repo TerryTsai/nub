@@ -163,10 +163,11 @@ Replies come back framed:
 - **Containers** — `list_containers`, `inspect_container`, `container_action`
   (start / stop / restart / kill / remove), `create_container`, `stream_logs`,
   `stream_stats`, `exec`
-- **Images** — `list_images`, `remove_image`, `pull_image` (streams progress),
-  `build_image` (streams /build progress; reads a stored Dockerfile, applies a tag)
-- **Volumes** — `list_volumes`, `remove_volume`
-- **Networks** — `list_networks`, `remove_network`
+- **Images** — `list_images`, `inspect_image`, `remove_image`, `pull_image`
+  (streams progress), `build_image` (streams /build progress; reads a stored
+  Dockerfile, applies a tag)
+- **Volumes** — `list_volumes`, `inspect_volume`, `remove_volume`
+- **Networks** — `list_networks`, `inspect_network`, `remove_network`
 - **Dockerfiles** — `list_dockerfiles`, `read_dockerfile`, `write_dockerfile`,
   `delete_dockerfile` (CRUD on text files in a configured flat directory; not
   compose, not orchestration — just stored build inputs for `build_image`)

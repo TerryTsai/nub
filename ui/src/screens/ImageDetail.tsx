@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
-import type { ImageSummary } from "@/api/types";
+import type { ImageDetail as ImageDetailT, ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
@@ -33,6 +33,12 @@ export function ImageDetail() {
     return r.data;
   });
   const image = images?.find((i) => i.id === iid);
+
+  const inspectKey = host && session.session && iid ? `${host.url}:inspect_image:${iid}` : null;
+  const { data: detail } = useQuery<ImageDetailT>(inspectKey, async () => {
+    const r = unwrap(await call(host!, { op: "inspect_image", id: iid! }), "image_detail");
+    return r.data;
+  });
 
   async function onRemove(force: boolean) {
     if (!host || !iid) return;
@@ -85,8 +91,35 @@ export function ImageDetail() {
               <Row label="Size" value={formatBytes(image.size)} />
               <Row label="Created" value={formatTimestamp(image.created)} />
               <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
+              {detail && <Row label="Layers" value={String(detail.layers)} />}
+              {detail?.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
             </div>
           </Section>
+
+          {detail && (detail.entrypoint.length > 0 || detail.cmd.length > 0 || detail.working_dir || detail.user) && (
+            <Section label="Process">
+              <div className="flex flex-col gap-2">
+                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+                {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
+                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+                {detail.user && <Row label="User" value={detail.user} mono />}
+              </div>
+            </Section>
+          )}
+
+          {detail && detail.exposed_ports.length > 0 && (
+            <Section label="Exposed ports">
+              <div className="text-xs mono text-[var(--id-color)]">{detail.exposed_ports.join(", ")}</div>
+            </Section>
+          )}
+
+          {detail && detail.env.length > 0 && (
+            <Section label="Environment">
+              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
+                {detail.env.join("\n")}
+              </pre>
+            </Section>
+          )}
 
           <Section label="Actions">
             <Button

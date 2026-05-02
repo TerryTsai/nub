@@ -14,9 +14,18 @@ export interface Status {
   label: string;
 }
 
-export function containerStatus(state: string, exitCode: number): Status {
+export function containerStatus(state: string, exitCode: number, health = ""): Status {
+  // Healthcheck overlays the running state: a "running but unhealthy"
+  // container is more important to surface than just "Running".
+  if (state === "running") {
+    switch (health) {
+      case "unhealthy": return { tone: "failed",  label: "Unhealthy" };
+      case "starting":  return { tone: "pending", label: "Starting" };
+      // "healthy" or empty (no healthcheck) → normal Running.
+      default:          return { tone: "active",  label: "Running" };
+    }
+  }
   switch (state) {
-    case "running":    return { tone: "active",  label: "Running" };
     case "paused":     return { tone: "pending", label: "Paused" };
     case "restarting": return { tone: "pending", label: "Restarting" };
     case "removing":   return { tone: "pending", label: "Removing" };

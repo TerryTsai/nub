@@ -17,7 +17,9 @@ import { PullProgress, reducePull, EMPTY_PULL, type PullState } from "@/componen
 import { Section } from "@/components/Section";
 
 type Source = "pull" | "build";
-type Phase = "idle" | "running" | "done";
+/** "still-building" = WS dropped after we'd already received some progress.
+ * Engine keeps building; we wait for the tag to appear in list_images. */
+type Phase = "idle" | "running" | "still-building" | "done";
 
 interface BuildState {
   stream: string;
@@ -124,12 +126,14 @@ export function CreateImage() {
       if (!df || !tg) return;
       setPhase("running");
       setBuild(EMPTY_BUILD);
+      let receivedAny = false;
       try {
         await streamOp(
           host,
           { op: "build_image", dockerfile: df, tag: tg, build_args: argValues },
           (chunk) => {
             if (chunk.type !== "build_progress") return;
+            receivedAny = true;
             setBuild((prev) => ({
               stream: prev.stream + chunk.stream,
               imageId: chunk.image_id ?? prev.imageId,
@@ -140,10 +144,43 @@ export function CreateImage() {
         invalidate(`${host.url}:list_images`);
         setPhase("done");
       } catch (err) {
-        setError((err as Error).message);
-        setPhase("idle");
+        // If the WS dropped after the build had started, the engine keeps
+        // building. Switch to a poll-for-the-tag state instead of blowing
+        // up — the user just needs to wait for the image to land.
+        if (receivedAny && !abortRef.current?.signal.aborted) {
+          setError(null);
+          setPhase("still-building");
+          watchForTag(host, tg).then((found) => {
+            if (found) {
+              invalidate(`${host.url}:list_images`);
+              setPhase("done");
+            } else {
+              setError("build still running but the image hasn't landed in 2 minutes — check the host directly");
+              setPhase("idle");
+            }
+          });
+        } else {
+          setError((err as Error).message);
+          setPhase("idle");
+        }
       }
     }
+  }
+
+  /** Poll list_images every 5s for up to 2 minutes, looking for `tag`.
+   * Resolves true when found, false if the budget is exhausted. */
+  async function watchForTag(h: Host, tag: string): Promise<boolean> {
+    const deadline = Date.now() + 120_000;
+    while (Date.now() < deadline) {
+      await new Promise((r) => setTimeout(r, 5000));
+      try {
+        const r = unwrap(await call(h, { op: "list_images" }), "images");
+        if (r.data.some((img) => img.repo_tag === tag)) return true;
+      } catch {
+        // ignore transient errors during polling
+      }
+    }
+    return false;
   }
 
   function onCancel() {
@@ -176,10 +213,13 @@ export function CreateImage() {
   const dfOptions = (dockerfiles ?? []).map((d) => ({ value: d.name }));
   const submitDisabled =
     phase === "running" ||
+    phase === "still-building" ||
     (source === "pull" ? !reference.trim() : !dockerfileName.trim() || !tag.trim());
 
   const submitLabel = phase === "running"
     ? source === "pull" ? "Pulling…" : "Building…"
+    : phase === "still-building"
+    ? "Waiting…"
     : source === "pull" ? "Pull" : "Build";
 
   return (
@@ -189,7 +229,11 @@ export function CreateImage() {
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <Section label="Source">
-        <SourceTabs value={source} onChange={setSource} disabled={phase === "running"} />
+        <SourceTabs
+          value={source}
+          onChange={setSource}
+          disabled={phase === "running" || phase === "still-building"}
+        />
       </Section>
 
       <form onSubmit={onSubmit} className="contents">
@@ -205,7 +249,7 @@ export function CreateImage() {
                 placeholder="image:tag"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                disabled={phase === "running"}
+                disabled={phase === "running" || phase === "still-building"}
                 required
               />
             </Field>
@@ -231,7 +275,7 @@ export function CreateImage() {
                 placeholder="image:tag"
                 value={tag}
                 onChange={(e) => setTag(e.target.value)}
-                disabled={phase === "running"}
+                disabled={phase === "running" || phase === "still-building"}
                 required
               />
             </Field>
@@ -262,6 +306,12 @@ export function CreateImage() {
         {phase !== "idle" && (
           <Section label="Progress">
             {source === "pull" ? <PullProgress pull={pull} /> : <BuildLog stream={build.stream} imageId={build.imageId} />}
+            {phase === "still-building" && (
+              <p className="text-xs text-[var(--text-secondary)] pt-2">
+                connection dropped, but the build is still running on the host —
+                waiting for <span className="mono">{tag}</span> to appear in the image list…
+              </p>
+            )}
           </Section>
         )}
 
@@ -285,7 +335,7 @@ export function CreateImage() {
                 onClick={() => (phase === "running" ? onCancel() : nav(`/h/${hid}/images`))}
                 className="flex-1"
               >
-                {phase === "running" ? "Cancel" : "Back"}
+                {phase === "running" ? "Cancel" : phase === "still-building" ? "Leave" : "Back"}
               </Button>
               <Button
                 type="submit"

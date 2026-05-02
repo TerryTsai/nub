@@ -64,6 +64,7 @@ struct RawListItem {
 
 impl RawListItem {
     fn into_summary(self) -> ContainerSummary {
+        let health = parse_health(&self.status);
         ContainerSummary {
             id: short_id(&self.id),
             name: first_name(&self.names),
@@ -72,7 +73,27 @@ impl RawListItem {
             status: self.status,
             created: created_to_string(self.created),
             exit_code: self.exit_code,
+            health,
         }
+    }
+}
+
+/// Pull a healthcheck state out of the engine's free-form Status string.
+/// Both engines render `Up 5 minutes (healthy)` / `(unhealthy)` /
+/// `(health: starting)`; we parse the parenthesized hint without pretending
+/// it's a structured field.
+fn parse_health(status: &str) -> String {
+    let (Some(open), Some(close)) = (status.find('('), status.rfind(')')) else {
+        return String::new();
+    };
+    if open >= close {
+        return String::new();
+    }
+    let inner = status[open + 1..close].trim();
+    let after_colon = inner.strip_prefix("health: ").unwrap_or(inner);
+    match after_colon {
+        "healthy" | "unhealthy" | "starting" => after_colon.to_string(),
+        _ => String::new(),
     }
 }
 
@@ -88,5 +109,24 @@ fn created_to_string(v: serde_json::Value) -> String {
         serde_json::Value::String(s) => s,
         serde_json::Value::Number(n) => n.to_string(),
         _ => String::new(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::parse_health;
+
+    #[test]
+    fn extracts_known_states() {
+        assert_eq!(parse_health("Up 5 minutes (healthy)"), "healthy");
+        assert_eq!(parse_health("Up 12 hours (unhealthy)"), "unhealthy");
+        assert_eq!(parse_health("Up 3 seconds (health: starting)"), "starting");
+    }
+
+    #[test]
+    fn ignores_unrelated_parens() {
+        assert_eq!(parse_health("Exited (137) 2 weeks ago"), "");
+        assert_eq!(parse_health("Up 5 minutes"), "");
+        assert_eq!(parse_health(""), "");
     }
 }

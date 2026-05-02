@@ -64,6 +64,15 @@ struct RawState {
     exit_code: i64,
     #[serde(default)]
     error: String,
+    #[serde(default)]
+    health: Option<RawHealth>,
+}
+
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RawHealth {
+    #[serde(default)]
+    status: String,
 }
 
 #[derive(Default, Deserialize)]
@@ -175,6 +184,7 @@ impl RawInspect {
             exit_code: self.state.exit_code,
             error: self.state.error,
             restart_count: self.restart_count,
+            health: self.state.health.map(|h| h.status).unwrap_or_default(),
             cmd: self.config.cmd,
             entrypoint: self.config.entrypoint,
             env: self.config.env,

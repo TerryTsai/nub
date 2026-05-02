@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Layout } from "./components/Layout";
 import { ScrollRestoration } from "./components/ScrollRestoration";
+import { Toaster } from "./components/Toaster";
 import { Hosts } from "./screens/Hosts";
 import { AddHost } from "./screens/AddHost";
 import { HostHome } from "./screens/HostHome";
@@ -29,6 +30,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <ScrollRestoration />
+      <Toaster>
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<Hosts />} />
@@ -58,6 +60,7 @@ export default function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </Toaster>
     </BrowserRouter>
   );
 }

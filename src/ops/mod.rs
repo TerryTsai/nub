@@ -85,6 +85,7 @@ impl OpHandler for EngineHandler {
             Op::Exec { id, cmd, tty } => stream(containers::exec::run(self, id, cmd, tty, input)),
 
             Op::ListImages => unary(images::list::run(self).await, OpResult::Images),
+            Op::InspectImage { id } => unary(images::inspect::run(self, id).await, OpResult::ImageDetail),
             Op::RemoveImage { id, force } => unary(images::remove::run(self, id, force).await, ok),
             Op::PullImage { reference } => stream(images::pull::run(self, reference)),
             Op::BuildImage {
@@ -94,9 +95,11 @@ impl OpHandler for EngineHandler {
             } => stream(images::build::run(self, dockerfile, tag, build_args)),
 
             Op::ListVolumes => unary(volumes::list(self).await, OpResult::Volumes),
+            Op::InspectVolume { name } => unary(volumes::inspect(self, &name).await, OpResult::VolumeDetail),
             Op::RemoveVolume { name, force } => unary(volumes::remove(self, name, force).await, ok),
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
+            Op::InspectNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
             Op::RemoveNetwork { id } => unary(networks::remove(self, id).await, ok),
 
             Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),

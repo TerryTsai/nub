@@ -1,10 +1,12 @@
-//! `docker volume ls/rm` — compat paths work on both engines.
+//! `docker volume ls/inspect/rm` — compat paths work on both engines.
+
+use std::collections::HashMap;
 
 use anyhow::Result;
 use serde::Deserialize;
 
 use crate::client::{Query, Req};
-use crate::proto::VolumeSummary;
+use crate::proto::{VolumeDetail, VolumeSummary};
 
 use super::usage;
 use super::EngineHandler;
@@ -28,6 +30,28 @@ async fn fetch(h: &EngineHandler) -> Result<ListResp> {
         .send_unary(Req::get("/volumes").build()?)
         .await?
         .json()?)
+}
+
+pub(super) async fn inspect(h: &EngineHandler, name: &str) -> Result<Box<VolumeDetail>> {
+    let path = format!("/volumes/{name}");
+    let raw: RawInspect = h
+        .engine
+        .conn()
+        .await?
+        .send_unary(Req::get(path).build()?)
+        .await?
+        .json()?;
+    Ok(Box::new(VolumeDetail {
+        name: raw.name,
+        driver: raw.driver,
+        mountpoint: raw.mountpoint,
+        created_at: raw.created_at,
+        scope: raw.scope,
+        labels: raw.labels,
+        options: raw.options,
+        ref_count: raw.usage_data.as_ref().map(|u| u.ref_count).unwrap_or(0),
+        size: raw.usage_data.map(|u| u.size).unwrap_or(-1),
+    }))
 }
 
 pub(super) async fn remove(h: &EngineHandler, name: String, force: bool) -> Result<()> {
@@ -62,6 +86,35 @@ struct RawVolume {
     created_at: String,
     #[serde(default)]
     scope: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RawInspect {
+    name: String,
+    #[serde(default)]
+    driver: String,
+    #[serde(default)]
+    mountpoint: String,
+    #[serde(default)]
+    created_at: String,
+    #[serde(default)]
+    scope: String,
+    #[serde(default)]
+    labels: HashMap<String, String>,
+    #[serde(default)]
+    options: HashMap<String, String>,
+    #[serde(default)]
+    usage_data: Option<RawUsage>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "PascalCase")]
+struct RawUsage {
+    #[serde(default)]
+    size: i64,
+    #[serde(default)]
+    ref_count: i64,
 }
 
 impl RawVolume {

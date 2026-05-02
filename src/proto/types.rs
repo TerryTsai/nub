@@ -34,6 +34,11 @@ pub struct ContainerSummary {
     /// Last exit code. 0 by default — also when the container hasn't exited or
     /// when the engine doesn't include the field on the list response.
     pub exit_code: i32,
+    /// Healthcheck state derived from the engine's free-form Status string:
+    /// `"healthy"`, `"unhealthy"`, `"starting"`, or empty (no healthcheck or
+    /// not parseable). Both engines format this consistently; we don't pay
+    /// the N+1 inspect cost just to get a structured field.
+    pub health: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -50,6 +55,9 @@ pub struct ContainerDetail {
     pub exit_code: i64,
     pub error: String,
     pub restart_count: i64,
+    /// Healthcheck state from inspect's structured `State.Health.Status`.
+    /// Empty when no healthcheck is configured.
+    pub health: String,
     pub cmd: Vec<String>,
     pub entrypoint: Vec<String>,
     pub env: Vec<String>,
@@ -98,6 +106,28 @@ pub struct ImageSummary {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct ImageDetail {
+    pub id: String,
+    pub repo_tags: Vec<String>,
+    pub repo_digests: Vec<String>,
+    pub created: String,
+    pub size: i64,
+    pub architecture: String,
+    pub os: String,
+    pub author: String,
+    pub comment: String,
+    pub cmd: Vec<String>,
+    pub entrypoint: Vec<String>,
+    pub env: Vec<String>,
+    pub working_dir: String,
+    pub user: String,
+    pub exposed_ports: Vec<String>,
+    pub labels: HashMap<String, String>,
+    /// Layer count (length of RootFS.Layers).
+    pub layers: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct VolumeSummary {
     pub name: String,
     pub driver: String,
@@ -106,6 +136,21 @@ pub struct VolumeSummary {
     pub scope: String,
     /// True if at least one container (running or stopped) mounts this volume.
     pub in_use: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct VolumeDetail {
+    pub name: String,
+    pub driver: String,
+    pub mountpoint: String,
+    pub created_at: String,
+    pub scope: String,
+    pub labels: HashMap<String, String>,
+    pub options: HashMap<String, String>,
+    /// Number of containers using this volume (from /system/df).
+    pub ref_count: i64,
+    /// Disk usage bytes (-1 if not reported).
+    pub size: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -135,4 +180,33 @@ pub struct NetworkSummary {
     pub internal: bool,
     /// True if at least one container (running or stopped) is attached.
     pub in_use: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NetworkDetail {
+    pub id: String,
+    pub name: String,
+    pub driver: String,
+    pub scope: String,
+    pub created: String,
+    pub internal: bool,
+    /// IPAM subnet/gateway pairs. Most networks have a single entry.
+    pub ipam: Vec<IpamConfig>,
+    pub containers: Vec<NetworkContainer>,
+    pub options: HashMap<String, String>,
+    pub labels: HashMap<String, String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IpamConfig {
+    pub subnet: String,
+    pub gateway: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct NetworkContainer {
+    pub id: String,
+    pub name: String,
+    pub ipv4: String,
+    pub ipv6: String,
 }

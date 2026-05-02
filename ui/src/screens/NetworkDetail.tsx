@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
-import type { NetworkSummary } from "@/api/types";
+import type { NetworkDetail as NetworkDetailT, NetworkSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
@@ -33,6 +33,12 @@ export function NetworkDetail() {
     return r.data;
   });
   const network = networks?.find((n) => n.id === nid);
+
+  const inspectKey = host && session.session && nid ? `${host.url}:inspect_network:${nid}` : null;
+  const { data: detail } = useQuery<NetworkDetailT>(inspectKey, async () => {
+    const r = unwrap(await call(host!, { op: "inspect_network", id: nid! }), "network_detail");
+    return r.data;
+  });
 
   async function onRemove() {
     if (!host || !nid) return;
@@ -88,6 +94,29 @@ export function NetworkDetail() {
               <Row label="Created" value={network.created} mono />
             </div>
           </Section>
+
+          {detail && detail.ipam.length > 0 && (
+            <Section label="IPAM">
+              <div className="flex flex-col gap-2">
+                {detail.ipam.map((c, i) => (
+                  <div key={i} className="flex flex-col gap-1">
+                    {c.subnet && <Row label="Subnet" value={c.subnet} mono />}
+                    {c.gateway && <Row label="Gateway" value={c.gateway} mono />}
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
+          {detail && detail.containers.length > 0 && (
+            <Section label="Attached containers">
+              <div className="flex flex-col gap-2">
+                {detail.containers.map((c) => (
+                  <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section label="Actions">
             <Button

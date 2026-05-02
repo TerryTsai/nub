@@ -1,15 +1,18 @@
-//! `docker network ls/rm`. Podman's compat `/networks` shares the brittleness
-//! of `/containers/json` — a single bad container 500s the whole endpoint.
-//! Use libpod on Podman; compat on Docker.
+//! `docker network ls/rm`. Podman's compat `/networks` inherits the
+//! brittleness of `/containers/json` — one bad container 500s the whole
+//! endpoint. Use libpod on Podman; compat on Docker. Inspect is split
+//! into a sibling module since it has its own engine-specific decoders.
 
 use anyhow::Result;
 use serde::Deserialize;
 
 use crate::client::{short_id, EngineKind, Req};
-use crate::proto::NetworkSummary;
+use crate::proto::{NetworkDetail, NetworkSummary};
 
 use super::usage;
 use super::EngineHandler;
+
+mod inspect;
 
 pub(super) async fn list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
     let (mut nets, used) = tokio::try_join!(fetch_list(h), usage::compute(h))?;
@@ -24,6 +27,10 @@ async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
         EngineKind::Podman => list_libpod(h).await,
         EngineKind::Docker => list_compat(h).await,
     }
+}
+
+pub(super) async fn inspect(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
+    inspect::run(h, id).await
 }
 
 pub(super) async fn remove(h: &EngineHandler, id: String) -> Result<()> {

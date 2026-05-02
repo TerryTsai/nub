@@ -8,6 +8,7 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -25,6 +26,7 @@ export function ContainerDetail() {
 
   const [pending, setPending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const toast = useToast();
 
   const queryKey = host && session.session && cid ? `${host.url}:inspect:${cid}` : null;
   const { data: detail, error: queryError, reload } = useQuery<ContainerDetailT>(queryKey, async () => {
@@ -39,12 +41,14 @@ export function ContainerDetail() {
     setActionError(null);
     try {
       unwrap(await call(host, { op: "container_action", id: cid, action }), "ok");
-      // Invalidate the host's container list — state likely changed.
       invalidate(`${host.url}:list_containers`);
+      toast.push(`${pastTense(name)} ${detail?.name || cid.slice(0, 12)}`, "success");
       if (after) after();
       else reload();
     } catch (e) {
-      setActionError((e as Error).message);
+      const msg = (e as Error).message;
+      setActionError(msg);
+      toast.push(msg, "error");
     } finally {
       setPending(null);
     }
@@ -73,7 +77,7 @@ export function ContainerDetail() {
       <Heading
         category="Container"
         title={displayName}
-        right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code)} />}
+        right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code, detail.health)} />}
       />
 
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
@@ -89,6 +93,7 @@ export function ContainerDetail() {
               {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
               {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
               {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
+              {detail.health && <Row label="Health" value={detail.health} />}
               {detail.network_mode && <Row label="Network" value={detail.network_mode} />}
               {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
             </div>
@@ -186,6 +191,17 @@ export function ContainerDetail() {
       )}
     </Page>
   );
+}
+
+function pastTense(name: string): string {
+  switch (name) {
+    case "start":   return "started";
+    case "stop":    return "stopped";
+    case "restart": return "restarted";
+    case "remove":  return "removed";
+    case "kill":    return "killed";
+    default:        return name;
+  }
 }
 
 function RemoveButton({

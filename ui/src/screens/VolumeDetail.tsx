@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
-import type { VolumeSummary } from "@/api/types";
+import type { VolumeDetail as VolumeDetailT, VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
@@ -33,6 +33,12 @@ export function VolumeDetail() {
     return r.data;
   });
   const volume = volumes?.find((v) => v.name === vname);
+
+  const inspectKey = host && session.session && vname ? `${host.url}:inspect_volume:${vname}` : null;
+  const { data: detail } = useQuery<VolumeDetailT>(inspectKey, async () => {
+    const r = unwrap(await call(host!, { op: "inspect_volume", name: vname! }), "volume_detail");
+    return r.data;
+  });
 
   async function onRemove(force: boolean) {
     if (!host || !vname) return;
@@ -86,8 +92,31 @@ export function VolumeDetail() {
               {volume.scope && <Row label="Scope" value={volume.scope} />}
               <Row label="Mountpoint" value={volume.mountpoint} mono />
               <Row label="Created" value={volume.created_at} mono />
+              {detail && detail.ref_count >= 0 && (
+                <Row
+                  label="In use by"
+                  value={`${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`}
+                />
+              )}
+              {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
             </div>
           </Section>
+
+          {detail && Object.keys(detail.options).length > 0 && (
+            <Section label="Options">
+              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
+                {Object.entries(detail.options).map(([k, v]) => `${k}=${v}`).join("\n")}
+              </pre>
+            </Section>
+          )}
+
+          {detail && Object.keys(detail.labels).length > 0 && (
+            <Section label="Labels">
+              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
+                {Object.entries(detail.labels).map(([k, v]) => `${k}=${v}`).join("\n")}
+              </pre>
+            </Section>
+          )}
 
           <Section label="Actions">
             <Button
@@ -114,4 +143,15 @@ export function VolumeDetail() {
       )}
     </Page>
   );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let v = n / 1024;
+  for (const u of units) {
+    if (v < 1024) return `${v.toFixed(v < 10 ? 1 : 0)} ${u}`;
+    v /= 1024;
+  }
+  return `${v.toFixed(0)} PB`;
 }

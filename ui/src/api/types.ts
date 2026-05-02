@@ -12,12 +12,15 @@ export type Op =
   | { op: "stream_stats"; id: string }
   | { op: "exec"; id: string; cmd: string[]; tty?: boolean }
   | { op: "list_images" }
+  | { op: "inspect_image"; id: string }
   | { op: "remove_image"; id: string; force?: boolean }
   | { op: "pull_image"; reference: string }
   | { op: "build_image"; dockerfile: string; tag: string; build_args: Record<string, string> }
   | { op: "list_volumes" }
+  | { op: "inspect_volume"; name: string }
   | { op: "remove_volume"; name: string; force?: boolean }
   | { op: "list_networks" }
+  | { op: "inspect_network"; id: string }
   | { op: "remove_network"; id: string }
   | { op: "list_dockerfiles" }
   | { op: "read_dockerfile"; name: string }
@@ -49,6 +52,9 @@ export type OpResult =
   | { type: "volumes"; data: VolumeSummary[] }
   | { type: "networks"; data: NetworkSummary[] }
   | { type: "container_created"; data: ContainerCreated }
+  | { type: "image_detail"; data: ImageDetail }
+  | { type: "volume_detail"; data: VolumeDetail }
+  | { type: "network_detail"; data: NetworkDetail }
   | { type: "dockerfiles"; data: DockerfileSummary[] }
   | { type: "dockerfile"; data: DockerfileContent }
   | { type: "ok" }
@@ -66,12 +72,15 @@ export interface HostInfo {
 export interface ContainerSummary {
   id: string; name: string; image: string; state: string; status: string; created: string;
   exit_code: number;
+  /** Healthcheck state: "healthy" | "unhealthy" | "starting" | "" (no healthcheck). */
+  health: string;
 }
 
 export interface ContainerDetail {
   id: string; name: string; image: string; image_id: string; created: string;
   state: string; running: boolean; started_at: string; finished_at: string;
   exit_code: number; error: string; restart_count: number;
+  health: string;
   cmd: string[]; entrypoint: string[]; env: string[]; working_dir: string; user: string;
   labels: Record<string, string>;
   network_mode: string; restart_policy: string; privileged: boolean; memory_limit: number;
@@ -83,8 +92,26 @@ export interface NetworkEndpoint { ip_address: string; gateway: string; mac_addr
 export interface PortMapping { container_port: string; host_ip: string; host_port: string }
 
 export interface ImageSummary { id: string; repo_tag: string; created: number; size: number; containers: number }
+export interface ImageDetail {
+  id: string; repo_tags: string[]; repo_digests: string[]; created: string; size: number;
+  architecture: string; os: string; author: string; comment: string;
+  cmd: string[]; entrypoint: string[]; env: string[]; working_dir: string; user: string;
+  exposed_ports: string[]; labels: Record<string, string>; layers: number;
+}
 export interface VolumeSummary { name: string; driver: string; mountpoint: string; created_at: string; scope: string; in_use: boolean }
+export interface VolumeDetail {
+  name: string; driver: string; mountpoint: string; created_at: string; scope: string;
+  labels: Record<string, string>; options: Record<string, string>;
+  ref_count: number; size: number;
+}
 export interface NetworkSummary { id: string; name: string; driver: string; scope: string; created: string; internal: boolean; in_use: boolean }
+export interface NetworkDetail {
+  id: string; name: string; driver: string; scope: string; created: string; internal: boolean;
+  ipam: { subnet: string; gateway: string }[];
+  containers: { id: string; name: string; ipv4: string; ipv6: string }[];
+  options: Record<string, string>;
+  labels: Record<string, string>;
+}
 export interface ContainerCreated { id: string; started: boolean; warnings: string[] }
 export interface DockerfileSummary { name: string; size: number; modified_at: string }
 export interface DockerfileContent { name: string; content: string; size: number; modified_at: string }
