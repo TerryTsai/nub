@@ -4,6 +4,7 @@ import { call, unwrap, type Host } from "@/api/client";
 import type { NetworkSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
@@ -17,6 +18,7 @@ export function HostNetworks() {
 
   const [networks, setNetworks] = useState<NetworkSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<NetworkSummary | null>(null);
 
   async function refresh() {
     if (!host) return;
@@ -31,7 +33,6 @@ export function HostNetworks() {
 
   async function removeNetwork(n: NetworkSummary) {
     if (!host) return;
-    if (!confirm(`Remove network ${n.name}?`)) return;
     try {
       unwrap(await call(host, { op: "remove_network", id: n.id }), "ok");
       await refresh();
@@ -68,7 +69,7 @@ export function HostNetworks() {
                 right={
                   <button
                     type="button"
-                    onClick={() => removeNetwork(n)}
+                    onClick={() => setPending(n)}
                     aria-label="Remove network"
                     className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
                   >
@@ -80,6 +81,14 @@ export function HostNetworks() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(o) => { if (!o) setPending(null); }}
+        title={pending ? `Remove network ${pending.name}?` : ""}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (pending) removeNetwork(pending); setPending(null); }}
+      />
     </Page>
   );
 }

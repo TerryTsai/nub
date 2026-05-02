@@ -1,12 +1,31 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+
+type ImageFilter = "all" | "tagged" | "untagged";
+const IMAGE_FILTERS: ImageFilter[] = ["all", "tagged", "untagged"];
+
+function asImageFilter(s: string | null): ImageFilter {
+  return IMAGE_FILTERS.includes(s as ImageFilter) ? (s as ImageFilter) : "all";
+}
+
+function isTagged(img: ImageSummary): boolean {
+  return img.repo_tag !== "<none>" && !img.repo_tag.startsWith("<none>");
+}
+
+function matchesImageFilter(img: ImageSummary, f: ImageFilter): boolean {
+  if (f === "all") return true;
+  if (f === "tagged") return isTagged(img);
+  return !isTagged(img);
+}
 
 export function HostImages() {
   const { hid } = useParams<{ hid: string }>();
@@ -17,6 +36,13 @@ export function HostImages() {
 
   const [images, setImages] = useState<ImageSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<ImageSummary | null>(null);
+  const [params, setParams] = useSearchParams();
+  const filter = asImageFilter(params.get("filter"));
+  const setFilter = (v: ImageFilter) => {
+    if (v === "all") setParams({}, { replace: true });
+    else setParams({ filter: v }, { replace: true });
+  };
 
   async function refresh() {
     if (!host) return;
@@ -31,7 +57,6 @@ export function HostImages() {
 
   async function removeImage(image: ImageSummary) {
     if (!host) return;
-    if (!confirm(`Remove ${image.repo_tag}?`)) return;
     try {
       unwrap(await call(host, { op: "remove_image", id: image.id, force: false }), "ok");
       await refresh();
@@ -49,8 +74,23 @@ export function HostImages() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
+  const tagged = images?.filter(isTagged).length ?? 0;
+  const subnav = images !== null ? (
+    <Filters
+      value={filter}
+      onChange={setFilter}
+      options={[
+        { value: "all", label: "All", count: images.length },
+        { value: "tagged", label: "Tagged", count: tagged },
+        { value: "untagged", label: "Untagged", count: images.length - tagged },
+      ]}
+    />
+  ) : undefined;
+
+  const visible = images?.filter((i) => matchesImageFilter(i, filter)) ?? null;
+
   return (
-    <Page crumbs={crumbs}>
+    <Page crumbs={crumbs} subnav={subnav}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {images === null && !error && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
@@ -58,9 +98,12 @@ export function HostImages() {
       {images?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No images.</p>
       )}
-      {images && images.length > 0 && (
+      {visible && visible.length === 0 && images && images.length > 0 && (
+        <p className="text-xs text-[var(--text-tertiary)]">No matches.</p>
+      )}
+      {visible && visible.length > 0 && (
         <div className="flex flex-col -mx-1">
-          {images.map((img) => (
+          {visible.map((img) => (
             <div key={img.id} className="px-1">
               <ListRow
                 title={img.repo_tag}
@@ -68,7 +111,7 @@ export function HostImages() {
                 right={
                   <button
                     type="button"
-                    onClick={() => removeImage(img)}
+                    onClick={() => setPending(img)}
                     aria-label="Remove image"
                     className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
                   >
@@ -80,6 +123,17 @@ export function HostImages() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(o) => { if (!o) setPending(null); }}
+        title={pending ? `Remove ${pending.repo_tag}?` : ""}
+        description={pending && pending.containers > 0
+          ? `In use by ${pending.containers} container${pending.containers > 1 ? "s" : ""}. Remove anyway?`
+          : undefined}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (pending) removeImage(pending); setPending(null); }}
+      />
     </Page>
   );
 }

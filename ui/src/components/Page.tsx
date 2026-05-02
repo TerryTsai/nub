@@ -12,11 +12,16 @@ export type Crumb =
  */
 export function Page({
   crumbs,
+  subnav,
   children,
   fab,
   fill,
 }: {
   crumbs?: Crumb[];
+  /** Sub-navigation row beneath the breadcrumb. Same height/padding/style
+   * across pages — used for filter bars, slim toolbars (logs pause/copy,
+   * exec subtitle, etc.). Rendered sticky with the header. */
+  subnav?: ReactNode;
   children: ReactNode;
   /** Optional floating action — rendered fixed bottom-right. */
   fab?: ReactNode;
@@ -28,7 +33,7 @@ export function Page({
   if (fill) {
     return (
       <div className="h-full flex flex-col overflow-hidden">
-        <AppHeader crumbs={crumbs} />
+        <AppHeader crumbs={crumbs} subnav={subnav} />
         <main className="flex-1 min-h-0 flex flex-col">{children}</main>
         {fab}
       </div>
@@ -36,7 +41,7 @@ export function Page({
   }
   return (
     <div className="min-h-full">
-      <AppHeader crumbs={crumbs} />
+      <AppHeader crumbs={crumbs} subnav={subnav} />
       <main className="max-w-2xl mx-auto px-5 pt-3 pb-24 flex flex-col gap-4">
         {children}
       </main>
@@ -45,7 +50,7 @@ export function Page({
   );
 }
 
-function AppHeader({ crumbs }: { crumbs?: Crumb[] }) {
+function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
   const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
@@ -57,6 +62,11 @@ function AppHeader({ crumbs }: { crumbs?: Crumb[] }) {
           ))}
         </nav>
       </div>
+      {subnav && (
+        <div className="px-5 h-10 flex items-center gap-2 border-t border-[var(--border-subtle)]">
+          {subnav}
+        </div>
+      )}
     </header>
   );
 }

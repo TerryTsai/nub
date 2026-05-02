@@ -45,11 +45,12 @@ export function ContainerStats() {
     { kind: "link", label: "stats" },
   ];
 
+  const subnav = (
+    <span className="text-[11px] text-[var(--text-tertiary)] truncate">{containerName}</span>
+  );
+
   return (
-    <Page crumbs={crumbs} fill>
-      <div className="px-5 py-2 text-[11px] text-[var(--text-tertiary)] border-b border-[var(--border-subtle)] truncate">
-        {containerName}
-      </div>
+    <Page crumbs={crumbs} subnav={subnav} fill>
       <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
         {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}

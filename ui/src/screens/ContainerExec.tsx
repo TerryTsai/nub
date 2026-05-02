@@ -39,11 +39,14 @@ export function ContainerExec() {
     { kind: "link", label: "exec" },
   ];
 
+  const subnav = (
+    <span className="text-[11px] text-[var(--text-tertiary)] truncate">
+      <span className="mono">{cmd}</span> · {containerName}
+    </span>
+  );
+
   return (
-    <Page crumbs={crumbs} fill>
-      <div className="px-5 py-2 text-[11px] text-[var(--text-tertiary)] border-b border-[var(--border-subtle)]">
-        <span className="mono">{cmd}</span> · {containerName}
-      </div>
+    <Page crumbs={crumbs} subnav={subnav} fill>
       {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
       <div ref={termRef} className="flex-1 min-h-0 bg-black px-1" />
     </Page>

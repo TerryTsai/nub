@@ -42,21 +42,24 @@ export function ContainerLogs() {
     { kind: "link", label: "logs" },
   ];
 
+  const subnav = (
+    <>
+      <span className="text-[11px] text-[var(--text-tertiary)] mr-auto truncate">
+        {containerName}
+      </span>
+      <Button
+        variant={follow ? "primary" : "ghost"}
+        onClick={() => setFollow((f) => !f)}
+      >
+        {follow ? "pause" : "follow"}
+      </Button>
+      <Button variant="ghost" onClick={() => copyAll(lines)}>copy</Button>
+      <Button variant="ghost" onClick={() => setLines([])}>clear</Button>
+    </>
+  );
+
   return (
-    <Page crumbs={crumbs} fill>
-      <div className="flex items-center gap-2 px-5 py-2 border-b border-[var(--border-subtle)]">
-        <span className="text-[11px] text-[var(--text-tertiary)] mr-auto truncate">
-          {containerName}
-        </span>
-        <Button
-          variant={follow ? "primary" : "ghost"}
-          onClick={() => setFollow((f) => !f)}
-        >
-          {follow ? "pause" : "follow"}
-        </Button>
-        <Button variant="ghost" onClick={() => copyAll(lines)}>copy</Button>
-        <Button variant="ghost" onClick={() => setLines([])}>clear</Button>
-      </div>
+    <Page crumbs={crumbs} subnav={subnav} fill>
       {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
       <LogPane paneRef={paneRef} onScroll={onScroll} lines={lines} />
     </Page>

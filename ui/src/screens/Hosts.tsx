@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useHosts } from "@/state/hosts";
+import { useHosts, type SavedHost } from "@/state/hosts";
 import { Button } from "@/components/Button";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { FAB } from "@/components/FAB";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
@@ -8,6 +10,7 @@ import { Page } from "@/components/Page";
 export function Hosts() {
   const { hosts, remove } = useHosts();
   const nav = useNavigate();
+  const [pending, setPending] = useState<SavedHost | null>(null);
 
   const empty = hosts.length === 0;
 
@@ -35,7 +38,7 @@ export function Hosts() {
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm(`Remove ${h.label}?`)) remove(h.hid);
+                      setPending(h);
                     }}
                     aria-label="Remove host"
                     className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
@@ -48,6 +51,15 @@ export function Hosts() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(o) => { if (!o) setPending(null); }}
+        title={pending ? `Remove ${pending.label}?` : ""}
+        description="The host is removed from this device only — the nub it points at keeps running."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (pending) remove(pending.hid); setPending(null); }}
+      />
     </Page>
   );
 }

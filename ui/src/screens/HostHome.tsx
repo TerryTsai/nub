@@ -70,9 +70,22 @@ export function HostHome() {
 
   const canCreate = session.session?.can("create_container") ?? false;
 
+  const subnav = session.session && containers !== null ? (
+    <Filters
+      value={filter}
+      onChange={setFilter}
+      options={[
+        { value: "all", label: "All", count: containers.length },
+        { value: "running", label: "Running", count: countRunning(containers) },
+        { value: "stopped", label: "Stopped", count: containers.length - countRunning(containers) },
+      ]}
+    />
+  ) : undefined;
+
   return (
     <Page
       crumbs={crumbs}
+      subnav={subnav}
       fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
     >
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
@@ -85,18 +98,6 @@ export function HostHome() {
           </p>
           <Link to="/add" className="self-start"><Button variant="ghost">Re-add host</Button></Link>
         </>
-      )}
-
-      {session.session && containers !== null && (
-        <Filters
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: "All", count: containers.length },
-            { value: "running", label: "Running", count: countRunning(containers) },
-            { value: "stopped", label: "Stopped", count: containers.length - countRunning(containers) },
-          ]}
-        />
       )}
 
       {session.session && (

@@ -4,6 +4,7 @@ import { call, unwrap, type Host } from "@/api/client";
 import type { VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
@@ -17,6 +18,7 @@ export function HostVolumes() {
 
   const [volumes, setVolumes] = useState<VolumeSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<VolumeSummary | null>(null);
 
   async function refresh() {
     if (!host) return;
@@ -31,7 +33,6 @@ export function HostVolumes() {
 
   async function removeVolume(v: VolumeSummary) {
     if (!host) return;
-    if (!confirm(`Remove volume ${v.name}?`)) return;
     try {
       unwrap(await call(host, { op: "remove_volume", name: v.name, force: false }), "ok");
       await refresh();
@@ -69,7 +70,7 @@ export function HostVolumes() {
                 right={
                   <button
                     type="button"
-                    onClick={() => removeVolume(v)}
+                    onClick={() => setPending(v)}
                     aria-label="Remove volume"
                     className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
                   >
@@ -81,6 +82,15 @@ export function HostVolumes() {
           ))}
         </div>
       )}
+      <ConfirmDialog
+        open={pending !== null}
+        onOpenChange={(o) => { if (!o) setPending(null); }}
+        title={pending ? `Remove volume ${pending.name.slice(0, 12)}?` : ""}
+        description="Volume contents are deleted. This cannot be undone."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => { if (pending) removeVolume(pending); setPending(null); }}
+      />
     </Page>
   );
 }

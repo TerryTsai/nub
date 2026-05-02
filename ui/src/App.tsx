@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ScrollRestoration } from "./components/ScrollRestoration";
 import { Hosts } from "./screens/Hosts";
 import { AddHost } from "./screens/AddHost";
 import { HostHome } from "./screens/HostHome";
@@ -20,6 +21,7 @@ const ContainerExec = lazy(() =>
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollRestoration />
       <Routes>
         <Route path="/" element={<Hosts />} />
         <Route path="/add" element={<AddHost />} />
