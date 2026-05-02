@@ -10,6 +10,10 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  # Rust-only checks. Don't enable `embed-ui` here — that feature's build.rs
+  # demands `ui/dist` exist, and pulling node into this job just to satisfy
+  # a few cfg-gated lines isn't worth the cycle. The end-to-end embed
+  # build is exercised by `release.yml` and the `embed` job below.
   rust:
     name: rust
     runs-on: ubuntu-latest
@@ -26,10 +30,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: clippy
-        run: cargo clippy --all-targets --features embed-ui -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: test
-        run: cargo test --features embed-ui
+        run: cargo test
 
   ui:
     name: ui
@@ -50,3 +54,34 @@ jobs:
       - name: build
         working-directory: ui
         run: npm run build
+
+  # Smoke-test the embed-ui combo: build the UI, then build nub with the
+  # feature enabled so the build.rs check passes and any embed-only code
+  # gets compiled. No lints here — the rust job covers those without ui.
+  embed:
+    name: embed
+    runs-on: ubuntu-latest
+    needs: [rust, ui]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: embed
+
+      - name: build ui
+        working-directory: ui
+        run: |
+          npm ci
+          npm run build
+
+      - name: build embed
+        run: cargo build --features embed-ui
