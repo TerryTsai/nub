@@ -5,6 +5,9 @@ import { HostHome } from "./screens/HostHome";
 import { ContainerDetail } from "./screens/ContainerDetail";
 import { ContainerLogs } from "./screens/ContainerLogs";
 import { ContainerStats } from "./screens/ContainerStats";
+import { HostImages } from "./screens/HostImages";
+import { HostNetworks } from "./screens/HostNetworks";
+import { HostVolumes } from "./screens/HostVolumes";
 import { RunContainer } from "./screens/RunContainer";
 
 export default function App() {
@@ -14,6 +17,9 @@ export default function App() {
         <Route path="/" element={<Hosts />} />
         <Route path="/add" element={<AddHost />} />
         <Route path="/h/:hid" element={<HostHome />} />
+        <Route path="/h/:hid/images" element={<HostImages />} />
+        <Route path="/h/:hid/volumes" element={<HostVolumes />} />
+        <Route path="/h/:hid/networks" element={<HostNetworks />} />
         <Route path="/h/:hid/run" element={<RunContainer />} />
         <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
         <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />

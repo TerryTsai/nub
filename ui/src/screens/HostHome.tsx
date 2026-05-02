@@ -6,6 +6,7 @@ import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
+import { HostNav } from "@/components/HostNav";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { Section } from "@/components/Section";
@@ -57,6 +58,8 @@ export function HostHome() {
       crumbs={crumbs}
       fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
     >
+      <HostNav hid={hid!} active="containers" />
+
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
 
       {session.error && (
