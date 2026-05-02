@@ -1,6 +1,6 @@
 [package]
 name = "nub"
-version = "0.0.5"
+version = "0.0.6"
 edition = "2021"
 description = "Minimal Docker/Podman control plane: hub + nub"
 license = "MIT OR Apache-2.0"
