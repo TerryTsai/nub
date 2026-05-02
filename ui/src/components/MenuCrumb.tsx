@@ -12,8 +12,10 @@ export interface MenuItem {
 }
 
 /** Breadcrumb segment that opens a small popover menu on click. Mirrors
- * foundry's `Sandbox ^` pattern — the segment looks like a normal crumb
- * but with a chevron, and tapping it opens a list of options. */
+ * foundry's `Sandbox ^` pattern — looks like a normal crumb but with a
+ * caret, opens a list of options on tap. The trigger uses `font: inherit`
+ * so it renders identically to neighbouring link segments (no <button>
+ * font-family fallback). */
 export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -28,14 +30,15 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
   }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative inline-flex items-baseline">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-1 text-[var(--text-primary)] font-medium font-display text-sm"
+        className="appearance-none bg-transparent border-0 p-0 m-0 cursor-pointer text-[var(--text-primary)] font-medium font-display text-sm leading-none"
+        style={{ font: "inherit" }}
       >
-        <span className="truncate">{label}</span>
-        <Chevron open={open} />
+        <span className="font-display font-medium">{label}</span>
+        <span className="text-[var(--text-tertiary)] ml-0.5 text-[10px]">▾</span>
       </button>
       {open && (
         <div className="absolute left-0 top-full mt-1 min-w-[180px] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] py-1 z-40 shadow-lg">
@@ -59,20 +62,6 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
         </div>
       )}
     </div>
-  );
-}
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      width="10"
-      height="10"
-      viewBox="0 0 10 10"
-      aria-hidden="true"
-      className={`text-[var(--text-tertiary)] transition-transform ${open ? "rotate-180" : ""}`}
-    >
-      <path d="M2 4l3 3 3-3" stroke="currentColor" fill="none" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
   );
 }
 

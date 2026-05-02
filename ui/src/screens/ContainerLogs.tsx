@@ -47,14 +47,11 @@ export function ContainerLogs() {
       <span className="text-[11px] text-[var(--text-tertiary)] mr-auto truncate">
         {containerName}
       </span>
-      <Button
-        variant={follow ? "primary" : "ghost"}
-        onClick={() => setFollow((f) => !f)}
-      >
+      <Button size="sm" variant={follow ? "primary" : "ghost"} onClick={() => setFollow((f) => !f)}>
         {follow ? "pause" : "follow"}
       </Button>
-      <Button variant="ghost" onClick={() => copyAll(lines)}>copy</Button>
-      <Button variant="ghost" onClick={() => setLines([])}>clear</Button>
+      <Button size="sm" variant="ghost" onClick={() => copyAll(lines)}>copy</Button>
+      <Button size="sm" variant="ghost" onClick={() => setLines([])}>clear</Button>
     </>
   );
 

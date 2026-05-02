@@ -114,6 +114,13 @@ input, textarea, select, button {
   color: var(--error);
 }
 
+/* Slim variant — used in the sub-nav row, where a regular pill would
+ * dominate the 40px header strip. */
+.btn-sm {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
 /* Template chips (horizontal scroll in RunContainer) */
 .template-chip {
   flex-shrink: 0;
