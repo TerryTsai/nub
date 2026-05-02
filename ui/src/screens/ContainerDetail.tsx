@@ -115,7 +115,7 @@ export function ContainerDetail() {
           )}
 
           <Section label="View">
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <Link to={`/h/${hid}/c/${cid}/logs`}>
                 <Button
                   variant="ghost"
@@ -132,6 +132,17 @@ export function ContainerDetail() {
                   disallowReason={denyReason("stream_stats")}
                 >
                   Stats →
+                </Button>
+              </Link>
+              <Link to={`/h/${hid}/c/${cid}/exec`}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disallowReason={
+                    !detail.running ? "container is not running" : denyReason("exec")
+                  }
+                >
+                  Exec →
                 </Button>
               </Link>
             </div>

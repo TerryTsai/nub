@@ -4,7 +4,6 @@
 //! way as logs.
 
 use futures::stream::BoxStream;
-use hyper::header::{HeaderValue, HOST};
 use hyper_util::rt::TokioIo;
 use hyper::upgrade::Upgraded;
 use serde::{Deserialize, Serialize};
@@ -76,7 +75,6 @@ async fn start_exec(engine: &Engine, exec_id: &str, tty: bool) -> Result<TokioIo
         .json(&body)
         .map_err(|e| e.to_string())?
         .upgrade("tcp")
-        .header(HOST, HeaderValue::from_static("localhost"))
         .build()
         .map_err(|e| e.to_string())?;
     let res = engine

@@ -15,6 +15,7 @@ pub(crate) struct Req {
     body: Body,
     content_type: Option<&'static str>,
     extra_headers: Vec<(HeaderName, HeaderValue)>,
+    upgrade: Option<&'static str>,
 }
 
 impl Req {
@@ -37,6 +38,7 @@ impl Req {
             body: Body::Empty,
             content_type: None,
             extra_headers: Vec::new(),
+            upgrade: None,
         }
     }
 
@@ -47,24 +49,31 @@ impl Req {
         Ok(self)
     }
 
+    #[allow(dead_code)]
     pub(crate) fn header(mut self, name: HeaderName, value: HeaderValue) -> Self {
         self.extra_headers.push((name, value));
         self
     }
 
     /// Mark as an HTTP upgrade. Used by exec to flip the connection into a
-    /// raw bidirectional byte stream after a 101 response.
-    pub(crate) fn upgrade(self, protocol: &'static str) -> Self {
-        self.header(UPGRADE, HeaderValue::from_static(protocol))
-            .header(CONNECTION, HeaderValue::from_static("upgrade"))
+    /// raw bidirectional byte stream after a 101 response. Switches the
+    /// `Connection` header from `close` to `upgrade` (servers reject both).
+    pub(crate) fn upgrade(mut self, protocol: &'static str) -> Self {
+        self.upgrade = Some(protocol);
+        self
     }
 
     pub(crate) fn build(self) -> Result<Request<Body>, Error> {
         let mut builder = Request::builder().method(self.method).uri(self.path);
         builder = builder.header(HOST, "localhost");
-        // Per-stream connections, no keepalive — we open a fresh socket for
-        // every op anyway.
-        builder = builder.header(CONNECTION, "close");
+        if let Some(protocol) = self.upgrade {
+            builder = builder
+                .header(CONNECTION, "upgrade")
+                .header(UPGRADE, HeaderValue::from_static(protocol));
+        } else {
+            // Per-call sockets — close the connection after the response.
+            builder = builder.header(CONNECTION, "close");
+        }
         if let Some(ct) = self.content_type {
             builder = builder.header(CONTENT_TYPE, ct);
         }

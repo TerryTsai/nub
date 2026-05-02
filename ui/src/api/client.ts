@@ -45,6 +45,72 @@ export function unwrap<T extends OpResult["type"]>(
   return r as Extract<OpResult, { type: T }>;
 }
 
+/** Bidirectional stream handle returned by `bidiStream` — the caller can
+ * push chunks back to the server (e.g. exec stdin) until they call `close`
+ * or the server ends the stream. */
+export interface BidiStream {
+  send: (chunk: StreamChunk) => void;
+  close: () => void;
+  /** Resolves on a clean `end` chunk; rejects on protocol error / socket
+   * failure. */
+  done: Promise<void>;
+}
+
+/**
+ * Open a streaming op that the caller can also write to. Used by exec —
+ * stdout/stderr arrive via `onChunk`, and the caller pumps stdin via the
+ * returned handle. For receive-only streams use `streamOp` instead.
+ */
+export function bidiStream(host: Host, op: Op, onChunk: (chunk: StreamChunk) => void): BidiStream {
+  const wsUrl = host.url.replace(/^http/, "ws") + "/api/ws";
+  const ws = new WebSocket(wsUrl, ["nub", `bearer.${host.token}`]);
+  let started = false;
+  let closed = false;
+
+  const done = new Promise<void>((resolve, reject) => {
+    ws.onopen = () => ws.send(JSON.stringify({ kind: "request", id: 1, op }));
+    ws.onerror = () => { if (!closed) reject(new Error("websocket error")); };
+    ws.onclose = () => {
+      if (!closed && !started) reject(new Error("websocket closed before stream started"));
+    };
+    ws.onmessage = (e) => {
+      const f = JSON.parse(e.data as string) as Frame;
+      if (f.kind === "response") {
+        if (f.result.type === "err") {
+          ws.close();
+          reject(new Error(f.result.data.message));
+        } else if (f.result.type === "stream_started") {
+          started = true;
+        } else {
+          ws.close();
+          reject(new Error(`unexpected response type ${f.result.type}`));
+        }
+        return;
+      }
+      if (f.kind !== "stream") return;
+      if (f.chunk.type === "end") {
+        ws.close();
+        if (f.chunk.ok) resolve();
+        else reject(new Error(f.chunk.err ?? "stream ended with error"));
+        return;
+      }
+      onChunk(f.chunk);
+    };
+  });
+
+  return {
+    send(chunk) {
+      if (ws.readyState !== WebSocket.OPEN) return;
+      ws.send(JSON.stringify({ kind: "stream", id: 1, chunk }));
+    },
+    close() {
+      closed = true;
+      ws.close();
+    },
+    done,
+  };
+}
+
 /**
  * Run a streaming op over WebSocket. `onChunk` fires for every stream frame;
  * the returned promise resolves on `end` (ok=true) or rejects on `end` (ok=false),

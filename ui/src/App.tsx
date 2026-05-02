@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Hosts } from "./screens/Hosts";
 import { AddHost } from "./screens/AddHost";
@@ -9,6 +10,12 @@ import { HostImages } from "./screens/HostImages";
 import { HostNetworks } from "./screens/HostNetworks";
 import { HostVolumes } from "./screens/HostVolumes";
 import { RunContainer } from "./screens/RunContainer";
+
+// Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
+// initial bundle for users who never open a terminal.
+const ContainerExec = lazy(() =>
+  import("./screens/ContainerExec").then((m) => ({ default: m.ContainerExec })),
+);
 
 export default function App() {
   return (
@@ -24,6 +31,14 @@ export default function App() {
         <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
         <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />
         <Route path="/h/:hid/c/:cid/stats" element={<ContainerStats />} />
+        <Route
+          path="/h/:hid/c/:cid/exec"
+          element={
+            <Suspense fallback={<p className="px-5 pt-5 text-xs text-[var(--text-tertiary)]">Loading terminal…</p>}>
+              <ContainerExec />
+            </Suspense>
+          }
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
