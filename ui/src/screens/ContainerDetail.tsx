@@ -122,6 +122,18 @@ export function ContainerDetail() {
             {error && <p className="text-[var(--error)] text-sm">{error}</p>}
           </Card>
 
+          <Card>
+            <Link to={`/h/${hid}/c/${cid}/logs`}>
+              <Button
+                variant="ghost"
+                className="w-full"
+                disallowReason={denyReason("stream_logs")}
+              >
+                View logs →
+              </Button>
+            </Link>
+          </Card>
+
           {detail.cmd.length > 0 && (
             <Card>
               <Row label="Cmd" value={detail.cmd.join(" ")} mono />

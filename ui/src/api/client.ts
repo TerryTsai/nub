@@ -49,11 +49,15 @@ export function unwrap<T extends OpResult["type"]>(
  * Run a streaming op over WebSocket. `onChunk` fires for every stream frame;
  * the returned promise resolves on `end` (ok=true) or rejects on `end` (ok=false),
  * server error response, or socket failure.
+ *
+ * Pass an `AbortSignal` to cancel mid-stream — the WS is closed and the
+ * promise resolves cleanly (no rejection on caller-initiated abort).
  */
 export function streamOp(
   host: Host,
   op: Op,
   onChunk: (chunk: StreamChunk) => void,
+  signal?: AbortSignal,
 ): Promise<void> {
   const wsUrl = host.url.replace(/^http/, "ws") + "/api/ws";
   // Two subprotocols: "nub" is what the server echoes back; "bearer.<token>"
@@ -61,12 +65,19 @@ export function streamOp(
   const ws = new WebSocket(wsUrl, ["nub", `bearer.${host.token}`]);
   return new Promise((resolve, reject) => {
     let started = false;
+    let aborted = false;
+    signal?.addEventListener("abort", () => {
+      aborted = true;
+      ws.close();
+      resolve();
+    });
     ws.onopen = () => ws.send(JSON.stringify({ kind: "request", id: 1, op }));
-    ws.onerror = () => reject(new Error("websocket error"));
+    ws.onerror = () => { if (!aborted) reject(new Error("websocket error")); };
     ws.onclose = () => {
-      if (!started) reject(new Error("websocket closed before stream started"));
+      if (!aborted && !started) reject(new Error("websocket closed before stream started"));
     };
     ws.onmessage = (e) => {
+      if (aborted) return;
       const f = JSON.parse(e.data as string) as Frame;
       if (f.kind === "response") {
         if (f.result.type === "err") {
