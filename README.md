@@ -76,13 +76,27 @@ baked in — the binary is API-only and any web server can serve `ui/dist`.
 
 ## Usage
 
-The fastest start needs no config file at all:
+Zero-arg startup uses sane defaults — `id` from `/etc/hostname`, `bind`
+`0.0.0.0:8080`:
 
 ```sh
-$ nub --id host1 --bind 127.0.0.1:8080
+$ nub
 admin token: 7a9e4b...c4f1   (regenerates each restart, allows everything)
-nub host1 listening on 127.0.0.1:8080
+nub m73a listening on 0.0.0.0:8080
 ```
+
+When you want a real config, `nub init` writes a starter:
+
+```sh
+$ nub init                            # writes ~/.config/nub/nub.toml; prints the path
+$ nub init /etc/nub/config.toml       # write somewhere specific (sudo if needed)
+$ nub init -                          # write to stdout (for piping)
+$ nub init --force                    # overwrite if exists
+```
+
+The generated file has the live defaults filled in plus commented examples
+for `[engine]` and `[[trust]]`. Edit it; nub re-reads on restart and never
+overwrites it.
 
 Copy the admin token from stdout, then poke the host:
 
@@ -141,9 +155,17 @@ Replies come back framed:
 
 ## Configuration
 
-Config can come from a TOML file, CLI flags, or both (CLI overrides file).
-With `--config` omitted, `nub` looks for `./nub.toml` then
-`/etc/nub/config.toml`. With no file at all, CLI flags are enough.
+Config can come from a TOML file, CLI flags, or neither (sane defaults
+fill in). CLI flags override file values. With `--config` omitted, `nub`
+searches in order:
+
+1. `$XDG_CONFIG_HOME/nub/nub.toml` (typically `~/.config/nub/nub.toml`)
+2. `./nub.toml`
+3. `/etc/nub/config.toml`
+
+With no file in any of those, defaults apply: `id` from `/etc/hostname`,
+`bind` `0.0.0.0:8080`. `nub init` materializes a starter file in the
+default location.
 
 The full schema:
 

@@ -2,6 +2,18 @@ use anyhow::{Context, Result};
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
 
+fn auto_paths() -> Vec<PathBuf> {
+    let mut out = Vec::with_capacity(3);
+    if let Some(x) = std::env::var_os("XDG_CONFIG_HOME") {
+        out.push(PathBuf::from(x).join("nub/nub.toml"));
+    } else if let Some(h) = std::env::var_os("HOME") {
+        out.push(PathBuf::from(h).join(".config/nub/nub.toml"));
+    }
+    out.push(PathBuf::from("./nub.toml"));
+    out.push(PathBuf::from("/etc/nub/config.toml"));
+    out
+}
+
 #[derive(Debug, Default, Deserialize)]
 pub struct Config {
     pub id: Option<String>,
@@ -40,10 +52,7 @@ impl Config {
     pub fn load(explicit: Option<&Path>) -> Result<Option<Self>> {
         let path = match explicit {
             Some(p) => Some(p.to_path_buf()),
-            None => ["./nub.toml", "/etc/nub/config.toml"]
-                .into_iter()
-                .map(PathBuf::from)
-                .find(|p| p.exists()),
+            None => auto_paths().into_iter().find(|p| p.exists()),
         };
         let Some(path) = path else { return Ok(None) };
         let s = std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;

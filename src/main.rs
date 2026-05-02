@@ -2,13 +2,14 @@ mod auth;
 mod config;
 mod handler;
 mod http;
+mod init;
 mod proto;
 mod ui;
 mod wire;
 mod ws;
 
-use anyhow::{anyhow, Context, Result};
-use clap::Parser;
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
 use config::TrustEntry;
 use std::io::Read;
 use std::path::PathBuf;
@@ -18,13 +19,13 @@ use tracing_subscriber::EnvFilter;
 #[derive(Parser)]
 #[command(name = "nub", about = "Minimal Docker/Podman control plane")]
 struct Args {
-    /// Path to TOML config (default: ./nub.toml or /etc/nub/config.toml; optional)
+    /// Path to TOML config (default: $XDG_CONFIG_HOME/nub/nub.toml, ./nub.toml, /etc/nub/config.toml)
     #[arg(long)]
     config: Option<PathBuf>,
-    /// This binary's identifier
+    /// This binary's identifier (default: /etc/hostname or "nub")
     #[arg(long)]
     id: Option<String>,
-    /// Address to listen on (e.g. 127.0.0.1:8080)
+    /// Address to listen on (default: 0.0.0.0:8080)
     #[arg(long)]
     bind: Option<String>,
     /// TLS certificate path
@@ -33,34 +34,55 @@ struct Args {
     /// TLS private key path
     #[arg(long)]
     tls_key: Option<PathBuf>,
+
+    #[command(subcommand)]
+    cmd: Option<Cmd>,
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
+#[derive(Subcommand)]
+enum Cmd {
+    /// Generate a starter config file. Default: $XDG_CONFIG_HOME/nub/nub.toml.
+    Init {
+        /// Where to write. Use `-` for stdout.
+        path: Option<String>,
+        /// Overwrite if file exists.
+        #[arg(long)]
+        force: bool,
+    },
+}
+
+fn main() -> Result<()> {
     init_tracing()?;
     let args = Args::parse();
-    let mut cfg = config::Config::load(args.config.as_deref())?.unwrap_or_default();
+    if let Some(Cmd::Init { path, force }) = args.cmd {
+        return init::run(path, force);
+    }
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(serve(args))
+}
 
-    // CLI overrides file.
-    if let Some(v) = args.id {
-        cfg.id = Some(v);
+// tracing::{info,error} macros expand enough that this small orchestration
+// fn crosses cognitive_complexity. The function is sequential setup; allow.
+#[allow(clippy::cognitive_complexity)]
+async fn serve(args: Args) -> Result<()> {
+    let cfg = resolve_config(&args)?;
+    let id = cfg.id.clone().unwrap_or_else(init::hostname);
+    let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let app = build_app(cfg)?;
+    let listener = tokio::net::TcpListener::bind(&bind).await?;
+    tracing::info!("nub {id} listening on {bind}");
+    if let Err(e) = axum::serve(listener, app).await {
+        tracing::error!("axum serve failed: {e}");
     }
-    if let Some(v) = args.bind {
-        cfg.bind = Some(v);
-    }
-    if let Some(v) = args.tls_cert {
-        cfg.tls_cert = Some(v);
-    }
-    if let Some(v) = args.tls_key {
-        cfg.tls_key = Some(v);
-    }
+    Ok(())
+}
 
-    let id = cfg.id.ok_or_else(|| anyhow!("`id` required (config or --id)"))?;
-    let bind = cfg.bind.ok_or_else(|| anyhow!("`bind` required (config or --bind)"))?;
+fn build_app(cfg: config::Config) -> Result<axum::Router> {
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
         tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
-
     let policy = handler::Policy {
         allowed_binds: cfg.engine.allowed_binds,
     };
@@ -78,13 +100,24 @@ async fn main() -> Result<()> {
     if let Some(ui) = ui::ui_fallback() {
         app = app.merge(ui);
     }
+    Ok(app)
+}
 
-    let listener = tokio::net::TcpListener::bind(&bind).await?;
-    tracing::info!("nub {id} listening on {bind}");
-    if let Err(e) = axum::serve(listener, app).await {
-        tracing::error!("axum serve failed: {e}");
+fn resolve_config(args: &Args) -> Result<config::Config> {
+    let mut cfg = config::Config::load(args.config.as_deref())?.unwrap_or_default();
+    if let Some(v) = &args.id {
+        cfg.id = Some(v.clone());
     }
-    Ok(())
+    if let Some(v) = &args.bind {
+        cfg.bind = Some(v.clone());
+    }
+    if let Some(v) = &args.tls_cert {
+        cfg.tls_cert = Some(v.clone());
+    }
+    if let Some(v) = &args.tls_key {
+        cfg.tls_key = Some(v.clone());
+    }
+    Ok(cfg)
 }
 
 fn admin_entry() -> Result<TrustEntry> {
