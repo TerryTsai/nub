@@ -8,7 +8,8 @@ import type { PortPublish, RestartPolicySpec } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
-import { Page } from "@/components/Page";
+import { useHostCrumb } from "@/components/HostCrumbs";
+import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
 
 type LayerProgress = { status: string; current: number; total: number };
@@ -106,11 +107,13 @@ export function RunContainer() {
     }
   }
 
+  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+
   if (!saved) {
     return <Page><p>Unknown host.</p></Page>;
   }
 
-  const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
+  const crumbs: Crumb[] = [hostCrumb, { kind: "link", label: "new container" }];
 
   return (
     <Page crumbs={crumbs}>

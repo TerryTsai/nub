@@ -7,7 +7,8 @@ import { useSession } from "@/state/session";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Heading } from "@/components/Heading";
-import { Page } from "@/components/Page";
+import { useHostCrumb } from "@/components/HostCrumbs";
+import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 import { StatusBadge } from "@/components/StatusBadge";
@@ -54,11 +55,16 @@ export function ContainerDetail() {
     }
   }
 
+  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+
   if (!saved) {
     return <Page><p>Unknown host.</p></Page>;
   }
 
-  const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
+  const crumbs: Crumb[] = [
+    hostCrumb,
+    { kind: "link", label: detail?.name || cid?.slice(0, 12) || "?" },
+  ];
   const can = (op: string) => session.session?.can(op) ?? false;
   const denyReason = (op: string) =>
     session.session && !can(op) ? `your token doesn't allow ${op}` : undefined;

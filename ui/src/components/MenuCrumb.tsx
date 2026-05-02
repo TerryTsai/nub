@@ -1,0 +1,89 @@
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+
+export interface MenuItem {
+  label: string;
+  to: string;
+  current?: boolean;
+  /** Optional small right-aligned annotation (e.g. "archived"). */
+  meta?: string;
+  /** Optional leading + glyph. Use for "add" affordances at the bottom. */
+  add?: boolean;
+}
+
+/** Breadcrumb segment that opens a small popover menu on click. Mirrors
+ * foundry's `Sandbox ^` pattern — the segment looks like a normal crumb
+ * but with a chevron, and tapping it opens a list of options. */
+export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDocClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1 text-[var(--text-primary)] font-medium font-display text-sm"
+      >
+        <span className="truncate">{label}</span>
+        <Chevron open={open} />
+      </button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 min-w-[180px] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] py-1 z-40 shadow-lg">
+          {items.map((it, i) => (
+            <Link
+              key={i}
+              to={it.to}
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-900/60"
+            >
+              {it.add && <span className="text-[var(--accent)]">+</span>}
+              {!it.add && <Check current={!!it.current} />}
+              <span className={it.current ? "text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}>
+                {it.label}
+              </span>
+              {it.meta && (
+                <span className="ml-auto text-[10px] text-[var(--text-tertiary)]">{it.meta}</span>
+              )}
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      aria-hidden="true"
+      className={`text-[var(--text-tertiary)] transition-transform ${open ? "rotate-180" : ""}`}
+    >
+      <path d="M2 4l3 3 3-3" stroke="currentColor" fill="none" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function Check({ current }: { current: boolean }) {
+  return (
+    <span className="w-3 inline-flex items-center justify-center">
+      {current && (
+        <svg width="10" height="10" viewBox="0 0 10 10" className="text-[var(--id-color)]" aria-hidden="true">
+          <path d="M2 5.5l2 2 4-5" stroke="currentColor" fill="none" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )}
+    </span>
+  );
+}

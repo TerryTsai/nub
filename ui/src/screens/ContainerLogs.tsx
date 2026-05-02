@@ -5,7 +5,8 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
 import { Heading } from "@/components/Heading";
-import { Page } from "@/components/Page";
+import { useHostCrumb } from "@/components/HostCrumbs";
+import { Page, type Crumb } from "@/components/Page";
 
 const TAIL_LINES = 200;
 const MAX_LINES = 4000;
@@ -31,12 +32,15 @@ export function ContainerLogs() {
   useStream(host, cid, follow, setLines, setError, !!session.session);
   const { paneRef, onScroll } = useAutoscroll(lines);
 
+  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const containerName = name || cid?.slice(0, 12) || "?";
-  const crumbs = [
-    { label: saved.label, to: `/h/${hid}` },
-    { label: containerName, to: `/h/${hid}/c/${cid}` },
+  const crumbs: Crumb[] = [
+    hostCrumb,
+    { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
+    { kind: "link", label: "logs" },
   ];
 
   return (

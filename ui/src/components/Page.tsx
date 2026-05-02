@@ -1,33 +1,28 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 
-export interface Crumb {
-  label: string;
-  to?: string;
-}
+export type Crumb =
+  | { kind: "link"; label: string; to?: string }
+  | { kind: "menu"; node: ReactNode };
 
-/** App shell — fixed top header with the nub mark, a breadcrumb path, and
- * an optional section-nav row below it. The body holds page content; a
- * filter bar (when present) lives at the top of the body, NOT in the header.
- * No per-page title or back button: navigation is via breadcrumb, and detail
- * pages render their own heading inside the body. */
+/** App shell — single-row top header with the nub mark and a breadcrumb
+ * path. Breadcrumb segments can be plain links or dropdown menus
+ * (workspace/section pickers, foundry-style). The body holds page content;
+ * the row immediately below the header is reserved for a future filter bar.
+ */
 export function Page({
   crumbs,
-  nav,
   children,
   fab,
 }: {
   crumbs?: Crumb[];
-  /** Section-nav (e.g. Containers / Images / Volumes / Networks tabs).
-   * Renders attached to the bottom of the app header, sticky with it. */
-  nav?: ReactNode;
   children: ReactNode;
   /** Optional floating action — rendered fixed bottom-right. */
   fab?: ReactNode;
 }) {
   return (
     <div className="min-h-full">
-      <AppHeader crumbs={crumbs} nav={nav} />
+      <AppHeader crumbs={crumbs} />
       <main className="max-w-2xl mx-auto px-5 pt-3 pb-24 flex flex-col gap-4">
         {children}
       </main>
@@ -36,30 +31,40 @@ export function Page({
   );
 }
 
-function AppHeader({ crumbs, nav }: { crumbs?: Crumb[]; nav?: ReactNode }) {
-  const all: Crumb[] = [{ label: "nub", to: "/" }, ...(crumbs ?? [])];
+function AppHeader({ crumbs }: { crumbs?: Crumb[] }) {
+  const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
       <div className="flex items-center h-11 px-5 gap-2">
         <NubMark />
         <nav className="flex items-center gap-1 min-w-0 text-xs">
           {all.map((c, i) => (
-            <CrumbLink key={i} crumb={c} last={i === all.length - 1} showSep={i > 0} />
+            <Segment key={i} crumb={c} last={i === all.length - 1} showSep={i > 0} />
           ))}
         </nav>
       </div>
-      {nav && <div className="px-5 pb-2">{nav}</div>}
     </header>
   );
 }
 
-function CrumbLink({ crumb, last, showSep }: { crumb: Crumb; last: boolean; showSep: boolean }) {
+function Segment({ crumb, last, showSep }: { crumb: Crumb; last: boolean; showSep: boolean }) {
+  const sep = showSep && (
+    <span className="text-[var(--text-tertiary)] px-1 shrink-0">/</span>
+  );
+  if (crumb.kind === "menu") {
+    return (
+      <>
+        {sep}
+        {crumb.node}
+      </>
+    );
+  }
   const cls = last
     ? "text-[var(--text-primary)] font-medium font-display text-sm truncate"
     : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] font-display text-sm truncate";
   return (
     <>
-      {showSep && <span className="text-[var(--text-tertiary)] px-1 shrink-0">/</span>}
+      {sep}
       {crumb.to && !last ? (
         <Link to={crumb.to} className={cls}>
           {crumb.label}

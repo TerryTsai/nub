@@ -5,9 +5,8 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
-import { CountRefresh } from "@/components/CountRefresh";
 import { FAB } from "@/components/FAB";
-import { HostNav } from "@/components/HostNav";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 
@@ -21,19 +20,15 @@ export function HostHome() {
   const session = useSession(host);
   const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
 
   async function refresh() {
     if (!host) return;
-    setRefreshing(true);
     setError(null);
     try {
       const r = unwrap(await call(host, { op: "list_containers", all: true }), "containers");
       setContainers(r.data);
     } catch (e) {
       setError((e as Error).message);
-    } finally {
-      setRefreshing(false);
     }
   }
 
@@ -41,6 +36,8 @@ export function HostHome() {
     if (host && session.session) refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hid, session.session]);
+
+  const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) {
     return (
@@ -50,13 +47,11 @@ export function HostHome() {
     );
   }
 
-  const crumbs = [{ label: saved.label }];
   const canCreate = session.session?.can("create_container") ?? false;
 
   return (
     <Page
       crumbs={crumbs}
-      nav={<HostNav hid={hid!} active="containers" />}
       fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
     >
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
@@ -81,30 +76,21 @@ export function HostHome() {
             <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
           )}
           {containers !== null && containers.length > 0 && (
-            <>
-              <CountRefresh
-                label={`${containers.length} container${containers.length !== 1 ? "s" : ""}`}
-                onRefresh={refresh}
-                refreshing={refreshing}
-              />
-              <div className="flex flex-col -mx-1">
-                {containers.map((c) => (
-                  <div key={c.id} className="px-1">
-                    <ListRow
-                      title={c.name || "(unnamed)"}
-                      subtitle={`${c.image} · ${c.status}`}
-                      status={c.state}
-                      onPress={() => nav(`/h/${hid}/c/${c.id}`)}
-                    />
-                  </div>
-                ))}
-              </div>
-            </>
+            <div className="flex flex-col -mx-1">
+              {containers.map((c) => (
+                <div key={c.id} className="px-1">
+                  <ListRow
+                    title={c.name || "(unnamed)"}
+                    subtitle={`${c.image} · ${c.status}`}
+                    status={c.state}
+                    onPress={() => nav(`/h/${hid}/c/${c.id}`)}
+                  />
+                </div>
+              ))}
+            </div>
           )}
         </>
       )}
-
     </Page>
   );
 }
-
