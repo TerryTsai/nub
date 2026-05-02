@@ -6,9 +6,18 @@ import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
+import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+
+type ContainerFilter = "all" | "running" | "stopped";
+
+function matchesFilter(state: string, filter: ContainerFilter): boolean {
+  if (filter === "all") return true;
+  if (filter === "running") return state === "running";
+  return state !== "running";
+}
 
 export function HostHome() {
   const { hid } = useParams<{ hid: string }>();
@@ -20,6 +29,7 @@ export function HostHome() {
   const session = useSession(host);
   const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<ContainerFilter>("all");
 
   async function refresh() {
     if (!host) return;
@@ -66,6 +76,18 @@ export function HostHome() {
         </>
       )}
 
+      {session.session && containers !== null && (
+        <Filters
+          value={filter}
+          onChange={setFilter}
+          options={[
+            { value: "all", label: "All", count: containers.length },
+            { value: "running", label: "Running", count: countRunning(containers) },
+            { value: "stopped", label: "Stopped", count: containers.length - countRunning(containers) },
+          ]}
+        />
+      )}
+
       {session.session && (
         <>
           {error && <p className="text-[var(--error)] text-xs">{error}</p>}
@@ -76,21 +98,43 @@ export function HostHome() {
             <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
           )}
           {containers !== null && containers.length > 0 && (
-            <div className="flex flex-col -mx-1">
-              {containers.map((c) => (
-                <div key={c.id} className="px-1">
-                  <ListRow
-                    title={c.name || "(unnamed)"}
-                    subtitle={`${c.image} · ${c.status}`}
-                    status={c.state}
-                    onPress={() => nav(`/h/${hid}/c/${c.id}`)}
-                  />
-                </div>
-              ))}
-            </div>
+            <ContainerList
+              containers={containers.filter((c) => matchesFilter(c.state, filter))}
+              onPick={(id) => nav(`/h/${hid}/c/${id}`)}
+            />
           )}
         </>
       )}
     </Page>
+  );
+}
+
+function countRunning(cs: ContainerSummary[]): number {
+  return cs.filter((c) => c.state === "running").length;
+}
+
+function ContainerList({
+  containers,
+  onPick,
+}: {
+  containers: ContainerSummary[];
+  onPick: (id: string) => void;
+}) {
+  if (containers.length === 0) {
+    return <p className="text-xs text-[var(--text-tertiary)]">No matches.</p>;
+  }
+  return (
+    <div className="flex flex-col -mx-1">
+      {containers.map((c) => (
+        <div key={c.id} className="px-1">
+          <ListRow
+            title={c.name || "(unnamed)"}
+            subtitle={`${c.image} · ${c.status}`}
+            status={c.state}
+            onPress={() => onPick(c.id)}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
