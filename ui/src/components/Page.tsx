@@ -35,8 +35,14 @@ export function Page({
  * only — pages never instantiate it directly. */
 export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
   const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
+  // translateZ(0) puts the header on its own compositing layer so iOS
+  // Safari paints it cleanly over scrolling content rather than peek-
+  // through-flickering during the first frame of a route change.
   return (
-    <header className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
+    <header
+      className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]"
+      style={{ transform: "translateZ(0)" }}
+    >
       <div className="flex items-center h-11 px-5 gap-2">
         <NubMark />
         <nav className="flex items-center gap-1 min-w-0 text-xs">

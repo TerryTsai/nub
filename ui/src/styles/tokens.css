@@ -18,7 +18,9 @@
   /* Accents */
   --accent:         rgb(56 189 248);      /* sky-400 — primary action */
   --accent-soft:    rgb(56 189 248 / 0.15);
-  --accent-soft-strong: rgb(56 189 248 / 0.30); /* used by FAB w/ backdrop-blur */
+  /* FAB sits over scrolling content. Composited blur shimmers on iOS during
+   * scroll, so use a flat opaque-ish bg that mostly hides what's behind. */
+  --accent-fab:     rgb(20 60 95);        /* opaque deep-sky tone */
   --accent-border:  rgb(56 189 248 / 0.25);
   --accent-fg:      rgb(9 9 11);          /* zinc-950 (text on solid sky-400) */
   --id-color:       rgb(251 191 36);      /* amber-400 — IDs, mono links */
