@@ -1,18 +1,16 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession, type Session } from "@/state/session";
-import { invalidate, useQuery } from "@/state/cache";
-import type { Action, ContainerSummary } from "@/api/types";
+import { useSession } from "@/state/session";
+import { useQuery } from "@/state/cache";
+import type { ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
-import { LongPressMenu, type LongPressItem } from "@/components/LongPressMenu";
 import { Page } from "@/components/Page";
-import { useToast } from "@/components/Toaster";
 
 type ContainerFilter = "all" | "running" | "stopped";
 
@@ -102,9 +100,6 @@ export function HostHome() {
           )}
           {containers !== null && containers.length > 0 && (
             <ContainerList
-              host={host!}
-              session={session.session}
-              hid={hid!}
               containers={containers.filter((c) => matchesFilter(c.state, filter))}
               onPick={(id) => nav(`/h/${hid}/c/${id}`)}
             />
@@ -120,66 +115,12 @@ function countRunning(cs: ContainerSummary[]): number {
 }
 
 function ContainerList({
-  host,
-  session,
-  hid,
   containers,
   onPick,
 }: {
-  host: Host;
-  session: Session;
-  hid: string;
   containers: ContainerSummary[];
   onPick: (id: string) => void;
 }) {
-  const nav = useNavigate();
-  const toast = useToast();
-
-  async function act(c: ContainerSummary, action: Action, label: string) {
-    try {
-      unwrap(await call(host, { op: "container_action", id: c.id, action }), "ok");
-      invalidate(`${host.url}:list_containers`);
-      invalidate(`${host.url}:inspect:${c.id}`);
-      toast.push(`${label} ${c.name || c.id.slice(0, 12)}`, "success");
-    } catch (e) {
-      toast.push((e as Error).message, "error");
-    }
-  }
-
-  function quickItems(c: ContainerSummary): LongPressItem[] {
-    const running = c.state === "running";
-    const denyAction = !session.can("container_action") ? "your token doesn't allow container_action" : undefined;
-    const denyLogs = !session.can("stream_logs") ? "your token doesn't allow stream_logs" : undefined;
-    const denyExec = !session.can("exec") ? "your token doesn't allow exec" : undefined;
-    return [
-      {
-        label: "Start",
-        disabled: denyAction || running,
-        onSelect: () => act(c, { kind: "start" }, "started"),
-      },
-      {
-        label: "Stop",
-        disabled: denyAction || !running,
-        onSelect: () => act(c, { kind: "stop" }, "stopped"),
-      },
-      {
-        label: "Restart",
-        disabled: denyAction || !running,
-        onSelect: () => act(c, { kind: "restart" }, "restarted"),
-      },
-      {
-        label: "Logs",
-        disabled: denyLogs,
-        onSelect: () => nav(`/h/${hid}/c/${c.id}/logs`),
-      },
-      {
-        label: "Exec",
-        disabled: denyExec || (!running && "container is not running"),
-        onSelect: () => nav(`/h/${hid}/c/${c.id}/exec`),
-      },
-    ];
-  }
-
   if (containers.length === 0) {
     return <p className="text-xs text-[var(--text-tertiary)]">No matches.</p>;
   }
@@ -187,13 +128,12 @@ function ContainerList({
     <div className="flex flex-col -mx-1">
       {containers.map((c) => (
         <div key={c.id} className="px-1">
-          <LongPressMenu items={quickItems(c)} onPress={() => onPick(c.id)}>
-            <ListRow
-              title={c.name || "(unnamed)"}
-              subtitle={`${c.image} · ${c.status}`}
-              status={containerStatus(c.state, c.exit_code, c.health)}
-            />
-          </LongPressMenu>
+          <ListRow
+            title={c.name || "(unnamed)"}
+            subtitle={`${c.image} · ${c.status}`}
+            status={containerStatus(c.state, c.exit_code, c.health)}
+            onPress={() => onPick(c.id)}
+          />
         </div>
       ))}
     </div>
