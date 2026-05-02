@@ -4,7 +4,6 @@ import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { Button } from "@/components/Button";
-import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
@@ -44,23 +43,21 @@ export function ContainerLogs() {
   ];
 
   return (
-    <Page crumbs={crumbs}>
-      <Heading category="Logs" title={containerName} />
-      <div className="flex gap-2 items-center">
+    <Page crumbs={crumbs} fill>
+      <div className="flex items-center gap-2 px-5 py-2 border-b border-[var(--border-subtle)]">
+        <span className="text-[11px] text-[var(--text-tertiary)] mr-auto truncate">
+          {containerName}
+        </span>
         <Button
           variant={follow ? "primary" : "ghost"}
           onClick={() => setFollow((f) => !f)}
         >
-          {follow ? "⏸ Pause" : "▶ Follow"}
+          {follow ? "pause" : "follow"}
         </Button>
-        <Button variant="ghost" onClick={() => copyAll(lines)}>
-          Copy all
-        </Button>
-        <Button variant="ghost" onClick={() => setLines([])}>
-          Clear
-        </Button>
+        <Button variant="ghost" onClick={() => copyAll(lines)}>copy</Button>
+        <Button variant="ghost" onClick={() => setLines([])}>clear</Button>
       </div>
-      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
       <LogPane paneRef={paneRef} onScroll={onScroll} lines={lines} />
     </Page>
   );
@@ -83,8 +80,8 @@ function LogPane({
     <div
       ref={paneRef}
       onScroll={onScroll}
-      className="mono text-xs overflow-auto border border-[var(--border-subtle)] p-3 rounded-[var(--radius-md)]"
-      style={{ maxHeight: "60vh", whiteSpace: "pre-wrap" }}
+      className="mono text-xs overflow-auto flex-1 min-h-0 px-3 py-2"
+      style={{ whiteSpace: "pre-wrap" }}
     >
       {lines.length === 0 ? (
         <span className="text-[var(--text-tertiary)]">(no output yet)</span>
