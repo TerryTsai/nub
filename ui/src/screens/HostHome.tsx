@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { useQuery } from "@/state/cache";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
@@ -33,8 +33,6 @@ export function HostHome() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
 
   const session = useSession(host);
-  const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const filter = asFilter(params.get("filter"));
   const setFilter = (v: ContainerFilter) => {
@@ -42,21 +40,11 @@ export function HostHome() {
     else setParams({ filter: v }, { replace: true });
   };
 
-  async function refresh() {
-    if (!host) return;
-    setError(null);
-    try {
-      const r = unwrap(await call(host, { op: "list_containers", all: true }), "containers");
-      setContainers(r.data);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
-  useEffect(() => {
-    if (host && session.session) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hid, session.session]);
+  const queryKey = host && session.session ? `${host.url}:list_containers` : null;
+  const { data: containers, error } = useQuery<ContainerSummary[]>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_containers", all: true }), "containers");
+    return r.data;
+  });
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 

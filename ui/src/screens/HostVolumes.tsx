@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { invalidate, useQuery } from "@/state/cache";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
@@ -16,35 +17,26 @@ export function HostVolumes() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [volumes, setVolumes] = useState<VolumeSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<VolumeSummary | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  async function refresh() {
-    if (!host) return;
-    setError(null);
-    try {
-      const r = unwrap(await call(host, { op: "list_volumes" }), "volumes");
-      setVolumes(r.data);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
+  const queryKey = host && session.session ? `${host.url}:list_volumes` : null;
+  const { data: volumes, error: queryError, reload } = useQuery<VolumeSummary[]>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_volumes" }), "volumes");
+    return r.data;
+  });
+  const error = actionError ?? queryError;
 
   async function removeVolume(v: VolumeSummary) {
     if (!host) return;
     try {
       unwrap(await call(host, { op: "remove_volume", name: v.name, force: false }), "ok");
-      await refresh();
+      if (queryKey) invalidate(queryKey);
+      reload();
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     }
   }
-
-  useEffect(() => {
-    if (host && session.session) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hid, session.session]);
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "volumes");
 

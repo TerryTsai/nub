@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { NetworkSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { invalidate, useQuery } from "@/state/cache";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
@@ -16,35 +17,26 @@ export function HostNetworks() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [networks, setNetworks] = useState<NetworkSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<NetworkSummary | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  async function refresh() {
-    if (!host) return;
-    setError(null);
-    try {
-      const r = unwrap(await call(host, { op: "list_networks" }), "networks");
-      setNetworks(r.data);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
+  const queryKey = host && session.session ? `${host.url}:list_networks` : null;
+  const { data: networks, error: queryError, reload } = useQuery<NetworkSummary[]>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_networks" }), "networks");
+    return r.data;
+  });
+  const error = actionError ?? queryError;
 
   async function removeNetwork(n: NetworkSummary) {
     if (!host) return;
     try {
       unwrap(await call(host, { op: "remove_network", id: n.id }), "ok");
-      await refresh();
+      if (queryKey) invalidate(queryKey);
+      reload();
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     }
   }
-
-  useEffect(() => {
-    if (host && session.session) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hid, session.session]);
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "networks");
 

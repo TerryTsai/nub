@@ -34,10 +34,9 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="appearance-none bg-transparent border-0 p-0 m-0 cursor-pointer text-[var(--text-primary)] font-medium font-display text-sm leading-none"
-        style={{ font: "inherit" }}
+        className="appearance-none bg-transparent border-0 p-0 m-0 cursor-pointer inline-flex items-baseline"
       >
-        <span className="font-display font-medium">{label}</span>
+        <span className="text-[var(--text-primary)] font-medium font-display text-sm">{label}</span>
         <span className="text-[var(--text-tertiary)] ml-0.5 text-[10px]">▾</span>
       </button>
       {open && (

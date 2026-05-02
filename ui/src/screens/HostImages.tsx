@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { invalidate, useQuery } from "@/state/cache";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -34,9 +35,8 @@ export function HostImages() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [images, setImages] = useState<ImageSummary[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<ImageSummary | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const filter = asImageFilter(params.get("filter"));
   const setFilter = (v: ImageFilter) => {
@@ -44,31 +44,23 @@ export function HostImages() {
     else setParams({ filter: v }, { replace: true });
   };
 
-  async function refresh() {
-    if (!host) return;
-    setError(null);
-    try {
-      const r = unwrap(await call(host, { op: "list_images" }), "images");
-      setImages(r.data);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
+  const queryKey = host && session.session ? `${host.url}:list_images` : null;
+  const { data: images, error: queryError, reload } = useQuery<ImageSummary[]>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "list_images" }), "images");
+    return r.data;
+  });
+  const error = actionError ?? queryError;
 
   async function removeImage(image: ImageSummary) {
     if (!host) return;
     try {
       unwrap(await call(host, { op: "remove_image", id: image.id, force: false }), "ok");
-      await refresh();
+      if (queryKey) invalidate(queryKey);
+      reload();
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     }
   }
-
-  useEffect(() => {
-    if (host && session.session) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hid, session.session]);
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "images");
 

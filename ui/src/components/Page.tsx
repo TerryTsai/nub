@@ -1,15 +1,19 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { usePageConfig } from "./Layout";
 
 export type Crumb =
   | { kind: "link"; label: string; to?: string }
   | { kind: "menu"; node: ReactNode };
 
-/** App shell — single-row top header with the nub mark and a breadcrumb
- * path. Breadcrumb segments can be plain links or dropdown menus
- * (workspace/section pickers, foundry-style). The body holds page content;
- * the row immediately below the header is reserved for a future filter bar.
- */
+/** Page declares its layout config (crumbs, sub-nav, optional FAB, fill
+ * mode) via context. The Layout shell — mounted once for the whole app —
+ * picks those up and renders the AppHeader / FAB. The actual page body
+ * is just `children`, mounted inside the Layout's <Outlet/>.
+ *
+ * No DOM is created for the chrome by this component. That's deliberate:
+ * the AppHeader stays mounted across navigations so back-nav doesn't
+ * flicker through a moment of bare body. */
 export function Page({
   crumbs,
   subnav,
@@ -18,39 +22,18 @@ export function Page({
   fill,
 }: {
   crumbs?: Crumb[];
-  /** Sub-navigation row beneath the breadcrumb. Same height/padding/style
-   * across pages — used for filter bars, slim toolbars (logs pause/copy,
-   * exec subtitle, etc.). Rendered sticky with the header. */
   subnav?: ReactNode;
   children: ReactNode;
-  /** Optional floating action — rendered fixed bottom-right. */
   fab?: ReactNode;
-  /** Fill the viewport. The body becomes a flex column that doesn't scroll;
-   * children are responsible for managing their own scroll regions. Used for
-   * pages like the exec terminal that own their full-screen surface. */
   fill?: boolean;
 }) {
-  if (fill) {
-    return (
-      <div className="h-full flex flex-col overflow-hidden">
-        <AppHeader crumbs={crumbs} subnav={subnav} />
-        <main className="flex-1 min-h-0 flex flex-col">{children}</main>
-        {fab}
-      </div>
-    );
-  }
-  return (
-    <div className="min-h-full">
-      <AppHeader crumbs={crumbs} subnav={subnav} />
-      <main className="max-w-2xl mx-auto px-5 pt-3 pb-24 flex flex-col gap-4">
-        {children}
-      </main>
-      {fab}
-    </div>
-  );
+  usePageConfig({ crumbs, subnav, fab, fill });
+  return <>{children}</>;
 }
 
-function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
+/** Renders the breadcrumb header. Lives in Layout; exported for Layout
+ * only — pages never instantiate it directly. */
+export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
   const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
   return (
     <header className="sticky top-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
@@ -100,7 +83,6 @@ function Segment({ crumb, last, showSep }: { crumb: Crumb; last: boolean; showSe
   );
 }
 
-/** 16x16 diamond — visually echoes foundry's mark without copying it. */
 function NubMark() {
   return (
     <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" className="shrink-0">

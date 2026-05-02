@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
+import { invalidate, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Heading } from "@/components/Heading";
@@ -21,35 +22,28 @@ export function ContainerDetail() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
   const session = useSession(host);
 
-  const [detail, setDetail] = useState<ContainerDetailT | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  async function refresh() {
-    if (!host || !cid) return;
-    try {
-      const r = unwrap(await call(host, { op: "inspect_container", id: cid }), "container_detail");
-      setDetail(r.data);
-      setError(null);
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-
-  useEffect(() => {
-    if (host && session.session) refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hid, cid, session.session]);
+  const queryKey = host && session.session && cid ? `${host.url}:inspect:${cid}` : null;
+  const { data: detail, error: queryError, reload } = useQuery<ContainerDetailT>(queryKey, async () => {
+    const r = unwrap(await call(host!, { op: "inspect_container", id: cid! }), "container_detail");
+    return r.data;
+  });
+  const error = actionError ?? queryError;
 
   async function act(name: string, action: Action, after?: () => void) {
     if (!host || !cid) return;
     setPending(name);
+    setActionError(null);
     try {
       unwrap(await call(host, { op: "container_action", id: cid, action }), "ok");
+      // Invalidate the host's container list — state likely changed.
+      invalidate(`${host.url}:list_containers`);
       if (after) after();
-      else await refresh();
+      else reload();
     } catch (e) {
-      setError((e as Error).message);
+      setActionError((e as Error).message);
     } finally {
       setPending(null);
     }

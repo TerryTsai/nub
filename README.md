@@ -18,6 +18,7 @@ list views are compact, detail views are full, and streaming things stream.
 ## Table of Contents
 
 - [Background](#background)
+- [Footprint](#footprint)
 - [Install](#install)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -48,6 +49,19 @@ phone over a flaky connection is miserable.
 
 If you want full Docker, run Docker. `nub` is for the 80% of operations a
 human does on their phone at 11pm.
+
+## Footprint
+
+A single statically-linked binary with the UI embedded as static assets.
+Numbers from a `--release` build, idle, on linux x86_64:
+
+- **Binary**: 3.4 MiB stripped (1.4 MiB packaged). 2.6 MiB without the UI.
+- **RSS at idle**: ≈ 4 MiB. Flat — there is no background poller.
+- **Idle CPU**: 0%. Event-driven: a stream stays open while you're
+  watching it, otherwise `nub` is asleep on the socket.
+
+That's roughly two orders of magnitude lighter than the typical
+container-management UI server.
 
 ## Install
 

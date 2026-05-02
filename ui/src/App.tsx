@@ -1,5 +1,6 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Layout } from "./components/Layout";
 import { ScrollRestoration } from "./components/ScrollRestoration";
 import { Hosts } from "./screens/Hosts";
 import { AddHost } from "./screens/AddHost";
@@ -23,25 +24,27 @@ export default function App() {
     <BrowserRouter>
       <ScrollRestoration />
       <Routes>
-        <Route path="/" element={<Hosts />} />
-        <Route path="/add" element={<AddHost />} />
-        <Route path="/h/:hid" element={<HostHome />} />
-        <Route path="/h/:hid/images" element={<HostImages />} />
-        <Route path="/h/:hid/volumes" element={<HostVolumes />} />
-        <Route path="/h/:hid/networks" element={<HostNetworks />} />
-        <Route path="/h/:hid/run" element={<RunContainer />} />
-        <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
-        <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />
-        <Route path="/h/:hid/c/:cid/stats" element={<ContainerStats />} />
-        <Route
-          path="/h/:hid/c/:cid/exec"
-          element={
-            <Suspense fallback={<p className="px-5 pt-5 text-xs text-[var(--text-tertiary)]">Loading terminal…</p>}>
-              <ContainerExec />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route element={<Layout />}>
+          <Route path="/" element={<Hosts />} />
+          <Route path="/add" element={<AddHost />} />
+          <Route path="/h/:hid" element={<HostHome />} />
+          <Route path="/h/:hid/images" element={<HostImages />} />
+          <Route path="/h/:hid/volumes" element={<HostVolumes />} />
+          <Route path="/h/:hid/networks" element={<HostNetworks />} />
+          <Route path="/h/:hid/run" element={<RunContainer />} />
+          <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
+          <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />
+          <Route path="/h/:hid/c/:cid/stats" element={<ContainerStats />} />
+          <Route
+            path="/h/:hid/c/:cid/exec"
+            element={
+              <Suspense fallback={<p className="px-5 pt-5 text-xs text-[var(--text-tertiary)]">Loading terminal…</p>}>
+                <ContainerExec />
+              </Suspense>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
