@@ -18,11 +18,7 @@ pub(crate) fn run(h: &EngineHandler, id: String) -> BoxStream<'static, StreamChu
     spawn_chunked(move |tx| pump(engine, id, tx))
 }
 
-async fn pump(
-    engine: crate::client::Engine,
-    id: String,
-    tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
+async fn pump(engine: crate::client::Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let path = format!("/containers/{id}/stats{}", stats_query());
     let res = conn

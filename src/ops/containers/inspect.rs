@@ -157,7 +157,11 @@ impl RawInspect {
         let ports = unwrap_ports(self.network_settings.ports);
         let mounts = self.mounts.into_iter().map(mount).collect();
         let image_id = self.image;
-        let image = if self.config.image.is_empty() { image_id.clone() } else { self.config.image };
+        let image = if self.config.image.is_empty() {
+            image_id.clone()
+        } else {
+            self.config.image
+        };
         ContainerDetail {
             id: self.id,
             name: self.name.trim_start_matches('/').to_string(),

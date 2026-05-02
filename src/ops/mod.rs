@@ -53,7 +53,10 @@ pub struct EngineHandler {
 
 impl EngineHandler {
     pub async fn connect(policy: Policy) -> Result<Self> {
-        Ok(Self { engine: Engine::connect().await?, policy })
+        Ok(Self {
+            engine: Engine::connect().await?,
+            policy,
+        })
     }
 }
 
@@ -68,21 +71,11 @@ impl OpHandler for EngineHandler {
 
             Op::HostInfo => unary(host::run(self).await, OpResult::HostInfo),
 
-            Op::ListContainers { all } => {
-                unary(containers::list::run(self, all).await, OpResult::Containers)
-            }
-            Op::InspectContainer { id } => {
-                unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail)
-            }
-            Op::ContainerAction { id, action } => {
-                unary(containers::action::run(self, id, action).await, ok)
-            }
-            Op::CreateContainer(req) => {
-                unary(containers::create::run(self, *req).await, OpResult::ContainerCreated)
-            }
-            Op::StreamLogs { id, follow, tail } => {
-                stream(containers::logs::run(self, id, follow, tail))
-            }
+            Op::ListContainers { all } => unary(containers::list::run(self, all).await, OpResult::Containers),
+            Op::InspectContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
+            Op::ContainerAction { id, action } => unary(containers::action::run(self, id, action).await, ok),
+            Op::CreateContainer(req) => unary(containers::create::run(self, *req).await, OpResult::ContainerCreated),
+            Op::StreamLogs { id, follow, tail } => stream(containers::logs::run(self, id, follow, tail)),
             Op::StreamStats { id } => stream(containers::stats::run(self, id)),
             Op::Exec { id, cmd, tty } => stream(containers::exec::run(self, id, cmd, tty, input)),
 

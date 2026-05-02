@@ -102,8 +102,8 @@ impl UnaryResponse {
     }
 
     fn into_status_error(self) -> Error {
-        let message = engine_error_message(&self.body)
-            .unwrap_or_else(|| String::from_utf8_lossy(&self.body).into_owned());
+        let message =
+            engine_error_message(&self.body).unwrap_or_else(|| String::from_utf8_lossy(&self.body).into_owned());
         Error::Status {
             code: self.status.as_u16(),
             message,

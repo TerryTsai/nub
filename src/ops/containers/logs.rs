@@ -27,7 +27,11 @@ async fn pump(
 ) -> Result<(), String> {
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let res = conn
-        .send_streaming(Req::get(logs_path(&id, follow, tail)).build().map_err(|e| e.to_string())?)
+        .send_streaming(
+            Req::get(logs_path(&id, follow, tail))
+                .build()
+                .map_err(|e| e.to_string())?,
+        )
         .await
         .map_err(|e| e.to_string())?;
     if !res.status().is_success() {

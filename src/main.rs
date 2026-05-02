@@ -112,7 +112,11 @@ fn display_authority(bind: &str) -> String {
         "0.0.0.0" | "::" | "" => init::hostname(),
         h => h.to_string(),
     };
-    if port.is_empty() { host } else { format!("{host}:{port}") }
+    if port.is_empty() {
+        host
+    } else {
+        format!("{host}:{port}")
+    }
 }
 
 fn resolve_config(args: &Args) -> Result<config::Config> {

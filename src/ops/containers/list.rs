@@ -71,7 +71,10 @@ impl RawListItem {
 }
 
 fn first_name(names: &[String]) -> String {
-    names.first().map(|n| n.trim_start_matches('/').to_string()).unwrap_or_default()
+    names
+        .first()
+        .map(|n| n.trim_start_matches('/').to_string())
+        .unwrap_or_default()
 }
 
 fn created_to_string(v: serde_json::Value) -> String {

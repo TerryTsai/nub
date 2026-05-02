@@ -1,6 +1,6 @@
-mod ws;
-mod wire;
 pub mod ui;
+mod wire;
+mod ws;
 
 use crate::auth::{require_token, AuthState};
 use crate::config::TrustEntry;

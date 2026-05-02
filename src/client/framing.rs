@@ -23,7 +23,11 @@ pub struct LineStream {
 
 impl LineStream {
     pub fn new(body: Incoming) -> Self {
-        Self { body, buf: BytesMut::with_capacity(4096), eof: false }
+        Self {
+            body,
+            buf: BytesMut::with_capacity(4096),
+            eof: false,
+        }
     }
 }
 
@@ -111,7 +115,10 @@ pub struct Multiplexer {
 
 impl Multiplexer {
     pub fn new(mode: MultiplexerMode) -> Self {
-        Self { buf: BytesMut::with_capacity(8192), mode }
+        Self {
+            buf: BytesMut::with_capacity(8192),
+            mode,
+        }
     }
 
     pub fn push(&mut self, bytes: &[u8]) {

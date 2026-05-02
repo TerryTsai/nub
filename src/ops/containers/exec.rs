@@ -4,8 +4,8 @@
 //! way as logs.
 
 use futures::stream::BoxStream;
-use hyper_util::rt::TokioIo;
 use hyper::upgrade::Upgraded;
+use hyper_util::rt::TokioIo;
 use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::sync::mpsc;
@@ -109,7 +109,11 @@ async fn forward_output(
     tty: bool,
     tx: mpsc::Sender<StreamChunk>,
 ) -> Result<(), String> {
-    let mut mux = Multiplexer::new(if tty { MultiplexerMode::Tty } else { MultiplexerMode::Multiplexed });
+    let mut mux = Multiplexer::new(if tty {
+        MultiplexerMode::Tty
+    } else {
+        MultiplexerMode::Multiplexed
+    });
     let mut tmp = [0u8; 4096];
     loop {
         let n = reader.read(&mut tmp).await.map_err(|e| e.to_string())?;

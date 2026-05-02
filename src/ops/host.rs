@@ -10,7 +10,13 @@ use crate::proto::HostInfo;
 use super::EngineHandler;
 
 pub(super) async fn run(h: &EngineHandler) -> Result<HostInfo> {
-    let info: InfoResp = h.engine.conn().await?.send_unary(Req::get("/info").build()?).await?.json()?;
+    let info: InfoResp = h
+        .engine
+        .conn()
+        .await?
+        .send_unary(Req::get("/info").build()?)
+        .await?
+        .json()?;
     let version: VersionResp = h
         .engine
         .conn()

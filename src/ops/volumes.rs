@@ -23,7 +23,12 @@ pub(super) async fn remove(h: &EngineHandler, name: String, force: bool) -> Resu
     let mut q = Query::new();
     q.push_bool("force", force);
     let path = format!("/volumes/{name}{}", q.finish());
-    h.engine.conn().await?.send_unary(Req::delete(path).build()?).await?.ok()?;
+    h.engine
+        .conn()
+        .await?
+        .send_unary(Req::delete(path).build()?)
+        .await?
+        .ok()?;
     Ok(())
 }
 

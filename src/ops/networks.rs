@@ -19,7 +19,12 @@ pub(super) async fn list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 
 pub(super) async fn remove(h: &EngineHandler, id: String) -> Result<()> {
     let path = format!("/networks/{id}");
-    h.engine.conn().await?.send_unary(Req::delete(path).build()?).await?.ok()?;
+    h.engine
+        .conn()
+        .await?
+        .send_unary(Req::delete(path).build()?)
+        .await?
+        .ok()?;
     Ok(())
 }
 

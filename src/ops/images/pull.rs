@@ -53,10 +53,7 @@ fn parse_line(line: &[u8]) -> Result<StreamChunk, String> {
     if let Some(err) = info.error {
         return Err(err);
     }
-    let (current, total) = info
-        .progress_detail
-        .map(|d| (d.current, d.total))
-        .unwrap_or((0, 0));
+    let (current, total) = info.progress_detail.map(|d| (d.current, d.total)).unwrap_or((0, 0));
     Ok(StreamChunk::PullProgress {
         id: info.id.unwrap_or_default(),
         status: info.status.unwrap_or_default(),
