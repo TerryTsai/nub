@@ -94,7 +94,6 @@ fn sum_net(nets: Option<&HashMap<String, RawNet>>) -> (u64, u64) {
 // ---- Wire types ----------------------------------------------------------
 
 #[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
 struct RawStats {
     #[serde(default)]
     cpu_stats: RawCpu,
@@ -107,7 +106,6 @@ struct RawStats {
 }
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
 struct RawCpu {
     #[serde(default)]
     cpu_usage: RawCpuUsage,
@@ -118,7 +116,6 @@ struct RawCpu {
 }
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
 struct RawCpuUsage {
     #[serde(default)]
     total_usage: u64,
@@ -127,7 +124,6 @@ struct RawCpuUsage {
 }
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
 struct RawMem {
     #[serde(default)]
     usage: u64,
@@ -136,7 +132,6 @@ struct RawMem {
 }
 
 #[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
 struct RawNet {
     #[serde(default)]
     rx_bytes: u64,

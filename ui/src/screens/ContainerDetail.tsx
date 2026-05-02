@@ -123,15 +123,26 @@ export function ContainerDetail() {
           </Card>
 
           <Card>
-            <Link to={`/h/${hid}/c/${cid}/logs`}>
-              <Button
-                variant="ghost"
-                className="w-full"
-                disallowReason={denyReason("stream_logs")}
-              >
-                View logs →
-              </Button>
-            </Link>
+            <div className="grid grid-cols-2 gap-2">
+              <Link to={`/h/${hid}/c/${cid}/logs`}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disallowReason={denyReason("stream_logs")}
+                >
+                  Logs →
+                </Button>
+              </Link>
+              <Link to={`/h/${hid}/c/${cid}/stats`}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  disallowReason={denyReason("stream_stats")}
+                >
+                  Stats →
+                </Button>
+              </Link>
+            </div>
           </Card>
 
           {detail.cmd.length > 0 && (
