@@ -1,24 +1,20 @@
+use crate::engine;
 use crate::proto::*;
 use anyhow::{anyhow, Result};
-use bollard::container::{Config, CreateContainerOptions};
-use bollard::models::{HostConfig, PortBinding, RestartPolicy, RestartPolicyNameEnum};
-use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use super::DockerHandler;
+use super::EngineHandler;
 
-impl DockerHandler {
+impl EngineHandler {
     pub(super) async fn create_container(&self, req: CreateContainerReq) -> Result<ContainerCreated> {
         validate(&req, &self.policy.allowed_binds)?;
-        let create_opts = req.name.as_deref().map(|n| CreateContainerOptions {
-            name: n.to_string(),
-            platform: None,
-        });
-        let cfg = build_config(&req);
-        let resp = self.docker.create_container::<String, String>(create_opts, cfg).await?;
+        let spec = to_engine_spec(&req);
+        let resp = self.engine.create_container(spec).await?;
         let mut started = false;
         if req.start {
-            self.docker.start_container::<String>(&resp.id, None).await?;
+            self.engine
+                .container_action(&resp.id, engine::ContainerAction::Start)
+                .await?;
             started = true;
         }
         Ok(ContainerCreated {
@@ -51,107 +47,47 @@ fn is_host_path(s: &str) -> bool {
     s.starts_with('/') || s.starts_with("./") || s.starts_with("../")
 }
 
-fn build_config(req: &CreateContainerReq) -> Config<String> {
-    Config {
-        image: Some(req.image.clone()),
-        cmd: nonempty_vec(&req.cmd),
-        entrypoint: nonempty_vec(&req.entrypoint),
-        env: nonempty_vec(&req.env),
+fn to_engine_spec(req: &CreateContainerReq) -> engine::CreateContainer {
+    engine::CreateContainer {
+        image: req.image.clone(),
+        name: req.name.clone(),
+        cmd: req.cmd.clone(),
+        entrypoint: req.entrypoint.clone(),
+        env: req.env.clone(),
         working_dir: req.working_dir.clone(),
         user: req.user.clone(),
-        labels: nonempty_map(&req.labels),
-        exposed_ports: build_exposed_ports(&req.ports),
-        host_config: Some(HostConfig {
-            binds: build_binds(&req.volumes),
-            port_bindings: build_port_bindings(&req.ports),
-            restart_policy: req.restart.as_ref().map(to_restart_policy),
-            memory: req.memory_limit,
-            cpu_shares: req.cpu_shares,
-            network_mode: req.network.clone(),
-            ..Default::default()
-        }),
-        ..Default::default()
-    }
-}
-
-fn nonempty_vec(v: &[String]) -> Option<Vec<String>> {
-    (!v.is_empty()).then(|| v.to_vec())
-}
-
-fn nonempty_map(m: &HashMap<String, String>) -> Option<HashMap<String, String>> {
-    (!m.is_empty()).then(|| m.clone())
-}
-
-fn build_exposed_ports(ports: &[PortPublish]) -> Option<HashMap<String, HashMap<(), ()>>> {
-    if ports.is_empty() {
-        return None;
-    }
-    Some(
-        ports
+        labels: req.labels.clone(),
+        ports: req
+            .ports
             .iter()
-            .map(|p| (normalize_container_port(&p.container), HashMap::new()))
-            .collect(),
-    )
-}
-
-fn build_port_bindings(ports: &[PortPublish]) -> Option<HashMap<String, Option<Vec<PortBinding>>>> {
-    if ports.is_empty() {
-        return None;
-    }
-    let mut grouped: HashMap<String, Vec<PortBinding>> = HashMap::new();
-    for p in ports {
-        let (host_ip, host_port) = parse_host(&p.host);
-        grouped
-            .entry(normalize_container_port(&p.container))
-            .or_default()
-            .push(PortBinding {
-                host_ip: Some(host_ip),
-                host_port: Some(host_port),
-            });
-    }
-    Some(grouped.into_iter().map(|(k, v)| (k, Some(v))).collect())
-}
-
-fn normalize_container_port(s: &str) -> String {
-    if s.contains('/') {
-        s.to_string()
-    } else {
-        format!("{s}/tcp")
-    }
-}
-
-fn parse_host(s: &str) -> (String, String) {
-    match s.rfind(':') {
-        Some(i) => (s[..i].to_string(), s[i + 1..].to_string()),
-        None => (String::new(), s.to_string()),
-    }
-}
-
-fn build_binds(volumes: &[VolumeMount]) -> Option<Vec<String>> {
-    if volumes.is_empty() {
-        return None;
-    }
-    Some(
-        volumes
-            .iter()
-            .map(|v| {
-                let mode = if v.read_only { ":ro" } else { "" };
-                format!("{}:{}{}", v.source, v.target, mode)
+            .map(|p| engine::PortBinding {
+                container: p.container.clone(),
+                host: p.host.clone(),
             })
             .collect(),
-    )
+        volumes: req
+            .volumes
+            .iter()
+            .map(|v| engine::VolumeMount {
+                source: v.source.clone(),
+                target: v.target.clone(),
+                read_only: v.read_only,
+            })
+            .collect(),
+        network: req.network.clone(),
+        restart: req.restart.as_ref().map(restart_policy),
+        memory_limit: req.memory_limit,
+        cpu_shares: req.cpu_shares,
+    }
 }
 
-fn to_restart_policy(spec: &RestartPolicySpec) -> RestartPolicy {
-    use RestartPolicyNameEnum::*;
-    let (name, retry) = match spec {
-        RestartPolicySpec::No => (NO, None),
-        RestartPolicySpec::OnFailure { max_retries } => (ON_FAILURE, *max_retries),
-        RestartPolicySpec::Always => (ALWAYS, None),
-        RestartPolicySpec::UnlessStopped => (UNLESS_STOPPED, None),
-    };
-    RestartPolicy {
-        name: Some(name),
-        maximum_retry_count: retry,
+fn restart_policy(spec: &RestartPolicySpec) -> engine::RestartPolicy {
+    match spec {
+        RestartPolicySpec::No => engine::RestartPolicy::No,
+        RestartPolicySpec::OnFailure { max_retries } => engine::RestartPolicy::OnFailure {
+            max_retries: *max_retries,
+        },
+        RestartPolicySpec::Always => engine::RestartPolicy::Always,
+        RestartPolicySpec::UnlessStopped => engine::RestartPolicy::UnlessStopped,
     }
 }

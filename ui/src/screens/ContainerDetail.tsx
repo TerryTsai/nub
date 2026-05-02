@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
-import { call, type Host } from "@/api/client";
+import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { Action, ContainerDetail as ContainerDetailT } from "@/api/types";
@@ -24,8 +24,7 @@ export function ContainerDetail() {
   async function refresh() {
     if (!host || !cid) return;
     try {
-      const r = await call(host, { op: "inspect_container", id: cid });
-      if (r.type !== "container_detail") throw new Error("unexpected response");
+      const r = unwrap(await call(host, { op: "inspect_container", id: cid }), "container_detail");
       setDetail(r.data);
       setError(null);
     } catch (e) {
@@ -42,9 +41,7 @@ export function ContainerDetail() {
     if (!host || !cid) return;
     setPending(name);
     try {
-      const r = await call(host, { op: "container_action", id: cid, action });
-      if (r.type !== "ok" && r.type !== "err") throw new Error("unexpected response");
-      if (r.type === "err") throw new Error(r.data.message);
+      unwrap(await call(host, { op: "container_action", id: cid, action }), "ok");
       if (after) after();
       else await refresh();
     } catch (e) {

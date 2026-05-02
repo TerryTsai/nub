@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod engine;
 mod handler;
 mod http;
 mod init;
@@ -70,7 +71,15 @@ async fn serve(args: Args) -> Result<()> {
     let cfg = resolve_config(&args)?;
     let id = cfg.id.clone().unwrap_or_else(init::hostname);
     let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
-    let app = build_app(cfg)?;
+    let admin = admin_entry()?;
+    println!(
+        "admin token: {}   (regenerates each restart, allows everything)",
+        admin.token
+    );
+    if cfg!(feature = "embed-ui") {
+        println!("connect:     http://{}/add#t={}", display_authority(&bind), admin.token);
+    }
+    let app = build_app(cfg, admin).await?;
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     tracing::info!("nub {id} listening on {bind}");
     if let Err(e) = axum::serve(listener, app).await {
@@ -79,20 +88,15 @@ async fn serve(args: Args) -> Result<()> {
     Ok(())
 }
 
-fn build_app(cfg: config::Config) -> Result<axum::Router> {
+async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Router> {
     if cfg.tls_cert.is_some() || cfg.tls_key.is_some() {
         tracing::warn!("tls_cert/tls_key set but TLS is not yet wired; serving plaintext");
     }
     let policy = handler::Policy {
         allowed_binds: cfg.engine.allowed_binds,
     };
-    let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::DockerHandler::connect(policy)?);
+    let handler: Arc<dyn handler::OpHandler> = Arc::new(handler::EngineHandler::connect(policy).await?);
 
-    let admin = admin_entry()?;
-    println!(
-        "admin token: {}   (regenerates each restart, allows everything)",
-        admin.token
-    );
     let mut trust = vec![admin];
     trust.extend(cfg.trust);
     let auth = Arc::new(auth::AuthState { trust });
@@ -101,6 +105,17 @@ fn build_app(cfg: config::Config) -> Result<axum::Router> {
         app = app.merge(ui);
     }
     Ok(app)
+}
+
+// Substitute hostname for unspecified bind addresses so the printed URL is
+// usable on the LAN. Specific binds pass through unchanged.
+fn display_authority(bind: &str) -> String {
+    let (host, port) = bind.rsplit_once(':').unwrap_or((bind, ""));
+    let host = match host.trim_matches(['[', ']']) {
+        "0.0.0.0" | "::" | "" => init::hostname(),
+        h => h.to_string(),
+    };
+    if port.is_empty() { host } else { format!("{host}:{port}") }
 }
 
 fn resolve_config(args: &Args) -> Result<config::Config> {

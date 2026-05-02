@@ -1,153 +1,96 @@
+use crate::engine;
 use crate::proto::*;
 use anyhow::Result;
-use bollard::models::{
-    ContainerInspectResponse, ContainerSummary as RawSummary, EndpointSettings as RawEndpoint, MountPoint as RawMount,
-    PortBinding,
-};
 
-use super::util::short_id;
-use super::DockerHandler;
+use super::EngineHandler;
 
-impl DockerHandler {
+impl EngineHandler {
     pub(super) async fn list_containers(&self, all: bool) -> Result<Vec<ContainerSummary>> {
-        use bollard::container::ListContainersOptions;
-        let opts = ListContainersOptions::<String> {
-            all,
-            ..Default::default()
-        };
-        let cs = self.docker.list_containers(Some(opts)).await?;
-        Ok(cs.into_iter().map(summarize).collect())
+        let cs = self.engine.list_containers(all).await?;
+        Ok(cs.into_iter().map(to_summary).collect())
     }
 
     pub(super) async fn inspect_container(&self, id: String) -> Result<Box<ContainerDetail>> {
-        let r = self.docker.inspect_container(&id, None).await?;
-        Ok(Box::new(to_detail(r)))
+        let d = self.engine.inspect_container(&id).await?;
+        Ok(Box::new(to_detail(d)))
     }
 
     pub(super) async fn container_action(&self, id: String, action: Action) -> Result<()> {
-        use bollard::container::{
-            KillContainerOptions, RemoveContainerOptions, RestartContainerOptions, StopContainerOptions,
+        let mapped = match action {
+            Action::Start => engine::ContainerAction::Start,
+            Action::Stop { timeout } => engine::ContainerAction::Stop { timeout },
+            Action::Restart { timeout } => engine::ContainerAction::Restart { timeout },
+            Action::Kill { signal } => engine::ContainerAction::Kill { signal },
+            Action::Remove { force, volumes } => engine::ContainerAction::Remove { force, volumes },
         };
-        match action {
-            Action::Start => {
-                self.docker.start_container::<String>(&id, None).await?;
-            }
-            Action::Stop { timeout } => {
-                let opts = timeout.map(|t| StopContainerOptions { t });
-                self.docker.stop_container(&id, opts).await?;
-            }
-            Action::Restart { timeout } => {
-                let opts = timeout.map(|t| RestartContainerOptions { t: t as isize });
-                self.docker.restart_container(&id, opts).await?;
-            }
-            Action::Kill { signal } => {
-                let opts = signal.map(|s| KillContainerOptions { signal: s });
-                self.docker.kill_container(&id, opts).await?;
-            }
-            Action::Remove { force, volumes } => {
-                let opts = RemoveContainerOptions {
-                    force,
-                    v: volumes,
-                    link: false,
-                };
-                self.docker.remove_container(&id, Some(opts)).await?;
-            }
-        }
+        self.engine.container_action(&id, mapped).await?;
         Ok(())
     }
 }
 
-fn summarize(c: RawSummary) -> ContainerSummary {
+fn to_summary(c: engine::ContainerSummary) -> ContainerSummary {
     ContainerSummary {
-        id: short_id(&c.id.unwrap_or_default()),
-        name: c
-            .names
-            .and_then(|n| n.into_iter().next())
-            .map(|n| n.trim_start_matches('/').to_string())
-            .unwrap_or_default(),
-        image: c.image.unwrap_or_default(),
-        state: c.state.unwrap_or_default(),
-        status: c.status.unwrap_or_default(),
-        created: c.created.unwrap_or(0),
+        id: c.id,
+        name: c.name,
+        image: c.image,
+        state: c.state,
+        status: c.status,
+        created: c.created,
     }
 }
 
-fn to_detail(r: ContainerInspectResponse) -> ContainerDetail {
-    let state = r.state.unwrap_or_default();
-    let config = r.config.unwrap_or_default();
-    let host = r.host_config.unwrap_or_default();
-    let net = r.network_settings.unwrap_or_default();
+fn to_detail(d: engine::ContainerDetail) -> ContainerDetail {
     ContainerDetail {
-        id: r.id.unwrap_or_default(),
-        name: r
-            .name
-            .map(|n| n.trim_start_matches('/').to_string())
-            .unwrap_or_default(),
-        image: config.image.clone().unwrap_or_default(),
-        image_id: r.image.unwrap_or_default(),
-        created: r.created.unwrap_or_default(),
-        state: state.status.map(|s| s.to_string()).unwrap_or_default(),
-        running: state.running.unwrap_or(false),
-        started_at: state.started_at.unwrap_or_default(),
-        finished_at: state.finished_at.unwrap_or_default(),
-        exit_code: state.exit_code.unwrap_or(0),
-        error: state.error.unwrap_or_default(),
-        restart_count: r.restart_count.unwrap_or(0),
-        cmd: config.cmd.unwrap_or_default(),
-        entrypoint: config.entrypoint.unwrap_or_default(),
-        env: config.env.unwrap_or_default(),
-        working_dir: config.working_dir.unwrap_or_default(),
-        user: config.user.unwrap_or_default(),
-        labels: config.labels.unwrap_or_default(),
-        network_mode: host.network_mode.unwrap_or_default(),
-        restart_policy: host
-            .restart_policy
-            .and_then(|p| p.name.map(|n| n.to_string()))
-            .unwrap_or_default(),
-        privileged: host.privileged.unwrap_or(false),
-        memory_limit: host.memory.unwrap_or(0),
-        mounts: r.mounts.unwrap_or_default().into_iter().map(to_mount).collect(),
-        networks: net
-            .networks
-            .unwrap_or_default()
-            .into_iter()
-            .map(|(k, v)| (k, to_endpoint(v)))
-            .collect(),
-        ports: ports_from_map(net.ports),
+        id: d.id,
+        name: d.name,
+        image: d.image,
+        image_id: d.image_id,
+        created: d.created,
+        state: d.state,
+        running: d.running,
+        started_at: d.started_at,
+        finished_at: d.finished_at,
+        exit_code: d.exit_code,
+        error: d.error,
+        restart_count: d.restart_count,
+        cmd: d.cmd,
+        entrypoint: d.entrypoint,
+        env: d.env,
+        working_dir: d.working_dir,
+        user: d.user,
+        labels: d.labels,
+        network_mode: d.network_mode,
+        restart_policy: d.restart_policy,
+        privileged: d.privileged,
+        memory_limit: d.memory_limit,
+        mounts: d.mounts.into_iter().map(to_mount).collect(),
+        networks: d.networks.into_iter().map(|(k, v)| (k, to_endpoint(v))).collect(),
+        ports: d.ports.into_iter().map(to_port).collect(),
     }
 }
 
-fn to_mount(m: RawMount) -> MountPoint {
+fn to_mount(m: engine::MountPoint) -> MountPoint {
     MountPoint {
-        kind: m.typ.map(|t| t.to_string()).unwrap_or_default(),
-        source: m.source.unwrap_or_default(),
-        destination: m.destination.unwrap_or_default(),
-        mode: m.mode.unwrap_or_default(),
-        rw: m.rw.unwrap_or(false),
+        kind: m.kind,
+        source: m.source,
+        destination: m.destination,
+        mode: m.mode,
+        rw: m.rw,
     }
 }
 
-fn to_endpoint(e: RawEndpoint) -> NetworkEndpoint {
+fn to_endpoint(e: engine::NetworkEndpoint) -> NetworkEndpoint {
     NetworkEndpoint {
-        ip_address: e.ip_address.unwrap_or_default(),
-        gateway: e.gateway.unwrap_or_default(),
-        mac_address: e.mac_address.unwrap_or_default(),
+        ip_address: e.ip_address,
+        gateway: e.gateway,
+        mac_address: e.mac_address,
     }
 }
 
-fn ports_from_map(map: Option<std::collections::HashMap<String, Option<Vec<PortBinding>>>>) -> Vec<PortMapping> {
-    let Some(map) = map else {
-        return Vec::new();
-    };
-    let mut out = Vec::new();
-    for (port, bindings) in map {
-        for b in bindings.unwrap_or_default() {
-            out.push(PortMapping {
-                container_port: port.clone(),
-                host_ip: b.host_ip.unwrap_or_default(),
-                host_port: b.host_port.unwrap_or_default(),
-            });
-        }
+fn to_port(p: engine::PortMapping) -> PortMapping {
+    PortMapping {
+        container_port: p.container_port,
+        host_ip: p.host_ip,
+        host_port: p.host_port,
     }
-    out
 }

@@ -1,29 +1,28 @@
+use crate::engine;
 use crate::proto::*;
 use anyhow::Result;
-use bollard::models::Network as RawNetwork;
 
-use super::util::short_id;
-use super::DockerHandler;
+use super::EngineHandler;
 
-impl DockerHandler {
+impl EngineHandler {
     pub(super) async fn list_networks(&self) -> Result<Vec<NetworkSummary>> {
-        let nets = self.docker.list_networks::<String>(None).await?;
-        Ok(nets.into_iter().map(summarize_network).collect())
+        let ns = self.engine.list_networks().await?;
+        Ok(ns.into_iter().map(to_summary).collect())
     }
 
     pub(super) async fn remove_network(&self, id: String) -> Result<()> {
-        self.docker.remove_network(&id).await?;
+        self.engine.remove_network(&id).await?;
         Ok(())
     }
 }
 
-fn summarize_network(n: RawNetwork) -> NetworkSummary {
+fn to_summary(n: engine::NetworkSummary) -> NetworkSummary {
     NetworkSummary {
-        id: short_id(&n.id.unwrap_or_default()),
-        name: n.name.unwrap_or_default(),
-        driver: n.driver.unwrap_or_default(),
-        scope: n.scope.unwrap_or_default(),
-        created: n.created.map(|d| d.to_string()).unwrap_or_default(),
-        internal: n.internal.unwrap_or(false),
+        id: n.id,
+        name: n.name,
+        driver: n.driver,
+        scope: n.scope,
+        created: n.created,
+        internal: n.internal,
     }
 }

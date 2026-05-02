@@ -57,7 +57,7 @@ export interface HostInfo {
 }
 
 export interface ContainerSummary {
-  id: string; name: string; image: string; state: string; status: string; created: number;
+  id: string; name: string; image: string; state: string; status: string; created: string;
 }
 
 export interface ContainerDetail {

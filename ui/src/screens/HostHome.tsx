@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { call, type Host } from "@/api/client";
+import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
@@ -27,8 +27,7 @@ export function HostHome() {
     setRefreshing(true);
     setError(null);
     try {
-      const r = await call(host, { op: "list_containers", all: true });
-      if (r.type !== "containers") throw new Error("unexpected response");
+      const r = unwrap(await call(host, { op: "list_containers", all: true }), "containers");
       setContainers(r.data);
     } catch (e) {
       setError((e as Error).message);

@@ -7,10 +7,10 @@ mod networks;
 mod util;
 mod volumes;
 
+use crate::engine::Engine;
 use crate::proto::*;
-use anyhow::{anyhow, Context, Result};
+use anyhow::Result;
 use async_trait::async_trait;
-use bollard::{Docker, API_DEFAULT_VERSION};
 use futures::stream::BoxStream;
 use std::path::PathBuf;
 use tokio::sync::mpsc;
@@ -42,60 +42,22 @@ pub struct Policy {
     pub allowed_binds: Vec<PathBuf>,
 }
 
-pub struct DockerHandler {
-    docker: Docker,
-    policy: Policy,
+pub struct EngineHandler {
+    pub(crate) engine: Engine,
+    pub(crate) policy: Policy,
 }
 
-impl DockerHandler {
-    pub fn connect(policy: Policy) -> Result<Self> {
+impl EngineHandler {
+    pub async fn connect(policy: Policy) -> Result<Self> {
         Ok(Self {
-            docker: connect_engine()?,
+            engine: Engine::connect().await?,
             policy,
         })
     }
 }
 
-/// Auto-detect a container engine socket. Honors `DOCKER_HOST` if set;
-/// otherwise tries common rootless then root paths for Docker and Podman.
-fn connect_engine() -> Result<Docker> {
-    if std::env::var_os("DOCKER_HOST").is_some() {
-        return Docker::connect_with_local_defaults().context("DOCKER_HOST connect");
-    }
-    for path in candidate_sockets() {
-        if !path.exists() {
-            continue;
-        }
-        let s = path.to_string_lossy();
-        tracing::info!("connecting to {s}");
-        // bollard's connect_with_socket is lazy — it returns Ok immediately if
-        // the socket file exists; the actual TCP/IO error surfaces per-op.
-        return Docker::connect_with_socket(&s, 120, API_DEFAULT_VERSION).with_context(|| format!("connecting to {s}"));
-    }
-    Err(anyhow!(
-        "no docker or podman socket found.\n\n\
-         if podman is installed, enable its socket (it's daemonless and not started by default):\n  \
-         rootless: systemctl --user enable --now podman.socket\n  \
-         rootful:  sudo systemctl enable --now podman.socket\n\n\
-         if docker is installed, ensure the daemon is running.\n\n\
-         override with DOCKER_HOST."
-    ))
-}
-
-fn candidate_sockets() -> Vec<PathBuf> {
-    let mut out = Vec::with_capacity(4);
-    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
-        let xdg = PathBuf::from(xdg);
-        out.push(xdg.join("docker.sock")); // rootless docker
-        out.push(xdg.join("podman/podman.sock")); // rootless podman
-    }
-    out.push(PathBuf::from("/var/run/docker.sock")); // rootful docker
-    out.push(PathBuf::from("/run/podman/podman.sock")); // rootful podman
-    out
-}
-
 #[async_trait]
-impl OpHandler for DockerHandler {
+impl OpHandler for EngineHandler {
     async fn handle(&self, op: Op, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         match op {
             Op::HostInfo => unary(self.host_info().await, OpResult::HostInfo),

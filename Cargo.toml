@@ -16,7 +16,11 @@ embed-ui = ["dep:rust-embed", "dep:mime_guess"]
 [dependencies]
 tokio = { version = "1", features = ["full"] }
 axum = { version = "0.7", features = ["ws"] }
-bollard = "0.17"
+hyper = { version = "1", features = ["client", "http1"] }
+hyper-util = { version = "0.1", features = ["tokio"] }
+http-body = "1"
+http-body-util = "0.1"
+bytes = "1"
 rust-embed = { version = "8", optional = true }
 mime_guess = { version = "2", optional = true }
 serde = { version = "1", features = ["derive"] }

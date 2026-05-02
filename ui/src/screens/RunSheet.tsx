@@ -1,10 +1,16 @@
 import { useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { call, type Host } from "@/api/client";
+import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { SEEDED_TEMPLATES, type Template } from "@/state/templates";
 import type { PortPublish, RestartPolicySpec } from "@/api/types";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
+
+type LayerProgress = { status: string; current: number; total: number };
+interface PullState {
+  layers: Record<string, LayerProgress>;
+  lastStatus: string;
+}
 
 interface FormState {
   image: string;
@@ -40,6 +46,13 @@ export function RunSheet({
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pull, setPull] = useState<PullState | null>(null);
+
+  function reset() {
+    setForm(EMPTY_FORM);
+    setError(null);
+    setPull(null);
+  }
 
   function applyTemplate(t: Template) {
     setForm({
@@ -57,30 +70,43 @@ export function RunSheet({
     e.preventDefault();
     setPending(true);
     setError(null);
+    const image = form.image.trim();
     try {
-      const r = await call(host, {
+      // Pull first — Podman's compat API doesn't auto-pull on create like
+      // dockerd does, and showing progress is better UX than a silent hang.
+      setPull({ layers: {}, lastStatus: "starting pull…" });
+      await streamOp(host, { op: "pull_image", reference: image }, (chunk) => {
+        if (chunk.type !== "pull_progress") return;
+        setPull((prev) => {
+          const layers = { ...(prev?.layers ?? {}) };
+          if (chunk.id) {
+            layers[chunk.id] = { status: chunk.status, current: chunk.current, total: chunk.total };
+          }
+          return { layers, lastStatus: chunk.status || prev?.lastStatus || "" };
+        });
+      });
+      const r = unwrap(await call(host, {
         op: "create_container",
-        image: form.image.trim(),
+        image,
         name: form.name.trim() || undefined,
         ports: form.ports.length ? form.ports : undefined,
         env: form.env.length ? form.env : undefined,
         restart: form.restart,
         start: form.start,
-      });
-      if (r.type === "err") throw new Error(r.data.message);
-      if (r.type !== "container_created") throw new Error("unexpected response");
+      }), "container_created");
       onOpenChange(false);
-      setForm(EMPTY_FORM);
+      reset();
       onCreated(r.data.id);
     } catch (e) {
       setError((e as Error).message);
+      setPull(null);
     } finally {
       setPending(false);
     }
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
       <Dialog.Portal>
         <Dialog.Overlay className="sheet-overlay" />
         <Dialog.Content className="sheet glass-strong">
@@ -172,6 +198,8 @@ export function RunSheet({
               />
               <span className="text-sm">Start after create</span>
             </label>
+
+            {pull && <PullProgress pull={pull} />}
 
             {error && <div className="text-[var(--error)] text-sm px-1">{error}</div>}
 
@@ -297,6 +325,29 @@ function RestartPicker({
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function PullProgress({ pull }: { pull: PullState }) {
+  const layers = Object.entries(pull.layers);
+  return (
+    <div className="px-1 text-sm flex flex-col gap-2">
+      <div className="text-[var(--text-secondary)]">{pull.lastStatus || "pulling…"}</div>
+      {layers.length > 0 && (
+        <div className="flex flex-col gap-1 max-h-32 overflow-y-auto">
+          {layers.map(([id, p]) => {
+            const pct = p.total > 0 ? Math.min(100, Math.round((p.current / p.total) * 100)) : null;
+            return (
+              <div key={id} className="flex items-center gap-2 text-xs">
+                <span className="mono text-[var(--text-tertiary)] w-16 truncate">{id.slice(0, 12)}</span>
+                <span className="flex-1 truncate">{p.status}</span>
+                {pct !== null && <span className="mono text-[var(--text-tertiary)]">{pct}%</span>}
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

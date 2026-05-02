@@ -19,7 +19,10 @@ pub async fn ws_handler(
     State(h): State<Shared>,
     Extension(caller): Extension<TrustEntry>,
 ) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, h, caller))
+    // Browser clients offer ["nub", "bearer.<token>"]; we echo back "nub" so
+    // the handshake completes. The bearer is consumed by the auth middleware.
+    ws.protocols(["nub"])
+        .on_upgrade(move |socket| handle_socket(socket, h, caller))
 }
 
 async fn handle_socket(socket: WebSocket, h: Shared, caller: TrustEntry) {

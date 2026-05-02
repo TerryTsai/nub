@@ -43,10 +43,6 @@ where
     }))
 }
 
-pub(super) fn short_id(id: &str) -> String {
-    id.strip_prefix("sha256:").unwrap_or(id).chars().take(12).collect()
-}
-
 pub(super) fn log_chunk(stderr: bool, msg: &[u8]) -> StreamChunk {
     StreamChunk::Log {
         stderr,

@@ -28,7 +28,9 @@ pub struct ContainerSummary {
     pub image: String,
     pub state: String,
     pub status: String,
-    pub created: i64,
+    /// ISO 8601 string from libpod, or Unix-as-string from compat. Wire-stable
+    /// across both engines without forcing nub to do timestamp math.
+    pub created: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

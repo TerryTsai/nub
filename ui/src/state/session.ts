@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { call, type Host } from "@/api/client";
+import { call, unwrap, type Host } from "@/api/client";
 import type { WhoamiInfo } from "@/api/types";
 
 export interface Session {
@@ -28,14 +28,10 @@ export function useSession(host: Host | undefined): State {
     call(host, { op: "whoami" })
       .then((r) => {
         if (cancelled) return;
-        if (r.type !== "whoami") {
-          setState({ loading: false, session: null, error: "unexpected response" });
-          return;
-        }
-        const allowed = new Set(r.data.allowed);
-        const whoami = r.data;
+        const w = unwrap(r, "whoami");
+        const allowed = new Set(w.data.allowed);
         const can = (op: string) => allowed.has("*") || allowed.has(op);
-        setState({ loading: false, session: { whoami, can }, error: null });
+        setState({ loading: false, session: { whoami: w.data, can }, error: null });
       })
       .catch((e: Error) => {
         if (cancelled) return;
