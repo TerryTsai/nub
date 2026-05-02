@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
@@ -12,6 +12,12 @@ import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 
 type ContainerFilter = "all" | "running" | "stopped";
+
+const FILTER_VALUES: ContainerFilter[] = ["all", "running", "stopped"];
+
+function asFilter(s: string | null): ContainerFilter {
+  return FILTER_VALUES.includes(s as ContainerFilter) ? (s as ContainerFilter) : "all";
+}
 
 function matchesFilter(state: string, filter: ContainerFilter): boolean {
   if (filter === "all") return true;
@@ -29,7 +35,12 @@ export function HostHome() {
   const session = useSession(host);
   const [containers, setContainers] = useState<ContainerSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<ContainerFilter>("all");
+  const [params, setParams] = useSearchParams();
+  const filter = asFilter(params.get("filter"));
+  const setFilter = (v: ContainerFilter) => {
+    if (v === "all") setParams({}, { replace: true });
+    else setParams({ filter: v }, { replace: true });
+  };
 
   async function refresh() {
     if (!host) return;

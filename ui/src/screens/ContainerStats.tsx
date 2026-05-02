@@ -3,7 +3,6 @@ import { useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
@@ -47,11 +46,15 @@ export function ContainerStats() {
   ];
 
   return (
-    <Page crumbs={crumbs}>
-      <Heading category="Stats" title={containerName} />
-      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
-      {snap && <StatsView snap={snap} rates={rates} />}
+    <Page crumbs={crumbs} fill>
+      <div className="px-5 py-2 text-[11px] text-[var(--text-tertiary)] border-b border-[var(--border-subtle)] truncate">
+        {containerName}
+      </div>
+      <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
+        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+        {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
+        {snap && <StatsView snap={snap} rates={rates} />}
+      </div>
     </Page>
   );
 }

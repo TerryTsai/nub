@@ -9,6 +9,7 @@
   --color-text-secondary: var(--text-secondary);
   --color-text-tertiary: var(--text-tertiary);
   --color-accent: var(--accent);
+  --color-accent-soft-strong: var(--accent-soft-strong);
   --color-id: var(--id-color);
   --color-success: var(--success);
   --color-warn: var(--warn);
@@ -33,6 +34,7 @@
 html, body, #root {
   height: 100%;
   margin: 0;
+  background: var(--bg-base);
 }
 
 body {
