@@ -4,11 +4,10 @@ import { call, unwrap, type Host } from "@/api/client";
 import type { NetworkSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Button } from "@/components/Button";
+import { CountRefresh } from "@/components/CountRefresh";
 import { HostNav } from "@/components/HostNav";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { Section } from "@/components/Section";
 
 export function HostNetworks() {
   const { hid } = useParams<{ hid: string }>();
@@ -55,24 +54,21 @@ export function HostNetworks() {
 
   const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
   return (
-    <Page crumbs={crumbs}>
-      <HostNav hid={hid} active="networks" />
+    <Page crumbs={crumbs} nav={<HostNav hid={hid} active="networks" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      <Section
-        label={`Networks${networks ? ` (${networks.length})` : ""}`}
-        right={
-          <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-            {refreshing ? "…" : "Refresh"}
-          </Button>
-        }
-      >
-        {networks === null && !error && (
-          <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-        )}
-        {networks?.length === 0 && (
-          <p className="text-xs text-[var(--text-tertiary)]">No networks.</p>
-        )}
-        {networks && networks.length > 0 && (
+      {networks === null && !error && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+      )}
+      {networks?.length === 0 && (
+        <p className="text-xs text-[var(--text-tertiary)]">No networks.</p>
+      )}
+      {networks && networks.length > 0 && (
+        <>
+          <CountRefresh
+            label={`${networks.length} network${networks.length !== 1 ? "s" : ""}`}
+            onRefresh={refresh}
+            refreshing={refreshing}
+          />
           <div className="flex flex-col -mx-1">
             {networks.map((n) => (
               <div key={n.id} className="px-1">
@@ -93,8 +89,8 @@ export function HostNetworks() {
               </div>
             ))}
           </div>
-        )}
-      </Section>
+        </>
+      )}
     </Page>
   );
 }

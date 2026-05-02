@@ -4,11 +4,10 @@ import { call, unwrap, type Host } from "@/api/client";
 import type { VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Button } from "@/components/Button";
+import { CountRefresh } from "@/components/CountRefresh";
 import { HostNav } from "@/components/HostNav";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { Section } from "@/components/Section";
 
 export function HostVolumes() {
   const { hid } = useParams<{ hid: string }>();
@@ -55,24 +54,21 @@ export function HostVolumes() {
 
   const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
   return (
-    <Page crumbs={crumbs}>
-      <HostNav hid={hid} active="volumes" />
+    <Page crumbs={crumbs} nav={<HostNav hid={hid} active="volumes" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      <Section
-        label={`Volumes${volumes ? ` (${volumes.length})` : ""}`}
-        right={
-          <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-            {refreshing ? "…" : "Refresh"}
-          </Button>
-        }
-      >
-        {volumes === null && !error && (
-          <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-        )}
-        {volumes?.length === 0 && (
-          <p className="text-xs text-[var(--text-tertiary)]">No volumes.</p>
-        )}
-        {volumes && volumes.length > 0 && (
+      {volumes === null && !error && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+      )}
+      {volumes?.length === 0 && (
+        <p className="text-xs text-[var(--text-tertiary)]">No volumes.</p>
+      )}
+      {volumes && volumes.length > 0 && (
+        <>
+          <CountRefresh
+            label={`${volumes.length} volume${volumes.length !== 1 ? "s" : ""}`}
+            onRefresh={refresh}
+            refreshing={refreshing}
+          />
           <div className="flex flex-col -mx-1">
             {volumes.map((v) => (
               <div key={v.name} className="px-1">
@@ -94,8 +90,8 @@ export function HostVolumes() {
               </div>
             ))}
           </div>
-        )}
-      </Section>
+        </>
+      )}
     </Page>
   );
 }

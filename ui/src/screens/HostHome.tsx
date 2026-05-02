@@ -5,11 +5,11 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import type { ContainerSummary } from "@/api/types";
 import { Button } from "@/components/Button";
+import { CountRefresh } from "@/components/CountRefresh";
 import { FAB } from "@/components/FAB";
 import { HostNav } from "@/components/HostNav";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { Section } from "@/components/Section";
 
 export function HostHome() {
   const { hid } = useParams<{ hid: string }>();
@@ -56,31 +56,23 @@ export function HostHome() {
   return (
     <Page
       crumbs={crumbs}
+      nav={<HostNav hid={hid!} active="containers" />}
       fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
     >
-      <HostNav hid={hid!} active="containers" />
-
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
 
       {session.error && (
-        <Section label="Connection">
+        <>
           <p className="text-[var(--error)] text-sm">Couldn't connect: {session.error}</p>
           <p className="text-xs text-[var(--text-tertiary)]">
             The token may have rotated (admin tokens regenerate on every nub restart).
           </p>
           <Link to="/add" className="self-start"><Button variant="ghost">Re-add host</Button></Link>
-        </Section>
+        </>
       )}
 
       {session.session && (
-        <Section
-          label={`Containers${containers ? ` (${containers.length})` : ""}`}
-          right={
-            <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-              {refreshing ? "…" : "Refresh"}
-            </Button>
-          }
-        >
+        <>
           {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           {containers === null && !error && (
             <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
@@ -89,22 +81,30 @@ export function HostHome() {
             <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
           )}
           {containers !== null && containers.length > 0 && (
-            <div className="flex flex-col -mx-1">
-              {containers.map((c) => (
-                <div key={c.id} className="px-1">
-                  <ListRow
-                    title={c.name || "(unnamed)"}
-                    subtitle={`${c.image} · ${c.status}`}
-                    status={c.state}
-                    onPress={() => nav(`/h/${hid}/c/${c.id}`)}
-                  />
-                </div>
-              ))}
-            </div>
+            <>
+              <CountRefresh
+                label={`${containers.length} container${containers.length !== 1 ? "s" : ""}`}
+                onRefresh={refresh}
+                refreshing={refreshing}
+              />
+              <div className="flex flex-col -mx-1">
+                {containers.map((c) => (
+                  <div key={c.id} className="px-1">
+                    <ListRow
+                      title={c.name || "(unnamed)"}
+                      subtitle={`${c.image} · ${c.status}`}
+                      status={c.state}
+                      onPress={() => nav(`/h/${hid}/c/${c.id}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
           )}
-        </Section>
+        </>
       )}
 
     </Page>
   );
 }
+

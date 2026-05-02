@@ -4,11 +4,10 @@ import { call, unwrap, type Host } from "@/api/client";
 import type { ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Button } from "@/components/Button";
+import { CountRefresh } from "@/components/CountRefresh";
 import { HostNav } from "@/components/HostNav";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { Section } from "@/components/Section";
 
 export function HostImages() {
   const { hid } = useParams<{ hid: string }>();
@@ -55,24 +54,21 @@ export function HostImages() {
 
   const crumbs = [{ label: saved.label, to: `/h/${hid}` }];
   return (
-    <Page crumbs={crumbs}>
-      <HostNav hid={hid} active="images" />
+    <Page crumbs={crumbs} nav={<HostNav hid={hid} active="images" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      <Section
-        label={`Images${images ? ` (${images.length})` : ""}`}
-        right={
-          <Button variant="ghost" onClick={refresh} disabled={refreshing}>
-            {refreshing ? "…" : "Refresh"}
-          </Button>
-        }
-      >
-        {images === null && !error && (
-          <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-        )}
-        {images?.length === 0 && (
-          <p className="text-xs text-[var(--text-tertiary)]">No images.</p>
-        )}
-        {images && images.length > 0 && (
+      {images === null && !error && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+      )}
+      {images?.length === 0 && (
+        <p className="text-xs text-[var(--text-tertiary)]">No images.</p>
+      )}
+      {images && images.length > 0 && (
+        <>
+          <CountRefresh
+            label={`${images.length} image${images.length !== 1 ? "s" : ""}`}
+            onRefresh={refresh}
+            refreshing={refreshing}
+          />
           <div className="flex flex-col -mx-1">
             {images.map((img) => (
               <div key={img.id} className="px-1">
@@ -93,8 +89,8 @@ export function HostImages() {
               </div>
             ))}
           </div>
-        )}
-      </Section>
+        </>
+      )}
     </Page>
   );
 }
