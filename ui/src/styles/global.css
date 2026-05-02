@@ -56,7 +56,9 @@ input, textarea, select, button {
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Form inputs */
+/* Form inputs. Font-size MUST be ≥16px on iOS or Safari auto-zooms the
+ * viewport on focus. Same rule applies to xterm's hidden helper textarea —
+ * targeted below. */
 .input {
   background: var(--bg-elevated);
   border: 1px solid var(--border-subtle);
@@ -64,10 +66,15 @@ input, textarea, select, button {
   padding: 10px 12px;
   color: var(--text-primary);
   width: 100%;
+  font-size: 16px;
   transition: border-color 0.15s var(--ease-out);
 }
 .input:focus { border-color: var(--accent); }
 .input::placeholder { color: var(--text-tertiary); }
+
+/* xterm.js renders to canvas; its hidden helper textarea inherits a font-
+ * size that triggers iOS zoom on focus. Force ≥16px to prevent zoom. */
+.xterm-helper-textarea { font-size: 16px !important; }
 
 /* Buttons — pill-shaped, three variants. Class names kept stable; visual
  * style changed to match the foundry palette. */

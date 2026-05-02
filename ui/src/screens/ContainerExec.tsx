@@ -6,7 +6,6 @@ import "@xterm/xterm/css/xterm.css";
 import { bidiStream, call, unwrap, type BidiStream, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
-import { Heading } from "@/components/Heading";
 import { useHostCrumb } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
@@ -41,14 +40,12 @@ export function ContainerExec() {
   ];
 
   return (
-    <Page crumbs={crumbs}>
-      <Heading category={`Exec · ${cmd}`} title={containerName} />
-      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      <div
-        ref={termRef}
-        className="border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-2 bg-black"
-        style={{ height: "70vh" }}
-      />
+    <Page crumbs={crumbs} fill>
+      <div className="px-5 py-2 text-[11px] text-[var(--text-tertiary)] border-b border-[var(--border-subtle)]">
+        <span className="mono">{cmd}</span> · {containerName}
+      </div>
+      {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
+      <div ref={termRef} className="flex-1 min-h-0 bg-black px-1" />
     </Page>
   );
 }

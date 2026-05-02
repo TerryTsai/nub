@@ -14,12 +14,26 @@ export function Page({
   crumbs,
   children,
   fab,
+  fill,
 }: {
   crumbs?: Crumb[];
   children: ReactNode;
   /** Optional floating action — rendered fixed bottom-right. */
   fab?: ReactNode;
+  /** Fill the viewport. The body becomes a flex column that doesn't scroll;
+   * children are responsible for managing their own scroll regions. Used for
+   * pages like the exec terminal that own their full-screen surface. */
+  fill?: boolean;
 }) {
+  if (fill) {
+    return (
+      <div className="h-full flex flex-col overflow-hidden">
+        <AppHeader crumbs={crumbs} />
+        <main className="flex-1 min-h-0 flex flex-col">{children}</main>
+        {fab}
+      </div>
+    );
+  }
   return (
     <div className="min-h-full">
       <AppHeader crumbs={crumbs} />
