@@ -1,23 +1,36 @@
-//! `nub stack` — CLI deploys for compose-shaped stacks. The phone UI is
-//! the primary surface for stack ops; the CLI exists for codified /
-//! scriptable deploys (`nub stack deploy app.yml` from CI or cron).
+//! `nub stack` — CLI lifecycle for compose-shaped stacks. The phone UI
+//! is the primary interactive surface; the CLI exists for codified /
+//! scriptable deploys (`nub stack deploy app.yml` from CI or cron) and
+//! for SSH'd-in operators who want a quick `ls`/`rm`/`logs` without
+//! reaching for the phone.
 
 use anyhow::{Context, Result};
-use std::io::Read;
+use futures::StreamExt as _;
+use std::io::{BufRead as _, IsTerminal as _, Read, Write as _};
 
 use crate::config;
 use crate::ops;
+use crate::proto::StreamChunk;
 
 use super::StackCmd;
 
 pub fn run(action: StackCmd) -> Result<()> {
+    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
+    runtime.block_on(dispatch(action))
+}
+
+async fn dispatch(action: StackCmd) -> Result<()> {
+    let handler = connect().await?;
     match action {
-        StackCmd::Deploy { name, file } => deploy(name, file),
+        StackCmd::Deploy { name, file } => deploy(&handler, name, file).await,
+        StackCmd::Ls => list(&handler).await,
+        StackCmd::Rm { name, yes } => remove(&handler, name, yes).await,
+        StackCmd::Redeploy { name } => redeploy(&handler, name).await,
+        StackCmd::Logs { name, follow, tail } => logs(&handler, name, follow, tail).await,
     }
 }
 
-fn deploy(name: String, file: String) -> Result<()> {
-    let yaml = read_yaml(&file)?;
+async fn connect() -> Result<ops::EngineHandler> {
     let cfg = config::Config::load(None)?.unwrap_or_default();
     let policy = ops::Policy {
         allowed_binds: cfg.allowed_binds,
@@ -25,16 +38,89 @@ fn deploy(name: String, file: String) -> Result<()> {
         stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
         secrets_root: cfg.secrets.unwrap_or_else(config::default_secrets_dir),
     };
-    let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
-    runtime.block_on(async move {
-        let handler = ops::EngineHandler::connect(policy).await?;
-        let result = ops::stacks::create::run(&handler, name, yaml).await?;
-        println!("deployed stack `{}`", result.name);
-        for id in result.container_ids {
-            println!("  started {id}");
+    ops::EngineHandler::connect(policy).await
+}
+
+async fn deploy(h: &ops::EngineHandler, name: String, file: String) -> Result<()> {
+    let yaml = read_yaml(&file)?;
+    let result = ops::stacks::create::run(h, name, yaml).await?;
+    println!("deployed stack `{}`", result.name);
+    for id in result.container_ids {
+        println!("  started {id}");
+    }
+    Ok(())
+}
+
+async fn list(h: &ops::EngineHandler) -> Result<()> {
+    let stacks = ops::stacks::list::run(h).await?;
+    if stacks.is_empty() {
+        println!("(no stacks)");
+        return Ok(());
+    }
+    let name_w = stacks.iter().map(|s| s.name.len()).max().unwrap_or(4).max(4);
+    let status_w = stacks.iter().map(|s| s.status.len()).max().unwrap_or(6).max(6);
+    println!(
+        "{:<name_w$}  {:<status_w$}  {:>10}  MODIFIED",
+        "NAME", "STATUS", "CONTAINERS"
+    );
+    for s in stacks {
+        println!(
+            "{:<name_w$}  {:<status_w$}  {:>10}  {}",
+            s.name, s.status, s.container_count, s.modified_at
+        );
+    }
+    Ok(())
+}
+
+async fn remove(h: &ops::EngineHandler, name: String, yes: bool) -> Result<()> {
+    if !yes
+        && !confirm(&format!(
+            "remove stack `{name}`? containers will be stopped and the manifest deleted"
+        ))?
+    {
+        println!("aborted");
+        return Ok(());
+    }
+    ops::stacks::delete::run(h, name.clone()).await?;
+    println!("removed stack `{name}`");
+    Ok(())
+}
+
+async fn redeploy(h: &ops::EngineHandler, name: String) -> Result<()> {
+    let result = ops::stacks::redeploy::run(h, name).await?;
+    println!("redeployed stack `{}`", result.name);
+    for id in result.container_ids {
+        println!("  started {id}");
+    }
+    Ok(())
+}
+
+async fn logs(h: &ops::EngineHandler, name: String, follow: bool, tail: Option<u32>) -> Result<()> {
+    let mut stream = ops::stacks::logs::run(h, name, follow, tail);
+    while let Some(chunk) = stream.next().await {
+        match chunk {
+            StreamChunk::Log { stderr: is_err, data } => {
+                if is_err {
+                    let _ = std::io::stderr().write_all(data.as_bytes());
+                } else {
+                    let _ = std::io::stdout().write_all(data.as_bytes());
+                }
+            }
+            StreamChunk::Lagging { dropped } => {
+                let _ = writeln!(
+                    std::io::stderr(),
+                    "[nub: dropped {dropped} log chunks under backpressure]"
+                );
+            }
+            StreamChunk::End { ok: false, err } => {
+                let msg = err.unwrap_or_else(|| "stream ended without success".into());
+                anyhow::bail!("stream ended: {msg}");
+            }
+            StreamChunk::End { ok: true, .. } => break,
+            _ => {}
         }
-        Ok::<_, anyhow::Error>(())
-    })
+    }
+    Ok(())
 }
 
 fn read_yaml(file: &str) -> Result<String> {
@@ -44,4 +130,16 @@ fn read_yaml(file: &str) -> Result<String> {
         return Ok(buf);
     }
     std::fs::read_to_string(file).with_context(|| format!("reading {file}"))
+}
+
+fn confirm(prompt: &str) -> Result<bool> {
+    let stdin = std::io::stdin();
+    if !stdin.is_terminal() {
+        anyhow::bail!("refusing to prompt on a non-terminal stdin; pass --yes to skip");
+    }
+    eprint!("{prompt} [y/N]: ");
+    std::io::stderr().flush().ok();
+    let mut line = String::new();
+    stdin.lock().read_line(&mut line)?;
+    Ok(matches!(line.trim().to_ascii_lowercase().as_str(), "y" | "yes"))
 }

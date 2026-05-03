@@ -398,8 +398,9 @@ accidental `git add`, and non-root filesystem reads — same posture as
 Docker Swarm workers, Kubernetes nodes, and Vault Agent on a host.
 Root on the host can read the identity and decrypt; nub does not try
 to defend against that. `/run` is a tmpfs, so plaintext does not
-persist across reboots — operators must `nub stack redeploy <name>`
-after a host reboot to re-materialize secrets.
+persist across reboots — but the daemon re-materializes every stack's
+referenced secrets at startup, before serving, so containers with
+`restart: always` come back cleanly without operator intervention.
 
 `file:` and `environment:` sources in compose `secrets:` blocks are
 rejected; use `nub secret put` + `external: true` instead.

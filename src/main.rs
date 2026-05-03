@@ -55,6 +55,14 @@ async fn serve(args: Args) -> Result<()> {
         cli::connect::render_qr(&url);
     }
 
+    // Re-materialize secret tmpfs files for every stack on disk before
+    // we start serving. /run/nub/secrets/ is wiped by reboot; without
+    // this, containers with `secrets:` references would fail to start
+    // when the engine restart-policy kicks in.
+    let stacks_root = cfg.stacks.clone().unwrap_or_else(config::default_stacks_dir);
+    let secrets_root = cfg.secrets.clone().unwrap_or_else(config::default_secrets_dir);
+    ops::stacks::rehydrate::rehydrate_all(&stacks_root, &secrets_root).await;
+
     let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     let scheme = if tls.is_some() { "https" } else { "http" };

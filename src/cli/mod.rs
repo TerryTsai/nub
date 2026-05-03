@@ -65,11 +65,11 @@ Connect
   qr                    Print connect URL as a QR
 
 Management
-  bind   list|allow|deny  Manage the bind-mount allowlist
-  key    gen|rotate       Manage the Ed25519 issuer keypair
-  token  mint|scopes      Mint JWTs and inspect scope vocabulary
-  stack  deploy           Deploy a compose file as a stack
-  secret put|list|rm|get  Manage age-encrypted secrets
+  bind   list|allow|deny           Manage the bind-mount allowlist
+  key    gen|rotate                Manage the Ed25519 issuer keypair
+  token  mint|scopes               Mint JWTs and inspect scope vocabulary
+  stack  deploy|ls|rm|redeploy|logs  Manage compose-shaped stacks
+  secret put|list|rm|get           Manage age-encrypted secrets
 
 Tools
   completions <SHELL>   Shell completion script

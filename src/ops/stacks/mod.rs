@@ -15,6 +15,7 @@ pub mod list;
 pub mod logs;
 pub mod pull;
 pub mod redeploy;
+pub mod rehydrate;
 pub mod update;
 
 mod discover;
