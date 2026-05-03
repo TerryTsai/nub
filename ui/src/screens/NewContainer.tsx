@@ -13,6 +13,7 @@ import type {
   VolumeMount,
 } from "@/api/types";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
@@ -184,7 +185,7 @@ export function NewContainer() {
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="Container">
+        <Section label="container">
           <Field label="Image">
             <Combobox
               value={form.image}
@@ -210,34 +211,37 @@ export function NewContainer() {
           </Field>
         </Section>
 
-        <Section label="Ports">
+        <Collapsible label="ports" count={form.ports.length} defaultOpen={form.ports.length > 0}>
           <PairList
             pairs={form.ports.map((p) => [p.container, p.host])}
             placeholder={["80/tcp", "8080"]}
-            addLabel="+ Add port"
+            addLabel="+ port"
             onChange={(rows) =>
               setForm({ ...form, ports: rows.map(([container, host]) => ({ container, host })) })
             }
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="Volumes">
+        <Collapsible label="volumes" count={form.volumes.length} defaultOpen={form.volumes.length > 0}>
           <VolumeList
             mounts={form.volumes}
             onChange={(volumes) => setForm({ ...form, volumes })}
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="Environment">
+        <Collapsible label="environment" count={form.env.length} defaultOpen={form.env.length > 0}>
           <StringList
             values={form.env}
             placeholder="KEY=value"
-            addLabel="+ Add variable"
+            addLabel="+ variable"
             onChange={(env) => setForm({ ...form, env })}
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="Network">
+        <Collapsible
+          label="network"
+          defaultOpen={!!form.network}
+        >
           <Field label="Mode">
             <Combobox
               value={form.network}
@@ -249,14 +253,17 @@ export function NewContainer() {
               options={networkOptions}
             />
           </Field>
-        </Section>
+        </Collapsible>
 
-        <Section label="Process">
+        <Collapsible
+          label="process"
+          defaultOpen={form.entrypoint.length > 0 || form.cmd.length > 0 || !!form.workingDir || !!form.user}
+        >
           <Field label="Entrypoint">
             <StringList
               values={form.entrypoint}
               placeholder="/usr/bin/myprog"
-              addLabel="+ Add token"
+              addLabel="+ token"
               onChange={(entrypoint) => setForm({ ...form, entrypoint })}
             />
           </Field>
@@ -264,7 +271,7 @@ export function NewContainer() {
             <StringList
               values={form.cmd}
               placeholder="--flag"
-              addLabel="+ Add token"
+              addLabel="+ token"
               onChange={(cmd) => setForm({ ...form, cmd })}
             />
           </Field>
@@ -292,9 +299,9 @@ export function NewContainer() {
               onChange={(e) => setForm({ ...form, user: e.target.value })}
             />
           </Field>
-        </Section>
+        </Collapsible>
 
-        <Section label="Restart policy">
+        <Section label="restart">
           <RestartPicker value={form.restart} onChange={(restart) => setForm({ ...form, restart })} />
           <label className="flex items-center gap-2 cursor-pointer">
             <input
@@ -307,14 +314,14 @@ export function NewContainer() {
         </Section>
 
         {pull && (
-          <Section label="Pull progress">
+          <Section label="pull progress">
             <PullProgress pull={pull} />
           </Section>
         )}
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="Actions">
+        <Section label="actions">
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
               Cancel
@@ -446,7 +453,7 @@ function VolumeList({
         onClick={() => onChange([...mounts, { source: "", target: "" }])}
         className="self-start"
       >
-        + Add volume
+        + volume
       </Button>
     </div>
   );

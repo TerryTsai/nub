@@ -227,7 +227,7 @@ export function NewImage() {
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
-      <Section label="Source">
+      <Section label="source">
         <SourceTabs
           value={source}
           onChange={setSource}
@@ -237,7 +237,7 @@ export function NewImage() {
 
       <form onSubmit={onSubmit} className="contents">
         {source === "pull" ? (
-          <Section label="Pull">
+          <Section label="pull">
             <Field label="Image" hint="e.g. nginx:alpine, postgres:16, ghcr.io/owner/repo:tag">
               <input
                 className="input mono"
@@ -254,7 +254,7 @@ export function NewImage() {
             </Field>
           </Section>
         ) : (
-          <Section label="Build">
+          <Section label="build">
             <Field label="Dockerfile" hint="from this host's dockerfiles directory">
               <Combobox
                 value={dockerfileName}
@@ -303,7 +303,7 @@ export function NewImage() {
         )}
 
         {phase !== "idle" && (
-          <Section label="Progress">
+          <Section label="progress">
             {source === "pull" ? <PullProgress pull={pull} /> : <BuildLog stream={build.stream} imageId={build.imageId} />}
             {phase === "still-building" && (
               <p className="text-xs text-[var(--text-secondary)] pt-2">
@@ -316,7 +316,7 @@ export function NewImage() {
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="Actions">
+        <Section label="actions">
           {phase === "done" ? (
             <div className="flex gap-2">
               <Button variant="ghost" onClick={reset} className="flex-1">

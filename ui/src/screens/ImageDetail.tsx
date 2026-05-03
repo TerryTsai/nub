@@ -7,6 +7,7 @@ import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -84,43 +85,38 @@ export function ImageDetail() {
       {image && (
         <>
           <Section>
-            <div className="flex flex-col gap-2">
-              <Row label="ID" value={image.id} mono />
-              <Row label="Tag" value={image.repo_tag} mono />
-              <Row label="Size" value={formatBytes(image.size)} />
-              <Row label="Created" value={formatTimestamp(image.created)} />
-              <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
-              {detail && <Row label="Layers" value={String(detail.layers)} />}
-              {detail?.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
-            </div>
+            <Row label="ID" value={image.id} mono />
+            <Row label="Tag" value={image.repo_tag} mono />
+            <Row label="Size" value={formatBytes(image.size)} />
+            <Row label="Created" value={formatTimestamp(image.created)} />
+            <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
           </Section>
 
-          {detail && (detail.entrypoint.length > 0 || detail.cmd.length > 0 || detail.working_dir || detail.user) && (
-            <Section label="Process">
-              <div className="flex flex-col gap-2">
-                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-                {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
-                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-                {detail.user && <Row label="User" value={detail.user} mono />}
-              </div>
-            </Section>
+          {detail && (
+            <Collapsible label="spec">
+              {detail.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
+              <Row label="Layers" value={String(detail.layers)} />
+              {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+              {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
+              {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+              {detail.user && <Row label="User" value={detail.user} mono />}
+              {detail.exposed_ports.length > 0 && (
+                <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
+              )}
+              {detail.env.length > 0 && (
+                <Row
+                  label={`Env (${detail.env.length})`}
+                  right={
+                    <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
+                      {detail.env.join("\n")}
+                    </pre>
+                  }
+                />
+              )}
+            </Collapsible>
           )}
 
-          {detail && detail.exposed_ports.length > 0 && (
-            <Section label="Exposed ports">
-              <div className="text-xs mono text-[var(--id-color)]">{detail.exposed_ports.join(", ")}</div>
-            </Section>
-          )}
-
-          {detail && detail.env.length > 0 && (
-            <Section label="Environment">
-              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
-                {detail.env.join("\n")}
-              </pre>
-            </Section>
-          )}
-
-          <Section label="Actions">
+          <Section label="ops">
             <Button
               variant="destructive"
               disallowReason={denyReason}

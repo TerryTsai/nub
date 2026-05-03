@@ -15,7 +15,7 @@ interface Props {
 export function Section({ label, right, children, className = "" }: Props) {
   return (
     <section
-      className={`flex flex-col gap-2 pt-3 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
+      className={`flex flex-col gap-1.5 pt-2 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
     >
       {(label || right) && (
         <div className="flex items-center justify-between gap-2">

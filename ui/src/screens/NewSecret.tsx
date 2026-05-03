@@ -70,7 +70,7 @@ export function NewSecret() {
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="Secret">
+        <Section label="secret">
           <Field label="Name">
             <input
               className="input mono"
@@ -109,7 +109,7 @@ export function NewSecret() {
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="Actions">
+        <Section label="actions">
           <div className="flex gap-2">
             <Button
               variant="ghost"

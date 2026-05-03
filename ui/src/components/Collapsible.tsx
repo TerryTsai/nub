@@ -3,6 +3,8 @@ import { useState, type ReactNode } from "react";
 interface Props {
   /** Small-caps label, mirrors Section. Defaults to `info`. */
   label?: string;
+  /** Optional count badge after the label, e.g. an env var count. */
+  count?: number;
   /** Start expanded? Default false — info groups stay out of the way. */
   defaultOpen?: boolean;
   children: ReactNode;
@@ -17,21 +19,26 @@ interface Props {
  * Built on the native `<details>` so keyboard expand and screen-reader
  * semantics come for free; CSS hides the default disclosure marker so
  * we can render our own chevron beside the label. */
-export function Collapsible({ label = "info", defaultOpen = false, children, className = "" }: Props) {
+export function Collapsible({ label = "info", count, defaultOpen = false, children, className = "" }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <details
       open={open}
       onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
-      className={`pt-3 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
+      className={`pt-2 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
     >
       <summary
         className="flex items-center gap-1 cursor-pointer list-none select-none text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
       >
         <Chevron open={open} />
         <span>{label}</span>
+        {count !== undefined && count > 0 && (
+          <span className="text-[var(--text-secondary)] font-normal normal-case tracking-normal">
+            {count}
+          </span>
+        )}
       </summary>
-      <div className="flex flex-col gap-2 mt-2">{children}</div>
+      <div className="flex flex-col gap-1.5 mt-1.5">{children}</div>
     </details>
   );
 }

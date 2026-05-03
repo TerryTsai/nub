@@ -7,6 +7,7 @@ import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -85,39 +86,46 @@ export function VolumeDetail() {
       {volume && (
         <>
           <Section>
-            <div className="flex flex-col gap-2">
-              <Row label="Name" value={volume.name} mono />
-              <Row label="Driver" value={volume.driver} />
-              {volume.scope && <Row label="Scope" value={volume.scope} />}
-              <Row label="Mountpoint" value={volume.mountpoint} mono />
-              <Row label="Created" value={volume.created_at} mono />
-              {detail && detail.ref_count >= 0 && (
-                <Row
-                  label="In use by"
-                  value={`${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`}
-                />
-              )}
-              {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
-            </div>
+            <Row label="Name" value={volume.name} mono />
+            <Row label="Driver" value={volume.driver} />
+            <Row label="Mountpoint" value={volume.mountpoint} mono />
+            <Row label="Created" value={volume.created_at} mono />
+            {detail && detail.ref_count >= 0 && (
+              <Row
+                label="In use by"
+                value={`${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`}
+              />
+            )}
+            {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
           </Section>
 
-          {detail && Object.keys(detail.options).length > 0 && (
-            <Section label="Options">
-              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
-                {Object.entries(detail.options).map(([k, v]) => `${k}=${v}`).join("\n")}
-              </pre>
-            </Section>
+          {detail && (volume.scope || Object.keys(detail.options).length > 0 || Object.keys(detail.labels).length > 0) && (
+            <Collapsible label="spec">
+              {volume.scope && <Row label="Scope" value={volume.scope} />}
+              {Object.keys(detail.options).length > 0 && (
+                <Row
+                  label="Options"
+                  right={
+                    <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
+                      {Object.entries(detail.options).map(([k, v]) => `${k}=${v}`).join("\n")}
+                    </pre>
+                  }
+                />
+              )}
+              {Object.keys(detail.labels).length > 0 && (
+                <Row
+                  label="Labels"
+                  right={
+                    <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
+                      {Object.entries(detail.labels).map(([k, v]) => `${k}=${v}`).join("\n")}
+                    </pre>
+                  }
+                />
+              )}
+            </Collapsible>
           )}
 
-          {detail && Object.keys(detail.labels).length > 0 && (
-            <Section label="Labels">
-              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
-                {Object.entries(detail.labels).map(([k, v]) => `${k}=${v}`).join("\n")}
-              </pre>
-            </Section>
-          )}
-
-          <Section label="Actions">
+          <Section label="ops">
             <Button
               variant="destructive"
               disallowReason={denyReason}

@@ -70,7 +70,7 @@ export function NewStack() {
     <Page crumbs={crumbs}>
       <Heading category="Stack" title="new stack" />
 
-      <Section label="Name">
+      <Section label="name">
         <Field label="Stack name" hint="lowercase letters, digits, dash, underscore">
           <input
             className="input mono"
@@ -85,7 +85,7 @@ export function NewStack() {
         </Field>
       </Section>
 
-      <Section label="Compose YAML">
+      <Section label="compose">
         <textarea
           className="input mono"
           spellCheck={false}
@@ -101,7 +101,7 @@ export function NewStack() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      <Section label="Actions">
+      <Section label="actions">
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
             Cancel

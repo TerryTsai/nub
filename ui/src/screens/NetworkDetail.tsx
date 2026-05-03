@@ -7,6 +7,7 @@ import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -84,40 +85,40 @@ export function NetworkDetail() {
       {network && (
         <>
           <Section>
-            <div className="flex flex-col gap-2">
-              <Row label="ID" value={network.id} mono />
-              <Row label="Name" value={network.name} />
-              <Row label="Driver" value={network.driver} />
-              {network.scope && <Row label="Scope" value={network.scope} />}
-              <Row label="Internal" value={network.internal ? "yes" : "no"} />
-              <Row label="Created" value={network.created} mono />
-            </div>
+            <Row label="Name" value={network.name} />
+            <Row label="Driver" value={network.driver} />
+            <Row label="Internal" value={network.internal ? "yes" : "no"} />
+            <Row label="Created" value={network.created} mono />
+            {detail && (
+              <Row
+                label="Attached"
+                value={`${detail.containers.length} container${detail.containers.length === 1 ? "" : "s"}`}
+              />
+            )}
           </Section>
 
-          {detail && detail.ipam.length > 0 && (
-            <Section label="IPAM">
-              <div className="flex flex-col gap-2">
-                {detail.ipam.map((c, i) => (
-                  <div key={i} className="flex flex-col gap-1">
-                    {c.subnet && <Row label="Subnet" value={c.subnet} mono />}
-                    {c.gateway && <Row label="Gateway" value={c.gateway} mono />}
-                  </div>
-                ))}
-              </div>
-            </Section>
-          )}
-
           {detail && detail.containers.length > 0 && (
-            <Section label="Attached containers">
-              <div className="flex flex-col gap-2">
-                {detail.containers.map((c) => (
-                  <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
-                ))}
-              </div>
+            <Section label="attached">
+              {detail.containers.map((c) => (
+                <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
+              ))}
             </Section>
           )}
 
-          <Section label="Actions">
+          {detail && (
+            <Collapsible label="spec">
+              <Row label="ID" value={network.id} mono />
+              {network.scope && <Row label="Scope" value={network.scope} />}
+              {detail.ipam.map((c, i) => (
+                <div key={i} className="contents">
+                  {c.subnet && <Row label="Subnet" value={c.subnet} mono />}
+                  {c.gateway && <Row label="Gateway" value={c.gateway} mono />}
+                </div>
+              ))}
+            </Collapsible>
+          )}
+
+          <Section label="ops">
             <Button
               variant="destructive"
               disallowReason={denyReason}

@@ -87,74 +87,36 @@ export function ContainerDetail() {
       {detail && (
         <>
           <Section>
-            <div className="flex flex-col gap-2">
-              <Row label="Image" value={detail.image} mono />
-              <Row label="Created" value={detail.created} mono />
-              {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
-              {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
-              {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
-              {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
-              {detail.health && <Row label="Health" value={detail.health} />}
-              {detail.network_mode && <Row label="Network" value={detail.network_mode} />}
-              {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
-            </div>
+            <Row label="Image" value={detail.image} mono />
+            <Row label="Created" value={detail.created} mono />
+            {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
+            {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
+            {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
+            {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
+            {detail.health && <Row label="Health" value={detail.health} />}
           </Section>
 
-          {detail.cmd.length > 0 && (
-            <Section label="Process">
-              <div className="flex flex-col gap-2">
-                <Row label="Cmd" value={detail.cmd.join(" ")} mono />
-                {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-                {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-                {detail.user && <Row label="User" value={detail.user} mono />}
-              </div>
-            </Section>
-          )}
+          <Collapsible label="spec">
+            {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
+            {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
+            {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
+            {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+            {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+            {detail.user && <Row label="User" value={detail.user} mono />}
+            {detail.env.length > 0 && (
+              <Row
+                label={`Env (${detail.env.length})`}
+                right={
+                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
+                    {detail.env.join("\n")}
+                  </pre>
+                }
+              />
+            )}
+          </Collapsible>
 
-          {detail.env.length > 0 && (
-            <Collapsible label={`environment (${detail.env.length})`}>
-              <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
-                {detail.env.join("\n")}
-              </pre>
-            </Collapsible>
-          )}
-
-          <Section label="View">
-            <div className="grid grid-cols-3 gap-2">
-              <Link to={`/h/${hid}/c/${cid}/logs`}>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disallowReason={denyReason("containers:logs")}
-                >
-                  Logs →
-                </Button>
-              </Link>
-              <Link to={`/h/${hid}/c/${cid}/stats`}>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disallowReason={denyReason("containers:stats")}
-                >
-                  Stats →
-                </Button>
-              </Link>
-              <Link to={`/h/${hid}/c/${cid}/exec`}>
-                <Button
-                  variant="ghost"
-                  className="w-full"
-                  disallowReason={
-                    !detail.running ? "container is not running" : denyReason("containers:exec")
-                  }
-                >
-                  Exec →
-                </Button>
-              </Link>
-            </div>
-          </Section>
-
-          <Section label="Actions">
-            <div className="grid grid-cols-2 gap-2">
+          <Section label="ops">
+            <div className="grid grid-cols-2 gap-1.5">
               <Button
                 variant="primary"
                 disallowReason={denyReason("containers:action")}
@@ -186,14 +148,37 @@ export function ContainerDetail() {
                 onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
               />
             </div>
-            <Button
-              variant="ghost"
-              className="mt-2 w-full"
-              disallowReason={denyReason("containers:create")}
-              onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
-            >
-              Clone
-            </Button>
+            <div className="grid grid-cols-4 gap-1.5">
+              <Link to={`/h/${hid}/c/${cid}/logs`}>
+                <Button variant="ghost" size="sm" className="w-full" disallowReason={denyReason("containers:logs")}>
+                  Logs
+                </Button>
+              </Link>
+              <Link to={`/h/${hid}/c/${cid}/stats`}>
+                <Button variant="ghost" size="sm" className="w-full" disallowReason={denyReason("containers:stats")}>
+                  Stats
+                </Button>
+              </Link>
+              <Link to={`/h/${hid}/c/${cid}/exec`}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  disallowReason={!detail.running ? "container is not running" : denyReason("containers:exec")}
+                >
+                  Exec
+                </Button>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                disallowReason={denyReason("containers:create")}
+                onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
+              >
+                Clone
+              </Button>
+            </div>
             {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           </Section>
         </>

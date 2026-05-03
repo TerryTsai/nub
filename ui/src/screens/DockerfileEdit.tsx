@@ -117,7 +117,7 @@ export function DockerfileEdit() {
       {!loading && (
         <>
           {isNew && (
-            <Section label="Name">
+            <Section label="name">
               <Field label="Filename">
                 <input
                   className="input mono"
@@ -133,7 +133,7 @@ export function DockerfileEdit() {
             </Section>
           )}
 
-          <Section label="Content">
+          <Section label="content">
             <textarea
               className="input mono"
               spellCheck={false}
@@ -149,7 +149,7 @@ export function DockerfileEdit() {
 
           {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-          <Section label="Actions">
+          <Section label="actions">
             <div className="flex gap-2">
               <Button
                 variant="ghost"

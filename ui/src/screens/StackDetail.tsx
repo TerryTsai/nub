@@ -123,9 +123,9 @@ export function StackDetailScreen() {
 
       {detail && (
         <>
-          <Section label="Containers">
+          <Section label="containers">
             {detail.containers.length === 0 ? (
-              <p className="text-xs text-[var(--text-tertiary)]">No containers — stack is on disk but not deployed.</p>
+              <p className="text-xs text-[var(--text-tertiary)]">On disk, not deployed.</p>
             ) : (
               <div className="flex flex-col -mx-1">
                 {detail.containers.map((c) => (
@@ -142,6 +142,19 @@ export function StackDetailScreen() {
             )}
           </Section>
 
+          <Section label="compose">
+            <textarea
+              className="input mono"
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              rows={14}
+              value={yaml}
+              onChange={(e) => setYaml(e.target.value)}
+              style={{ minHeight: "260px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
+            />
+          </Section>
+
           {(detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0) && (
             <Collapsible label="dropped keys">
               <p className="text-xs text-[var(--text-tertiary)]">
@@ -156,47 +169,38 @@ export function StackDetailScreen() {
             </Collapsible>
           )}
 
-          <Section label="Compose YAML">
-            <textarea
-              className="input mono"
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              rows={14}
-              value={yaml}
-              onChange={(e) => setYaml(e.target.value)}
-              style={{ minHeight: "260px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
-            />
-          </Section>
-
           {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
 
-          <Section label="Actions">
-            <div className="flex gap-2">
-              <Button onClick={onSave} disabled={pending !== null || !dirty} disallowReason={denyUpdate} className="flex-1">
-                {pending === "save" ? "…" : "Save & redeploy"}
-              </Button>
-              <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)} className="flex-1">
-                Logs
-              </Button>
-            </div>
-            <div className="flex gap-2 mt-2">
-              <Button variant="ghost" onClick={onRedeploy} disabled={pending !== null} disallowReason={denyRedeploy} className="flex-1">
+          <Section label="ops">
+            <Button onClick={onSave} disabled={pending !== null || !dirty} disallowReason={denyUpdate} className="w-full">
+              {pending === "save" ? "…" : "Save & redeploy"}
+            </Button>
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button variant="ghost" onClick={onRedeploy} disabled={pending !== null} disallowReason={denyRedeploy}>
                 {pending === "redeploy" ? "…" : "Redeploy"}
               </Button>
-              <Button variant="ghost" onClick={onPull} disabled={pending !== null} disallowReason={denyPull} className="flex-1">
+              <Button variant="ghost" onClick={onPull} disabled={pending !== null} disallowReason={denyPull}>
                 {pending === "pull" ? "…" : "Pull & redeploy"}
               </Button>
             </div>
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmDelete(true)}
-              disabled={pending !== null}
-              disallowReason={denyDelete}
-              className="mt-2"
-            >
-              Delete
-            </Button>
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)}
+              >
+                Logs
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setConfirmDelete(true)}
+                disabled={pending !== null}
+                disallowReason={denyDelete}
+              >
+                Delete
+              </Button>
+            </div>
           </Section>
 
           <ConfirmDialog
