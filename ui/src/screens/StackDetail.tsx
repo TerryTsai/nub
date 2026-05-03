@@ -7,6 +7,7 @@ import { useSession } from "@/state/session";
 import { useQuery, invalidate } from "@/state/cache";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -142,8 +143,8 @@ export function StackDetailScreen() {
           </Section>
 
           {(detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0) && (
-            <Section label="Dropped">
-              <p className="text-xs text-[var(--text-tertiary)] mb-1">
+            <Collapsible label="dropped keys">
+              <p className="text-xs text-[var(--text-tertiary)]">
                 Compose keys we recognized but don't translate. The deployed stack ignores them.
               </p>
               {detail.unsupported.length > 0 && (
@@ -152,7 +153,7 @@ export function StackDetailScreen() {
               {Object.entries(detail.service_unsupported).map(([svc, keys]) => (
                 <p key={svc} className="text-xs"><span className="text-[var(--text-tertiary)]">{svc}:</span> {keys.join(", ")}</p>
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           <Section label="Compose YAML">

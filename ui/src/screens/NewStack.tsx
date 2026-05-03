@@ -37,7 +37,7 @@ export function NewStack() {
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new" }];
+  const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new stack" }];
   const canCreate = session.session?.can("stacks:create") ?? false;
   const denyCreate = !canCreate ? "your token doesn't allow stacks:create" : undefined;
 
@@ -68,7 +68,7 @@ export function NewStack() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Stack" title="New stack" />
+      <Heading category="Stack" title="new stack" />
 
       <Section label="Name">
         <Field label="Stack name" hint="lowercase letters, digits, dash, underscore">

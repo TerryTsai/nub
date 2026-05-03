@@ -5,6 +5,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -64,13 +65,13 @@ export function NewSecret() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Secret" title="New secret" />
+      <Heading category="Secret" title="new secret" />
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
         <Section label="Secret">
-          <Field label="Name" hint="letters, digits, dot, underscore, dash">
+          <Field label="Name">
             <input
               className="input mono"
               type="text"
@@ -83,7 +84,7 @@ export function NewSecret() {
               required
             />
           </Field>
-          <Field label="Value" hint="encrypted at rest with the host's age key. The value is never read back over the network — read it with `nub secret get` on the host.">
+          <Field label="Value">
             <textarea
               className="input mono"
               spellCheck={false}
@@ -98,6 +99,13 @@ export function NewSecret() {
             />
           </Field>
         </Section>
+
+        <Collapsible>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Encrypted at rest with the host's age key. Values are never read back over
+            the network — use <code className="mono">nub secret get NAME</code> on the host.
+          </p>
+        </Collapsible>
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 

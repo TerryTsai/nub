@@ -8,6 +8,7 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -111,11 +112,11 @@ export function ContainerDetail() {
           )}
 
           {detail.env.length > 0 && (
-            <Section label="Environment">
+            <Collapsible label={`environment (${detail.env.length})`}>
               <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--text-secondary)]">
                 {detail.env.join("\n")}
               </pre>
-            </Section>
+            </Collapsible>
           )}
 
           <Section label="View">

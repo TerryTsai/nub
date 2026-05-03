@@ -4,6 +4,7 @@ import type { SecretSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
+import { Collapsible } from "@/components/Collapsible";
 import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
@@ -56,7 +57,8 @@ export function HostSecrets() {
       )}
       {secrets?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">
-          No secrets. Run <code className="mono">nub secret put NAME</code> on the host or tap +secret.
+          No secrets. Tap secret to add one, or run{" "}
+          <code className="mono">nub secret put NAME</code> on the host.
         </p>
       )}
       {secrets && secrets.length > 0 && (
@@ -72,9 +74,14 @@ export function HostSecrets() {
           ))}
         </div>
       )}
-      <p className="text-xs text-[var(--text-tertiary)] mt-3">
-        Values are write-only over the network. Read with <code className="mono">nub secret get NAME</code> on the host.
-      </p>
+      {secrets && secrets.length > 0 && (
+        <Collapsible>
+          <p className="text-xs text-[var(--text-tertiary)]">
+            Values are write-only over the network. Read with{" "}
+            <code className="mono">nub secret get NAME</code> on the host.
+          </p>
+        </Collapsible>
+      )}
     </Page>
   );
 }

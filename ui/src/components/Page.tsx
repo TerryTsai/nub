@@ -76,18 +76,18 @@ function Segment({ crumb, last, showSep }: { crumb: Crumb; last: boolean; showSe
       </>
     );
   }
-  const cls = last
-    ? "text-[var(--text-primary)] font-medium font-display text-sm truncate"
-    : "text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] font-display text-sm truncate";
+  const baseCls = "font-display text-sm truncate";
+  const lastCls = `text-[var(--text-primary)] font-medium ${baseCls}`;
+  const linkCls = `text-[var(--text-tertiary)] hover:text-[var(--text-secondary)] underline underline-offset-2 decoration-[var(--border-subtle)] ${baseCls}`;
   return (
     <>
       {sep}
       {crumb.to && !last ? (
-        <Link to={crumb.to} className={cls}>
+        <Link to={crumb.to} className={linkCls}>
           {crumb.label}
         </Link>
       ) : (
-        <span className={cls}>{crumb.label}</span>
+        <span className={lastCls}>{crumb.label}</span>
       )}
     </>
   );

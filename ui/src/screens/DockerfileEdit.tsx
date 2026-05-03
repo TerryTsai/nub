@@ -97,7 +97,7 @@ export function DockerfileEdit() {
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const title = isNew ? "New dockerfile" : name;
+  const title = isNew ? "new dockerfile" : name;
   const crumbs: Crumb[] = [
     ...sectionCrumbs,
     { kind: "link", label: title },
@@ -118,7 +118,7 @@ export function DockerfileEdit() {
         <>
           {isNew && (
             <Section label="Name">
-              <Field label="Filename" hint="letters, digits, dot, underscore, dash">
+              <Field label="Filename">
                 <input
                   className="input mono"
                   type="text"

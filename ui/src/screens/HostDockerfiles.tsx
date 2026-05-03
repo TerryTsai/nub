@@ -45,7 +45,7 @@ export function HostDockerfiles() {
       )}
       {files?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">
-          No dockerfiles yet. Tap + to add one.
+          No dockerfiles yet. Tap dockerfile to add one.
         </p>
       )}
       {files && files.length > 0 && (

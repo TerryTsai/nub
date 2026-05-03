@@ -35,7 +35,9 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
         onClick={() => setOpen((v) => !v)}
         className="appearance-none bg-transparent border-0 p-0 m-0 cursor-pointer inline-flex items-baseline"
       >
-        <span className="text-[var(--text-primary)] font-medium font-display text-sm">{label}</span>
+        <span className="text-[var(--text-primary)] font-medium font-display text-sm underline underline-offset-2 decoration-[var(--border-subtle)]">
+          {label}
+        </span>
       </button>
       {open && (
         <>

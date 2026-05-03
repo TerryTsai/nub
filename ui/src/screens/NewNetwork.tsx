@@ -60,13 +60,13 @@ export function NewNetwork() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Network" title="New network" />
+      <Heading category="Network" title="new network" />
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
         <Section label="Network">
-          <Field label="Name" hint="letters, digits, dot, underscore, dash">
+          <Field label="Name">
             <input
               className="input mono"
               type="text"
@@ -85,9 +85,7 @@ export function NewNetwork() {
               checked={internal}
               onChange={(e) => setInternal(e.target.checked)}
             />
-            <span className="text-xs">
-              Internal — block external traffic; attached containers can only reach each other
-            </span>
+            <span className="text-xs">Internal (no external traffic)</span>
           </label>
         </Section>
 

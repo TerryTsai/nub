@@ -173,12 +173,11 @@ export function NewContainer() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Container" title="New container" />
+      <Heading category="Container" title="new container" />
 
       {cloning && sourceName && (
         <p className="text-xs text-[var(--text-secondary)]">
-          cloned from <span className="mono text-[var(--id-color)]">{sourceName}</span> — fields
-          are pre-filled; edit before creating
+          cloned from <span className="mono text-[var(--id-color)]">{sourceName}</span>
         </p>
       )}
 
@@ -186,32 +185,25 @@ export function NewContainer() {
 
       <form onSubmit={onSubmit} className="contents">
         <Section label="Container">
-          <Field
-            label="Image"
-            hint={
-              localTags.size > 0
-                ? "pick a pulled image, or type a reference (will pull on create)"
-                : "e.g. nginx:alpine, postgres:16, ghcr.io/..."
-            }
-          >
+          <Field label="Image">
             <Combobox
               value={form.image}
               onChange={(v) => setForm({ ...form, image: v })}
-              placeholder="image:tag"
+              placeholder="nginx:alpine"
               freeText
               freeTextHint="type or pick"
               mono
               options={Array.from(localTags).sort().map((t) => ({ value: t }))}
             />
           </Field>
-          <Field label="Name" hint="optional — engine auto-names if blank">
+          <Field label="Name">
             <input
               className="input mono"
               type="text"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="my-app"
+              placeholder="my-app (auto if blank)"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
@@ -246,7 +238,7 @@ export function NewContainer() {
         </Section>
 
         <Section label="Network">
-          <Field label="Mode" hint="leave blank for default; nub rejects host/container modes">
+          <Field label="Mode">
             <Combobox
               value={form.network}
               onChange={(v) => setForm({ ...form, network: v })}
@@ -260,7 +252,7 @@ export function NewContainer() {
         </Section>
 
         <Section label="Process">
-          <Field label="Entrypoint" hint="overrides the image's ENTRYPOINT; one token per row">
+          <Field label="Entrypoint">
             <StringList
               values={form.entrypoint}
               placeholder="/usr/bin/myprog"
@@ -268,7 +260,7 @@ export function NewContainer() {
               onChange={(entrypoint) => setForm({ ...form, entrypoint })}
             />
           </Field>
-          <Field label="Cmd" hint="overrides the image's CMD; one token per row">
+          <Field label="Cmd">
             <StringList
               values={form.cmd}
               placeholder="--flag"
@@ -276,7 +268,7 @@ export function NewContainer() {
               onChange={(cmd) => setForm({ ...form, cmd })}
             />
           </Field>
-          <Field label="Working dir" hint="optional">
+          <Field label="Working dir">
             <input
               className="input mono"
               type="text"
@@ -288,14 +280,14 @@ export function NewContainer() {
               onChange={(e) => setForm({ ...form, workingDir: e.target.value })}
             />
           </Field>
-          <Field label="User" hint="UID, name, or UID:GID — optional">
+          <Field label="User">
             <input
               className="input mono"
               type="text"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="1000:1000"
+              placeholder="1000 or 1000:1000"
               value={form.user}
               onChange={(e) => setForm({ ...form, user: e.target.value })}
             />

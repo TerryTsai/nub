@@ -223,7 +223,7 @@ export function NewImage() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Image" title="New image" />
+      <Heading category="Image" title="new image" />
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 

@@ -57,9 +57,9 @@ export function AddHost() {
 
   return (
     <Page>
-      <Heading category="Add" title="New host" />
+      <Heading category="Add" title="new host" />
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="URL" hint="e.g. http://192.168.1.10:8080">
+        <Field label="URL">
           <input
             className="input"
             type="url"
@@ -87,7 +87,7 @@ export function AddHost() {
             required
           />
         </Field>
-        <Field label="Label" hint="optional — what to call this host in the list">
+        <Field label="Label">
           <input
             className="input"
             type="text"
