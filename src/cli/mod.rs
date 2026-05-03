@@ -10,10 +10,12 @@ pub mod init;
 pub mod install;
 pub mod key;
 pub mod man;
+pub mod restart;
 pub mod stack;
 pub mod status;
 pub mod token;
 pub mod uninstall;
+pub mod update;
 
 pub use cmds::{BindCmd, ConfigCmd, InstallTarget, KeyCmd, StackCmd, TokenCmd};
 
@@ -27,10 +29,11 @@ const ABOUT: &str = "Minimal Docker/Podman control plane.";
 
 const LONG_ABOUT: &str = "\
 nub is an agent-shape daemon: it runs on one host, manages that host's
-container engine, and exposes a phone-first UI. Run `nub` with no args
-to start the server. The CLI manages nub itself — config, keys, tokens,
-the bind allowlist, and a few one-shot helpers. Container ops happen on
-the phone (or via podman/docker directly).";
+container engine, and exposes a phone-first UI. `nub run` starts the
+daemon foreground; in production `nub install systemd` puts it under
+systemd. The CLI manages nub itself — config, keys, tokens, the bind
+allowlist, and lifecycle (run / restart / update). Container ops
+happen on the phone (or via podman/docker directly).";
 
 const HELP_TEMPLATE: &str = "\
 {about-with-newline}
@@ -46,6 +49,11 @@ Setup
   init                  Generate a starter nub.toml
   install systemd       Install + enable the systemd unit
   uninstall             Remove config, data, and systemd unit
+
+Lifecycle
+  run                   Start the daemon in the foreground
+  restart               Restart the systemd unit
+  update                Pull the latest release and restart
 
 Status
   status                Daemon, engine, listen state
@@ -68,13 +76,14 @@ Tools
 
 const EXAMPLES: &str = "\
 Examples:
-  nub                          Start the server
+  nub run                      Start the daemon (foreground)
   nub init                     Generate config
-  nub install systemd          Install + start systemd unit
+  nub install systemd          Install + enable the unit
   nub status                   Health check
   nub url                      Print connect URL
-  nub bind allow /data         Permit /data as a bind-mount source
-  nub stack deploy app app.yml Deploy a stack from a YAML file
+  nub bind allow /data         Permit a bind-mount source
+  nub stack deploy app app.yml Deploy a stack from YAML
+  nub update                   Pull latest release and restart
 
 For per-command help: nub <COMMAND> --help
 For tab completion: nub completions zsh > ~/.zfunc/_nub
@@ -89,6 +98,7 @@ For tab completion: nub completions zsh > ~/.zfunc/_nub
     help_template = HELP_TEMPLATE,
     before_help = COMMANDS,
     after_help = EXAMPLES,
+    arg_required_else_help = true,
 )]
 pub struct Args {
     /// Path to TOML config (default: $XDG_CONFIG_HOME/nub/nub.toml,
@@ -133,6 +143,19 @@ pub enum Cmd {
         /// Skip the confirmation prompt.
         #[arg(long)]
         yes: bool,
+    },
+    /// Start the daemon in the foreground.
+    Run,
+    /// Restart the systemd unit (auto-detect user vs system).
+    Restart,
+    /// Pull the latest release and restart.
+    Update {
+        /// Just print what's available, don't change anything.
+        #[arg(long)]
+        check: bool,
+        /// Pin to a specific version (e.g. v0.0.20). Default: latest.
+        #[arg(long, value_name = "TAG")]
+        version: Option<String>,
     },
     /// Daemon, engine, and listen state at a glance.
     Status,
@@ -179,6 +202,9 @@ pub fn dispatch(cmd: Cmd) -> Result<()> {
         Cmd::Init { path, force } => init::run(path, force),
         Cmd::Install { target } => install::run(target),
         Cmd::Uninstall { yes } => uninstall::run(yes),
+        Cmd::Run => unreachable!("`nub run` is handled in main()"),
+        Cmd::Restart => restart::run(),
+        Cmd::Update { check, version } => update::run(check, version),
         Cmd::Status => status::run(),
         Cmd::Config { action } => config::run(action),
         Cmd::Url => connect::print_url(),

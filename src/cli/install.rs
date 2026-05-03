@@ -146,7 +146,7 @@ After=default.target
 
 [Service]
 Type=simple
-ExecStart={exec}
+ExecStart={exec} run
 Restart=on-failure
 RestartSec=2s
 
@@ -165,7 +165,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart={exec}
+ExecStart={exec} run
 Restart=on-failure
 RestartSec=2s
 

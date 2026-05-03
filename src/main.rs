@@ -15,20 +15,23 @@ use tokio_rustls::rustls;
 use tracing_subscriber::EnvFilter;
 
 use auth::{jwt, AuthState, Issuer};
-use cli::Args;
+use cli::{Args, Cmd};
 
 fn main() -> Result<()> {
-    let args = Args::parse();
-    if let Some(cmd) = args.cmd {
-        // CLI subcommands skip tracing init so server-level INFO lines
-        // (engine connect, etc.) don't leak into command output.
-        return cli::dispatch(cmd);
+    let mut args = Args::parse();
+    // `arg_required_else_help` ensures bare `nub` printed help and exited
+    // before this point, so we always have a subcommand here.
+    let cmd = args.cmd.take().expect("clap requires a subcommand");
+    if matches!(cmd, Cmd::Run) {
+        init_tracing()?;
+        return tokio::runtime::Builder::new_multi_thread()
+            .enable_all()
+            .build()?
+            .block_on(serve(args));
     }
-    init_tracing()?;
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()?
-        .block_on(serve(args))
+    // Other CLI subcommands skip tracing init so server-level INFO lines
+    // (engine connect, etc.) don't leak into command output.
+    cli::dispatch(cmd)
 }
 
 // tracing::{info,error} macros expand enough that this small orchestration
