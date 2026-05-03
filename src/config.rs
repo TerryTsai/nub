@@ -24,6 +24,10 @@ pub struct Config {
     /// Flat directory holding Dockerfile text files. When unset, falls
     /// back to `$XDG_DATA_HOME/nub/dockerfiles` (created on first write).
     pub dockerfiles: Option<PathBuf>,
+    /// Directory holding compose-stack manifests. One subdir per stack
+    /// containing `compose.yml` and optional `.env`. When unset, falls
+    /// back to `$XDG_DATA_HOME/nub/stacks`.
+    pub stacks: Option<PathBuf>,
     /// Base64url-encoded Ed25519 public key. When set, nub validates
     /// presented JWTs against this key only — the operator mints tokens
     /// elsewhere (their laptop, latch, etc.) and nub never holds a
@@ -73,6 +77,12 @@ pub fn xdg_data_home() -> PathBuf {
 /// Default dockerfiles directory: `$XDG_DATA_HOME/nub/dockerfiles`.
 pub fn default_dockerfiles_dir() -> PathBuf {
     xdg_data_home().join("nub/dockerfiles")
+}
+
+/// Default stacks directory: `$XDG_DATA_HOME/nub/stacks`. One subdir
+/// per stack with the YAML manifest inside.
+pub fn default_stacks_dir() -> PathBuf {
+    xdg_data_home().join("nub/stacks")
 }
 
 /// Default issuer key path: `$XDG_DATA_HOME/nub/issuer.key`. PKCS#8

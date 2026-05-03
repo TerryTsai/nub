@@ -2,10 +2,11 @@ import { useHosts, type SavedHost } from "@/state/hosts";
 import { MenuCrumb, type MenuItem } from "@/components/MenuCrumb";
 import type { Crumb } from "@/components/Page";
 
-export type Section = "containers" | "images" | "volumes" | "networks" | "dockerfiles";
+export type Section = "containers" | "stacks" | "images" | "volumes" | "networks" | "dockerfiles";
 
 const SECTIONS: { key: Section; label: string; subpath: string }[] = [
   { key: "containers", label: "containers", subpath: "" },
+  { key: "stacks", label: "stacks", subpath: "/stacks" },
   { key: "images", label: "images", subpath: "/images" },
   { key: "volumes", label: "volumes", subpath: "/volumes" },
   { key: "networks", label: "networks", subpath: "/networks" },

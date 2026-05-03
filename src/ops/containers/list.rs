@@ -3,6 +3,8 @@
 //! Podman: a single container in `Removing` state 500s the whole endpoint.
 //! Libpod tolerates it, so we use libpod when we know we're on Podman.
 
+use std::collections::HashMap;
+
 use anyhow::Result;
 use serde::Deserialize;
 
@@ -60,6 +62,8 @@ struct RawListItem {
     created: serde_json::Value,
     #[serde(default)]
     exit_code: i32,
+    #[serde(default)]
+    labels: HashMap<String, String>,
 }
 
 impl RawListItem {
@@ -74,6 +78,7 @@ impl RawListItem {
             created: created_to_string(self.created),
             exit_code: self.exit_code,
             health,
+            labels: self.labels,
         }
     }
 }

@@ -1,6 +1,7 @@
 mod auth;
 mod cli;
 mod client;
+mod compose;
 mod config;
 mod ops;
 mod proto;
@@ -156,6 +157,7 @@ async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Resu
     let policy = ops::Policy {
         allowed_binds: cfg.allowed_binds,
         dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
+        stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
     };
     let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 

@@ -57,3 +57,13 @@ export function networkStatus(inUse: boolean): Status {
     ? { tone: "active", label: "In use" }
     : { tone: "idle",   label: "Idle" };
 }
+
+export function stackStatus(rollup: string): Status {
+  // Vocabulary mirrors the server's discover.rs `rollup_status`.
+  switch (rollup) {
+    case "active":  return { tone: "active",  label: "Running" };
+    case "idle":    return { tone: "idle",    label: "Stopped" };
+    case "pending": return { tone: "pending", label: "Pending" };
+    default:        return { tone: "idle",    label: rollup || "Unknown" };
+  }
+}

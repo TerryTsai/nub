@@ -19,6 +19,10 @@ import { NetworkDetail } from "./screens/NetworkDetail";
 import { NewContainer } from "./screens/NewContainer";
 import { NewImage } from "./screens/NewImage";
 import { NewNetwork } from "./screens/NewNetwork";
+import { NewStack } from "./screens/NewStack";
+import { HostStacks } from "./screens/HostStacks";
+import { StackDetailScreen } from "./screens/StackDetail";
+import { StackLogs } from "./screens/StackLogs";
 import { VolumeDetail } from "./screens/VolumeDetail";
 
 // Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
@@ -47,6 +51,10 @@ export default function App() {
           <Route path="/h/:hid/networks/:nid" element={<NetworkDetail />} />
           <Route path="/h/:hid/dockerfiles" element={<HostDockerfiles />} />
           <Route path="/h/:hid/dockerfiles/:name" element={<DockerfileEdit />} />
+          <Route path="/h/:hid/stacks" element={<HostStacks />} />
+          <Route path="/h/:hid/stacks/new" element={<NewStack />} />
+          <Route path="/h/:hid/stacks/:sname" element={<StackDetailScreen />} />
+          <Route path="/h/:hid/stacks/:sname/logs" element={<StackLogs />} />
           <Route path="/h/:hid/c/new" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid/clone" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />

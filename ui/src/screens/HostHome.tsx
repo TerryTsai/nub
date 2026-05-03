@@ -126,16 +126,22 @@ function ContainerList({
   }
   return (
     <div className="flex flex-col -mx-1">
-      {containers.map((c) => (
-        <div key={c.id} className="px-1">
-          <ListRow
-            title={c.name || "(unnamed)"}
-            subtitle={`${c.image} · ${c.status}`}
-            status={containerStatus(c.state, c.exit_code, c.health)}
-            onPress={() => onPick(c.id)}
-          />
-        </div>
-      ))}
+      {containers.map((c) => {
+        const stack = c.labels?.["nub.stack"];
+        const subtitle = stack
+          ? `stack:${stack} · ${c.image} · ${c.status}`
+          : `${c.image} · ${c.status}`;
+        return (
+          <div key={c.id} className="px-1">
+            <ListRow
+              title={c.name || "(unnamed)"}
+              subtitle={subtitle}
+              status={containerStatus(c.state, c.exit_code, c.health)}
+              onPress={() => onPick(c.id)}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }

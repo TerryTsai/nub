@@ -7,6 +7,7 @@ mod dockerfiles;
 mod host;
 mod images;
 mod networks;
+mod stacks;
 mod volumes;
 
 use std::path::PathBuf;
@@ -48,6 +49,9 @@ pub struct Policy {
     /// Flat directory holding Dockerfile text files. Always set — the
     /// caller resolves it (config override or XDG default).
     pub dockerfiles_root: PathBuf,
+    /// Directory holding compose-stack manifests, one subdir per stack.
+    /// Always set — caller resolves config override or XDG default.
+    pub stacks_root: PathBuf,
 }
 
 pub struct EngineHandler {
@@ -106,6 +110,15 @@ impl OpHandler for EngineHandler {
             Op::ReadDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),
             Op::WriteDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
             Op::DeleteDockerfile { name } => unary(dockerfiles::delete(self, &name).await, ok),
+
+            Op::CreateStack { name, yaml } => unary(stacks::create::run(self, name, yaml).await, OpResult::StackCreated),
+            Op::ListStacks => unary(stacks::list::run(self).await, OpResult::Stacks),
+            Op::GetStack { name } => unary(stacks::get::run(self, name).await, OpResult::StackDetail),
+            Op::DeleteStack { name } => unary(stacks::delete::run(self, name).await, ok),
+            Op::RedeployStack { name } => unary(stacks::redeploy::run(self, name).await, OpResult::StackCreated),
+            Op::UpdateStack { name, yaml } => unary(stacks::update::run(self, name, yaml).await, OpResult::StackCreated),
+            Op::PullStack { name } => unary(stacks::pull::run(self, name).await, OpResult::StackCreated),
+            Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
         }
     }
 }

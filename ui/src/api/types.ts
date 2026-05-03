@@ -26,7 +26,15 @@ export type Op =
   | { op: "list_dockerfiles" }
   | { op: "read_dockerfile"; name: string }
   | { op: "write_dockerfile"; name: string; content: string }
-  | { op: "delete_dockerfile"; name: string };
+  | { op: "delete_dockerfile"; name: string }
+  | { op: "create_stack"; name: string; yaml: string }
+  | { op: "list_stacks" }
+  | { op: "get_stack"; name: string }
+  | { op: "delete_stack"; name: string }
+  | { op: "redeploy_stack"; name: string }
+  | { op: "update_stack"; name: string; yaml: string }
+  | { op: "pull_stack"; name: string }
+  | { op: "stream_stack_logs"; name: string; follow?: boolean; tail?: number };
 
 export type Action =
   | { kind: "start" }
@@ -58,6 +66,9 @@ export type OpResult =
   | { type: "network_detail"; data: NetworkDetail }
   | { type: "dockerfiles"; data: DockerfileSummary[] }
   | { type: "dockerfile"; data: DockerfileContent }
+  | { type: "stacks"; data: StackSummary[] }
+  | { type: "stack_detail"; data: StackDetail }
+  | { type: "stack_created"; data: StackCreated }
   | { type: "ok" }
   | { type: "stream_started" }
   | { type: "err"; data: { message: string } };
@@ -75,6 +86,7 @@ export interface ContainerSummary {
   exit_code: number;
   /** Healthcheck state: "healthy" | "unhealthy" | "starting" | "" (no healthcheck). */
   health: string;
+  labels: Record<string, string>;
 }
 
 export interface ContainerDetail {
@@ -116,6 +128,27 @@ export interface NetworkDetail {
 export interface ContainerCreated { id: string; started: boolean; warnings: string[] }
 export interface DockerfileSummary { name: string; size: number; modified_at: string }
 export interface DockerfileContent { name: string; content: string; size: number; modified_at: string }
+
+export interface StackSummary {
+  name: string;
+  /** "active" | "idle" | "pending". */
+  status: string;
+  container_count: number;
+  modified_at: string;
+}
+export interface StackDetail {
+  name: string;
+  yaml: string;
+  modified_at: string;
+  containers: ContainerSummary[];
+  /** Network nub created for this stack; empty before first deploy. */
+  network_name: string;
+  /** Top-level compose keys we recognized but didn't translate. */
+  unsupported: string[];
+  /** Per-service compose keys we recognized but didn't translate. */
+  service_unsupported: Record<string, string[]>;
+}
+export interface StackCreated { name: string; container_ids: string[] }
 
 // Stream chunks (internally tagged with `type`).
 export type StreamChunk =
