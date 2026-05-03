@@ -75,7 +75,7 @@ export function HostImages() {
     <Page
       crumbs={crumbs}
       subnav={subnav}
-      fab={session.session && canCreate ? <FAB to={`/h/${hid}/images/create`} label="image" /> : undefined}
+      fab={session.session && canCreate ? <FAB to={`/h/${hid}/images/new`} label="image" /> : undefined}
     >
       {session.loading && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
       {session.error && <p className="text-[var(--error)] text-xs">Couldn't connect: {session.error}</p>}

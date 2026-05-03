@@ -9,7 +9,7 @@ import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
@@ -55,15 +55,14 @@ export function VolumeDetail() {
     }
   }
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "volumes");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const title = vname ?? "?";
   const shortTitle = title.length > 16 ? `${title.slice(0, 12)}…` : title;
   const crumbs: Crumb[] = [
-    hostCrumb,
-    { kind: "link", label: "volumes", to: `/h/${hid}/volumes` },
+    ...sectionCrumbs,
     { kind: "link", label: shortTitle },
   ];
   const denyReason =

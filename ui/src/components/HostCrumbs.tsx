@@ -12,18 +12,16 @@ const SECTIONS: { key: Section; label: string; subpath: string }[] = [
   { key: "dockerfiles", label: "dockerfiles", subpath: "/dockerfiles" },
 ];
 
-/** Two-segment breadcrumb for top-level host pages: workspace dropdown
- * (all saved hosts + add) and section dropdown (containers/images/...). */
+/** Two-segment breadcrumb prefix for any per-host page: host dropdown
+ * (all saved hosts + add) and section dropdown
+ * (containers / images / volumes / networks / dockerfiles).
+ *
+ * Used by every page under `/h/:hid`. List screens stop here; detail and
+ * sub-action screens (container logs / stats / exec, image inspect, etc.)
+ * append additional segments after the prefix. */
 export function useHostSectionCrumbs(hid: string, hostLabel: string, section: Section): Crumb[] {
   const { hosts } = useHosts();
   return [hostMenu(hid, hostLabel, hosts), sectionMenu(hid, section)];
-}
-
-/** Host dropdown only — used by container detail / logs / stats / run pages
- * where the breadcrumb continues with the specific resource. */
-export function useHostCrumb(hid: string, hostLabel: string): Crumb {
-  const { hosts } = useHosts();
-  return hostMenu(hid, hostLabel, hosts);
 }
 
 function hostMenu(hid: string, hostLabel: string, hosts: SavedHost[]): Crumb {

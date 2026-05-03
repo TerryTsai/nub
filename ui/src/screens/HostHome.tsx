@@ -75,7 +75,7 @@ export function HostHome() {
     <Page
       crumbs={crumbs}
       subnav={subnav}
-      fab={session.session && canCreate ? <FAB to={`/h/${hid}/run`} label="container" /> : undefined}
+      fab={session.session && canCreate ? <FAB to={`/h/${hid}/c/new`} label="container" /> : undefined}
     >
       {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
 

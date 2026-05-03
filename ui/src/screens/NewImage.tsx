@@ -11,7 +11,7 @@ import { Button } from "@/components/Button";
 import { Combobox } from "@/components/Combobox";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, EMPTY_PULL, type PullState } from "@/components/PullProgress";
 import { Section } from "@/components/Section";
@@ -28,7 +28,7 @@ interface BuildState {
 
 const EMPTY_BUILD: BuildState = { stream: "", imageId: null };
 
-export function CreateImage() {
+export function NewImage() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -200,14 +200,13 @@ export function CreateImage() {
     // Keep dockerfileName/args so the user can iterate quickly.
   }
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "images");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [
-    hostCrumb,
-    { kind: "link", label: "images", to: `/h/${hid}/images` },
-    { kind: "link", label: "create" },
+    ...sectionCrumbs,
+    { kind: "link", label: "new image" },
   ];
 
   const dfOptions = (dockerfiles ?? []).map((d) => ({ value: d.name }));
@@ -224,7 +223,7 @@ export function CreateImage() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Images" title="Create image" />
+      <Heading category="Image" title="New image" />
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 

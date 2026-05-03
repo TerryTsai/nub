@@ -7,7 +7,7 @@ import { bidiStream, type BidiStream, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
 const DEFAULT_CMD = "/bin/sh";
@@ -28,12 +28,12 @@ export function ContainerExec() {
   const containerName = useContainerName(host, cid);
   useExecTerminal(termRef, host, cid, cmd, !!session.session, setError);
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [
-    hostCrumb,
+    ...sectionCrumbs,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
     { kind: "link", label: "exec" },
   ];

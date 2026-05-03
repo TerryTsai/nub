@@ -9,7 +9,7 @@ import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
@@ -55,14 +55,13 @@ export function ImageDetail() {
     }
   }
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "images");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const title = image?.repo_tag && !image.repo_tag.startsWith("<none>") ? image.repo_tag : iid ?? "?";
   const crumbs: Crumb[] = [
-    hostCrumb,
-    { kind: "link", label: "images", to: `/h/${hid}/images` },
+    ...sectionCrumbs,
     { kind: "link", label: title },
   ];
   const denyReason =

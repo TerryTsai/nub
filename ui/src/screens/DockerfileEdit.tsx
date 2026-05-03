@@ -9,7 +9,7 @@ import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
 
@@ -93,14 +93,13 @@ export function DockerfileEdit() {
     }
   }
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "dockerfiles");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const title = isNew ? "New dockerfile" : name;
   const crumbs: Crumb[] = [
-    hostCrumb,
-    { kind: "link", label: "dockerfiles", to: `/h/${hid}/dockerfiles` },
+    ...sectionCrumbs,
     { kind: "link", label: title },
   ];
   const dirty = isNew ? draftName.trim() !== "" || content !== "" : content !== original;

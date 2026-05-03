@@ -16,8 +16,8 @@ import { HostNetworks } from "./screens/HostNetworks";
 import { HostVolumes } from "./screens/HostVolumes";
 import { ImageDetail } from "./screens/ImageDetail";
 import { NetworkDetail } from "./screens/NetworkDetail";
-import { CreateImage } from "./screens/CreateImage";
-import { RunContainer } from "./screens/RunContainer";
+import { NewContainer } from "./screens/NewContainer";
+import { NewImage } from "./screens/NewImage";
 import { VolumeDetail } from "./screens/VolumeDetail";
 
 // Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
@@ -37,7 +37,7 @@ export default function App() {
           <Route path="/add" element={<AddHost />} />
           <Route path="/h/:hid" element={<HostHome />} />
           <Route path="/h/:hid/images" element={<HostImages />} />
-          <Route path="/h/:hid/images/create" element={<CreateImage />} />
+          <Route path="/h/:hid/images/new" element={<NewImage />} />
           <Route path="/h/:hid/images/:iid" element={<ImageDetail />} />
           <Route path="/h/:hid/volumes" element={<HostVolumes />} />
           <Route path="/h/:hid/volumes/:vname" element={<VolumeDetail />} />
@@ -45,7 +45,8 @@ export default function App() {
           <Route path="/h/:hid/networks/:nid" element={<NetworkDetail />} />
           <Route path="/h/:hid/dockerfiles" element={<HostDockerfiles />} />
           <Route path="/h/:hid/dockerfiles/:name" element={<DockerfileEdit />} />
-          <Route path="/h/:hid/run" element={<RunContainer />} />
+          <Route path="/h/:hid/c/new" element={<NewContainer />} />
+          <Route path="/h/:hid/c/:cid/clone" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
           <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />
           <Route path="/h/:hid/c/:cid/stats" element={<ContainerStats />} />

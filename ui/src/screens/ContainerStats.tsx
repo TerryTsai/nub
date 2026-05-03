@@ -5,7 +5,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
 import { useResilientStream } from "@/state/resilientStream";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Sparkline } from "@/components/Sparkline";
 
@@ -69,12 +69,12 @@ export function ContainerStats() {
     }));
   });
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [
-    hostCrumb,
+    ...sectionCrumbs,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
     { kind: "link", label: "stats" },
   ];

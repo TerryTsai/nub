@@ -6,7 +6,7 @@ import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
 import { useResilientStream } from "@/state/resilientStream";
 import { Button } from "@/components/Button";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 
 const TAIL_LINES = 200;
@@ -37,12 +37,12 @@ export function ContainerLogs() {
   });
   const { paneRef, onScroll } = useAutoscroll(lines);
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [
-    hostCrumb,
+    ...sectionCrumbs,
     { kind: "link", label: containerName, to: `/h/${hid}/c/${cid}` },
     { kind: "link", label: "logs" },
   ];

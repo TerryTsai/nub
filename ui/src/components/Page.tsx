@@ -42,11 +42,13 @@ export function Page({
  * body already has matching safe-area padding so the notch region shows
  * the body bg. */
 export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: ReactNode }) {
-  const all: Crumb[] = [{ kind: "link", label: "nub", to: "/" }, ...(crumbs ?? [])];
+  const all = crumbs ?? [];
   return (
     <header className="fixed top-[env(safe-area-inset-top)] left-0 right-0 z-30 bg-[var(--bg-base)] border-b border-[var(--border-subtle)]">
       <div className="flex items-center h-11 px-5 gap-2">
-        <NubMark />
+        <Link to="/" aria-label="hosts" className="shrink-0 flex items-center">
+          <NubMark />
+        </Link>
         <nav className="flex items-center gap-1 min-w-0 text-xs">
           {all.map((c, i) => (
             <Segment key={i} crumb={c} last={i === all.length - 1} showSep={i > 0} />

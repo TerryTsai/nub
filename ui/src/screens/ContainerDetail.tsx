@@ -10,7 +10,7 @@ import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
-import { useHostCrumb } from "@/components/HostCrumbs";
+import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
@@ -54,7 +54,7 @@ export function ContainerDetail() {
     }
   }
 
-  const hostCrumb = useHostCrumb(hid ?? "", saved?.label ?? "?");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) {
     return <Page><p>Unknown host.</p></Page>;
@@ -65,7 +65,7 @@ export function ContainerDetail() {
     : undefined;
   const displayName = detail?.name || seedName || cid?.slice(0, 12) || "?";
   const crumbs: Crumb[] = [
-    hostCrumb,
+    ...sectionCrumbs,
     { kind: "link", label: displayName },
   ];
   const can = (op: string) => session.session?.can(op) ?? false;
@@ -185,6 +185,14 @@ export function ContainerDetail() {
                 onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
               />
             </div>
+            <Button
+              variant="ghost"
+              className="mt-2 w-full"
+              disallowReason={denyReason("create_container")}
+              onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
+            >
+              Clone
+            </Button>
             {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           </Section>
         </>
