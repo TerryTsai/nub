@@ -4,21 +4,41 @@
 [![ci](https://img.shields.io/github/actions/workflow/status/TerryTsai/nub/ci.yml?label=ci&branch=main)](https://github.com/TerryTsai/nub/actions/workflows/ci.yml)
 [![license](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue)](#license)
 
-> Manage containers from your phone. One small Rust binary, mobile-shaped API.
+A control plane for one container host.
 
-`nub` runs on a Docker or Podman host and exposes a deliberately tiny
-JSON+WebSocket API designed for a phone client to drive: list containers,
-tail logs, stream stats, exec a shell, pull images, create containers under a
-strict policy. Per-token permissions; no orchestration; no fleet management
-yet — just a server with a trust list.
+Re-shapes Docker or Podman as the API you wish it had: a smaller engine
+surface, scoped auth, encrypted secrets, and a compose-compatible deploy
+layer. One binary, embedded UI.
 
-It's an experiment in suckless minimalism. Every endpoint earns its place,
-list views are compact, detail views are full, and streaming things stream.
+## What's in the box
+
+**One host on purpose.** Manages a single Docker or Podman host. No
+fleet, no cluster, no scheduling. Run a nub per box and pair them in
+the same UI client.
+
+**Constrained engine API.** `--privileged`, host networking, `cap_add`,
+sysctls, and devices aren't in the wire format. Bind-mount sources go
+through an allowlist. Nothing dangerous to accidentally turn on.
+
+**Compose stacks.** Paste a `compose.yml`, deploy as a stack. nub owns
+the deploy end-to-end; unsupported keys (`file:` secrets,
+`network_mode: host`, `depends_on` ordering) come back as clear errors,
+not silent drops.
+
+**Scoped tokens.** Ed25519 JWTs with granular `<resource>:<action>`
+scopes. Phone tokens get day-to-day operations; admin tokens get
+everything; never all-or-nothing.
+
+**Encrypted secrets.** age-encrypted at rest, decrypted to tmpfs at
+deploy time, never read back over the wire. Compose `secrets:`
+integration via `external: true`.
+
+**Tiny footprint.** ~5 MB statically-linked binary. ~4 MiB RSS at
+idle, 0% CPU. Embedded responsive UI — phone, tablet, laptop, same
+app. Works against Docker or Podman.
 
 ## Table of Contents
 
-- [Background](#background)
-- [Footprint](#footprint)
 - [Install](#install)
 - [Usage](#usage)
 - [Configuration](#configuration)
@@ -27,41 +47,6 @@ list views are compact, detail views are full, and streaming things stream.
 - [Maintainers](#maintainers)
 - [Contributing](#contributing)
 - [License](#license)
-
-## Background
-
-Docker's HTTP API is sprawling. `/containers/json` returns ~30 fields per
-container; every endpoint exposes every Docker knob. Driving that from a
-phone over a flaky connection is miserable.
-
-`nub` takes the opposite approach:
-
-- **Mobile-shaped responses.** Lists return ~6 fields per item, not 30. Detail
-  views return everything a detail screen actually wants. One round trip per
-  screen.
-- **Streams over polling.** Logs, stats, exec, image pull progress all stream
-  over one multiplexed WebSocket.
-- **Curated surface.** No users-and-roles, no orchestration, no compose. Just
-  container primitives over the wire.
-- **Wrapper as boundary.** `create_container` rejects host networking, host
-  bind mounts outside an allowlist, privileged mode. The phone-driven create
-  path is intentionally smaller than Docker's.
-
-If you want full Docker, run Docker. `nub` is for the 80% of operations a
-human does on their phone at 11pm.
-
-## Footprint
-
-A single statically-linked binary with the UI embedded as static assets.
-Numbers from a `--release` build, idle, on linux x86_64:
-
-- **Binary**: 3.4 MiB stripped (1.4 MiB packaged). 2.6 MiB without the UI.
-- **RSS at idle**: ≈ 4 MiB. Flat — there is no background poller.
-- **Idle CPU**: 0%. Event-driven: a stream stays open while you're
-  watching it, otherwise `nub` is asleep on the socket.
-
-That's roughly two orders of magnitude lighter than the typical
-container-management UI server.
 
 ## Install
 

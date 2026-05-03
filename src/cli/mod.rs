@@ -1,5 +1,6 @@
-//! `nub` CLI — manages the nub daemon. Container ops live on the phone
-//! UI; this CLI is for setup, auth, and inspection of nub itself.
+//! `nub` CLI — manages the nub daemon itself: config, keys, tokens,
+//! secrets, stacks, lifecycle. Container ops live in the embedded
+//! web UI (or against the API directly).
 
 pub mod bind;
 mod cmds;
@@ -26,15 +27,15 @@ use std::path::PathBuf;
 
 const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), env!("NUB_VERSION_SUFFIX"));
 
-const ABOUT: &str = "Minimal Docker/Podman control plane.";
+const ABOUT: &str = "A control plane for one container host.";
 
 const LONG_ABOUT: &str = "\
-nub is an agent-shape daemon: it runs on one host, manages that host's
-container engine, and exposes a phone-first UI. `nub run` starts the
-daemon foreground; in production `nub install systemd` puts it under
-systemd. The CLI manages nub itself — config, keys, tokens, the bind
-allowlist, and lifecycle (run / restart / update). Container ops
-happen on the phone (or via podman/docker directly).";
+nub re-shapes Docker or Podman as the API you wish it had: a smaller
+engine surface, scoped auth, encrypted secrets, and a compose-compatible
+deploy layer. `nub run` starts the daemon foreground; in production
+`nub install systemd` puts it under systemd. The CLI manages nub itself —
+config, keys, tokens, secrets, stacks, and lifecycle. Container ops
+happen through the embedded UI or the API directly.";
 
 const HELP_TEMPLATE: &str = "\
 {about-with-newline}

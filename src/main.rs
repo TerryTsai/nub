@@ -12,7 +12,7 @@ use clap::Parser;
 use std::os::unix::fs::OpenOptionsExt as _;
 use std::sync::Arc;
 use tokio_rustls::rustls;
-use tracing_subscriber::EnvFilter;
+use tracing::Level;
 
 use auth::{jwt, AuthState, Issuer};
 use cli::{Args, Cmd};
@@ -177,8 +177,9 @@ fn resolve_config(args: &Args) -> Result<config::Config> {
 }
 
 fn init_tracing() -> Result<()> {
-    tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::from_default_env().add_directive("nub=info".parse()?))
-        .init();
+    // Fixed INFO floor for nub's own logs; we don't need per-module filtering
+    // for a daemon with one log namespace, and dropping `env-filter` saves
+    // ~180 KB of regex machinery from the binary.
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
     Ok(())
 }

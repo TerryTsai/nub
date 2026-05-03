@@ -1,8 +1,8 @@
 [package]
 name = "nub"
-version = "0.0.26"
+version = "0.0.27"
 edition = "2021"
-description = "Minimal Docker/Podman control plane: hub + nub"
+description = "A control plane for one container host."
 license = "MIT OR Apache-2.0"
 
 [[bin]]
@@ -14,7 +14,7 @@ default = []
 embed-ui = ["dep:rust-embed", "dep:mime_guess", "dep:qrcode"]
 
 [dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "fs", "net", "io-util", "sync"] }
 axum = { version = "0.7", features = ["ws"] }
 hyper = { version = "1", features = ["client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio", "server-auto", "service"] }
@@ -25,7 +25,7 @@ base64 = "0.22"
 http-body = "1"
 http-body-util = "0.1"
 bytes = "1"
-rust-embed = { version = "8", optional = true }
+rust-embed = { version = "8", features = ["compression"], optional = true }
 mime_guess = { version = "2", optional = true }
 qrcode = { version = "0.14", default-features = false, optional = true }
 serde = { version = "1", features = ["derive"] }
@@ -34,7 +34,7 @@ serde_yaml = "0.9"
 async-trait = "0.1"
 futures = "0.3"
 tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "ansi", "smallvec", "std"] }
 clap = { version = "4", features = ["derive"] }
 clap_complete = "4"
 clap_mangen = "0.2"
@@ -60,3 +60,4 @@ opt-level = "z"
 lto = true
 codegen-units = 1
 strip = true
+panic = "abort"
