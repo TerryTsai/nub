@@ -1,13 +1,13 @@
 mod auth;
+mod cli;
 mod client;
 mod config;
-mod init;
 mod ops;
 mod proto;
 mod server;
 
 use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use config::TrustEntry;
 use std::io::Read;
 use std::path::PathBuf;
@@ -35,46 +35,14 @@ struct Args {
     tls_key: Option<PathBuf>,
 
     #[command(subcommand)]
-    cmd: Option<Cmd>,
-}
-
-#[derive(Subcommand)]
-enum Cmd {
-    /// Generate a starter config file. Default: $XDG_CONFIG_HOME/nub/nub.toml.
-    Init {
-        /// Where to write. Use `-` for stdout.
-        path: Option<String>,
-        /// Overwrite if file exists.
-        #[arg(long)]
-        force: bool,
-    },
-    /// Remove nub's config and data directories ($XDG_CONFIG_HOME/nub
-    /// and $XDG_DATA_HOME/nub). The binary itself stays put.
-    Uninstall {
-        /// Skip the confirmation prompt.
-        #[arg(long)]
-        yes: bool,
-    },
-    /// Print a systemd unit file for nub on stdout. Default is `--user`
-    /// (drop into ~/.config/systemd/user); `--system` for /etc/systemd/system.
-    SystemdUnit {
-        /// User-level unit (default).
-        #[arg(long, conflicts_with = "system")]
-        user: bool,
-        /// System-level unit (runs as root unless edited).
-        #[arg(long, conflicts_with = "user")]
-        system: bool,
-    },
+    cmd: Option<cli::Cmd>,
 }
 
 fn main() -> Result<()> {
     init_tracing()?;
     let args = Args::parse();
-    match args.cmd {
-        Some(Cmd::Init { path, force }) => return init::run(path, force),
-        Some(Cmd::Uninstall { yes }) => return init::uninstall(yes),
-        Some(Cmd::SystemdUnit { system, user: _ }) => return init::systemd_unit(!system),
-        None => {}
+    if let Some(cmd) = args.cmd {
+        return cli::dispatch(cmd);
     }
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -87,7 +55,7 @@ fn main() -> Result<()> {
 #[allow(clippy::cognitive_complexity)]
 async fn serve(args: Args) -> Result<()> {
     let cfg = resolve_config(&args)?;
-    let id = cfg.id.clone().unwrap_or_else(init::hostname);
+    let id = cfg.id.clone().unwrap_or_else(cli::hostname);
     let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
     let tls = resolve_tls(&cfg)?;
     let admin = admin_entry()?;
@@ -152,7 +120,7 @@ async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Route
 fn display_authority(bind: &str) -> String {
     let (host, port) = bind.rsplit_once(':').unwrap_or((bind, ""));
     let host = match host.trim_matches(['[', ']']) {
-        "0.0.0.0" | "::" | "" => init::hostname(),
+        "0.0.0.0" | "::" | "" => cli::hostname(),
         h => h.to_string(),
     };
     if port.is_empty() {
