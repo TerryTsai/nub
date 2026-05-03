@@ -120,12 +120,6 @@ choose_service_level() {
 }
 
 setup_systemd_user() {
-  unit_dir="${HOME}/.config/systemd/user"
-  unit_file="${unit_dir}/nub.service"
-  info "installing user-level systemd unit at ${unit_file}"
-  mkdir -p "${unit_dir}"
-  "${PREFIX}/nub" systemd-unit --user > "${unit_file}"
-
   if command -v loginctl >/dev/null 2>&1; then
     linger=$(loginctl show-user "${USER}" -p Linger 2>/dev/null | cut -d= -f2 || true)
     if [ "${linger}" != "yes" ]; then
@@ -139,34 +133,17 @@ setup_systemd_user() {
     fi
   fi
 
-  systemctl --user daemon-reload
-  systemctl --user enable --now nub
-  info ""
-  info "nub started. manage with:"
-  info "  systemctl --user status nub"
-  info "  systemctl --user restart nub"
-  info "  journalctl --user -u nub -f"
+  "${PREFIX}/nub" install systemd --user
 }
 
 setup_systemd_system() {
-  unit_file="/etc/systemd/system/nub.service"
-  info "installing system-level systemd unit at ${unit_file}"
   if [ "$(id -u)" = "0" ]; then
-    "${PREFIX}/nub" systemd-unit --system > "${unit_file}"
-    systemctl daemon-reload
-    systemctl enable --now nub
+    "${PREFIX}/nub" install systemd --system
   elif command -v sudo >/dev/null 2>&1; then
-    "${PREFIX}/nub" systemd-unit --system | sudo tee "${unit_file}" >/dev/null
-    sudo systemctl daemon-reload
-    sudo systemctl enable --now nub
+    sudo "${PREFIX}/nub" install systemd --system
   else
     err "system-level install needs root or sudo"
   fi
-  info ""
-  info "nub started. manage with:"
-  info "  sudo systemctl status nub"
-  info "  sudo systemctl restart nub"
-  info "  sudo journalctl -u nub -f"
 }
 
 main() {
@@ -188,7 +165,7 @@ main() {
       info ""
       info "installed: ${PREFIX}/nub"
       info "to run: ${PREFIX}/nub"
-      info "to set up as a service later: ${PREFIX}/nub systemd-unit --user > ~/.config/systemd/user/nub.service"
+      info "to set up as a service later: ${PREFIX}/nub install systemd --user"
       ;;
   esac
 

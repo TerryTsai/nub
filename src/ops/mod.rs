@@ -7,7 +7,7 @@ mod dockerfiles;
 mod host;
 mod images;
 mod networks;
-mod stacks;
+pub mod stacks;
 mod volumes;
 
 use std::path::PathBuf;

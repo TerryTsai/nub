@@ -10,42 +10,21 @@ mod server;
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::os::unix::fs::OpenOptionsExt as _;
-use std::path::PathBuf;
 use std::sync::Arc;
 use tokio_rustls::rustls;
 use tracing_subscriber::EnvFilter;
 
 use auth::{jwt, AuthState, Issuer};
-
-#[derive(Parser)]
-#[command(name = "nub", about = "Minimal Docker/Podman control plane")]
-struct Args {
-    /// Path to TOML config (default: $XDG_CONFIG_HOME/nub/nub.toml, ./nub.toml, /etc/nub/config.toml)
-    #[arg(long)]
-    config: Option<PathBuf>,
-    /// This binary's identifier (default: /etc/hostname or "nub")
-    #[arg(long)]
-    id: Option<String>,
-    /// Address to listen on (default: 0.0.0.0:8080)
-    #[arg(long)]
-    bind: Option<String>,
-    /// TLS certificate path
-    #[arg(long)]
-    tls_cert: Option<PathBuf>,
-    /// TLS private key path
-    #[arg(long)]
-    tls_key: Option<PathBuf>,
-
-    #[command(subcommand)]
-    cmd: Option<cli::Cmd>,
-}
+use cli::Args;
 
 fn main() -> Result<()> {
-    init_tracing()?;
     let args = Args::parse();
     if let Some(cmd) = args.cmd {
+        // CLI subcommands skip tracing init so server-level INFO lines
+        // (engine connect, etc.) don't leak into command output.
         return cli::dispatch(cmd);
     }
+    init_tracing()?;
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?
@@ -68,10 +47,9 @@ async fn serve(args: Args) -> Result<()> {
     println!("admin token: {admin}");
     #[cfg(feature = "embed-ui")]
     {
-        let scheme = if tls.is_some() { "https" } else { "http" };
-        let url = format!("{scheme}://{}/add#t={admin}", display_authority(&bind));
+        let url = cli::connect::url_for_banner(&bind, tls.is_some(), &admin);
         println!("connect:     {url}");
-        print_connect_qr(&url);
+        cli::connect::render_qr(&url);
     }
 
     let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
@@ -167,43 +145,6 @@ async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Resu
         app = app.merge(ui);
     }
     Ok(app)
-}
-
-/// Render the connect URL as a terminal QR. Phones scan this with their
-/// camera and land directly on `/add#t=...`, sidestepping the need to
-/// type or paste a 270-char JWT. Colors are inverted for dark terminals
-/// (the common case for ssh/journalctl).
-#[cfg(feature = "embed-ui")]
-fn print_connect_qr(url: &str) {
-    use qrcode::render::unicode::Dense1x2;
-    use qrcode::{EcLevel, QrCode};
-    match QrCode::with_error_correction_level(url.as_bytes(), EcLevel::L) {
-        Ok(code) => {
-            let image = code
-                .render::<Dense1x2>()
-                .dark_color(Dense1x2::Light)
-                .light_color(Dense1x2::Dark)
-                .build();
-            println!("\n{image}");
-        }
-        Err(e) => tracing::warn!("could not render connect QR: {e}"),
-    }
-}
-
-// Substitute hostname for unspecified bind addresses so the printed URL is
-// usable on the LAN. Specific binds pass through unchanged.
-#[cfg(feature = "embed-ui")]
-fn display_authority(bind: &str) -> String {
-    let (host, port) = bind.rsplit_once(':').unwrap_or((bind, ""));
-    let host = match host.trim_matches(['[', ']']) {
-        "0.0.0.0" | "::" | "" => cli::hostname(),
-        h => h.to_string(),
-    };
-    if port.is_empty() {
-        host
-    } else {
-        format!("{host}:{port}")
-    }
 }
 
 fn resolve_config(args: &Args) -> Result<config::Config> {

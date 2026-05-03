@@ -59,6 +59,12 @@ impl Engine {
         self.kind
     }
 
+    /// Human-readable address for diagnostics (`unix:///run/.../podman.sock`,
+    /// `tcp://localhost:2375`). Used by `nub status`.
+    pub fn address_display(&self) -> String {
+        format!("{}", self.address)
+    }
+
     /// Open a fresh connection. Each op holds its own — no pooling.
     pub async fn conn(&self) -> Result<Conn> {
         Conn::connect(&self.address).await

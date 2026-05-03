@@ -23,6 +23,15 @@ pub(crate) enum Address {
     Tcp(String),
 }
 
+impl std::fmt::Display for Address {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Address::Unix(p) => write!(f, "unix://{}", p.display()),
+            Address::Tcp(s) => write!(f, "tcp://{s}"),
+        }
+    }
+}
+
 pub(crate) struct Conn {
     sender: http1::SendRequest<Body>,
 }

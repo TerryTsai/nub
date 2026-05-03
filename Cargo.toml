@@ -1,6 +1,6 @@
 [package]
 name = "nub"
-version = "0.0.21"
+version = "0.0.22"
 edition = "2021"
 description = "Minimal Docker/Podman control plane: hub + nub"
 license = "MIT OR Apache-2.0"
@@ -36,7 +36,10 @@ futures = "0.3"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 clap = { version = "4", features = ["derive"] }
+clap_complete = "4"
+clap_mangen = "0.2"
 toml = "0.8"
+toml_edit = "0.22"
 anyhow = "1"
 
 [lints.rust]

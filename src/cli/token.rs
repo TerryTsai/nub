@@ -1,12 +1,20 @@
-//! `nub mint` — sign a fresh JWT with nub's issuer key. Prints the
-//! resulting token to stdout. Requires `nub` to hold the private key
-//! (i.e. not configured with an external `trusted_issuer`).
+//! `nub token` — token operations. Today: `mint` only. Future slots:
+//! `list` and `revoke` (need a JWT-revocation backend; reserved here
+//! so the noun-verb shape is stable).
 
 use anyhow::{anyhow, Context, Result};
 
 use crate::auth::{jwt, Issuer};
 
-pub fn run(sub: String, scope: String, expires: String, audience: Option<String>) -> Result<()> {
+use super::TokenCmd;
+
+pub fn run(action: TokenCmd) -> Result<()> {
+    match action {
+        TokenCmd::Mint { sub, scope, expires, aud } => mint(sub, scope, expires, aud),
+    }
+}
+
+fn mint(sub: String, scope: String, expires: String, audience: Option<String>) -> Result<()> {
     let issuer_path = crate::config::default_issuer_key();
     let issuer = Issuer::load_or_generate(&issuer_path)?;
     if !issuer.can_mint() {
