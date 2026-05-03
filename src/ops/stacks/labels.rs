@@ -17,7 +17,9 @@ pub fn volume_name(stack: &str, declared: &str) -> String {
 }
 
 pub fn container_name(stack: &str, service: &str, override_name: Option<&str>) -> String {
-    override_name.map(|s| s.to_string()).unwrap_or_else(|| format!("{stack}_{service}"))
+    override_name
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| format!("{stack}_{service}"))
 }
 
 pub fn stack_labels(stack: &str, service: &str) -> HashMap<String, String> {

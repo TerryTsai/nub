@@ -25,7 +25,9 @@ fn list() -> Result<()> {
         return Ok(());
     };
     let raw = fs::read_to_string(&config_path).with_context(|| format!("reading {}", config_path.display()))?;
-    let doc: toml_edit::DocumentMut = raw.parse().with_context(|| format!("parsing {}", config_path.display()))?;
+    let doc: toml_edit::DocumentMut = raw
+        .parse()
+        .with_context(|| format!("parsing {}", config_path.display()))?;
     let current = read_array(&doc);
     if current.is_empty() {
         println!("(allowlist empty — bind mounts are denied)");
@@ -105,8 +107,7 @@ fn locate_config() -> Result<PathBuf> {
 
 fn update(path: &Path, mutate: impl FnOnce(&mut Vec<String>) -> bool) -> Result<bool> {
     let raw = fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-    let mut doc: toml_edit::DocumentMut =
-        raw.parse().with_context(|| format!("parsing {}", path.display()))?;
+    let mut doc: toml_edit::DocumentMut = raw.parse().with_context(|| format!("parsing {}", path.display()))?;
     let mut current = read_array(&doc);
     let changed = mutate(&mut current);
     if !changed {

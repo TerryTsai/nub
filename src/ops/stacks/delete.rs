@@ -30,7 +30,15 @@ pub(super) async fn teardown_resources(h: &EngineHandler, name: &str) -> Result<
         let _ = containers::action::run(h, c.id.clone(), Action::Stop { timeout: Some(10) }).await;
     }
     for c in containers {
-        let _ = containers::action::run(h, c.id.clone(), Action::Remove { force: true, volumes: false }).await;
+        let _ = containers::action::run(
+            h,
+            c.id.clone(),
+            Action::Remove {
+                force: true,
+                volumes: false,
+            },
+        )
+        .await;
     }
     engine::remove_network(h, &network_name(name)).await?;
     Ok(())

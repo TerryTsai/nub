@@ -23,5 +23,8 @@ pub(crate) async fn run(h: &EngineHandler, name: String) -> Result<StackCreated>
     let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow!("compose: {e}"))?;
     delete::teardown_resources(h, &name).await?;
     let ids = create::deploy_from_spec(h, &name, spec).await?;
-    Ok(StackCreated { name, container_ids: ids })
+    Ok(StackCreated {
+        name,
+        container_ids: ids,
+    })
 }

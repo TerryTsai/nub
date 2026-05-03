@@ -19,15 +19,24 @@ pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
     let mut volumes: Vec<_> = raw
         .volumes
         .into_iter()
-        .map(|(name, v)| VolumeSpec { name, external: v.external })
+        .map(|(name, v)| VolumeSpec {
+            name,
+            external: v.external,
+        })
         .collect();
     volumes.sort_by(|a, b| a.name.cmp(&b.name));
 
-    Ok(StackSpec { services, volumes, unsupported: sorted_keys(&raw.extra) })
+    Ok(StackSpec {
+        services,
+        volumes,
+        unsupported: sorted_keys(&raw.extra),
+    })
 }
 
 fn transform_service(name: String, svc: ServiceYaml) -> Result<ServiceSpec, ParseError> {
-    let image = svc.image.ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
+    let image = svc
+        .image
+        .ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
     let unsupported = sorted_keys(&svc.extra);
     let container = CreateContainerReq {
         image,
@@ -60,7 +69,11 @@ fn transform_service(name: String, svc: ServiceYaml) -> Result<ServiceSpec, Pars
         expose: svc.expose,
         start: false,
     };
-    Ok(ServiceSpec { name, container, unsupported })
+    Ok(ServiceSpec {
+        name,
+        container,
+        unsupported,
+    })
 }
 
 fn parse_ports(items: &[String], svc: &str) -> Result<Vec<PortPublish>, ParseError> {
@@ -70,11 +83,18 @@ fn parse_ports(items: &[String], svc: &str) -> Result<Vec<PortPublish>, ParseErr
 fn parse_port(s: &str, svc: &str) -> Result<PortPublish, ParseError> {
     let parts: Vec<&str> = s.split(':').collect();
     match parts.as_slice() {
-        [container] => Ok(PortPublish { container: (*container).into(), host: (*container).into() }),
-        [host, container] => Ok(PortPublish { container: (*container).into(), host: (*host).into() }),
-        [ip, host, container] => {
-            Ok(PortPublish { container: (*container).into(), host: format!("{ip}:{host}") })
-        }
+        [container] => Ok(PortPublish {
+            container: (*container).into(),
+            host: (*container).into(),
+        }),
+        [host, container] => Ok(PortPublish {
+            container: (*container).into(),
+            host: (*host).into(),
+        }),
+        [ip, host, container] => Ok(PortPublish {
+            container: (*container).into(),
+            host: format!("{ip}:{host}"),
+        }),
         _ => Err(ParseError(format!("service `{svc}`: bad port `{s}`"))),
     }
 }
@@ -86,8 +106,16 @@ fn parse_volumes(items: &[String], svc: &str) -> Result<Vec<VolumeMount>, ParseE
 fn parse_volume(s: &str, svc: &str) -> Result<VolumeMount, ParseError> {
     let parts: Vec<&str> = s.split(':').collect();
     match parts.as_slice() {
-        [target] => Ok(VolumeMount { source: String::new(), target: (*target).into(), read_only: false }),
-        [source, target] => Ok(VolumeMount { source: (*source).into(), target: (*target).into(), read_only: false }),
+        [target] => Ok(VolumeMount {
+            source: String::new(),
+            target: (*target).into(),
+            read_only: false,
+        }),
+        [source, target] => Ok(VolumeMount {
+            source: (*source).into(),
+            target: (*target).into(),
+            read_only: false,
+        }),
         [source, target, mode] => Ok(VolumeMount {
             source: (*source).into(),
             target: (*target).into(),
@@ -108,7 +136,10 @@ fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>
         v if v == "on-failure" || v.starts_with("on-failure:") => {
             let max_retries = v
                 .strip_prefix("on-failure:")
-                .map(|n| n.parse::<i64>().map_err(|e| ParseError(format!("service `{svc}`: bad on-failure count: {e}"))))
+                .map(|n| {
+                    n.parse::<i64>()
+                        .map_err(|e| ParseError(format!("service `{svc}`: bad on-failure count: {e}")))
+                })
                 .transpose()?;
             RestartPolicySpec::OnFailure { max_retries }
         }
@@ -119,7 +150,10 @@ fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>
 
 fn transform_healthcheck(hc: HealthcheckYaml) -> Result<HealthcheckSpec, ParseError> {
     if hc.disable {
-        return Ok(HealthcheckSpec { test: vec!["NONE".into()], ..Default::default() });
+        return Ok(HealthcheckSpec {
+            test: vec!["NONE".into()],
+            ..Default::default()
+        });
     }
     Ok(HealthcheckSpec {
         test: hc.test.map(StringOrList::into_list).unwrap_or_default(),
@@ -161,7 +195,9 @@ fn parse_duration_ns(s: &str) -> Result<i64, ParseError> {
 }
 
 fn consume_unit(num: &str, unit: &str) -> Result<i64, ParseError> {
-    let n: i64 = num.parse().map_err(|_| ParseError(format!("bad duration component `{num}{unit}`")))?;
+    let n: i64 = num
+        .parse()
+        .map_err(|_| ParseError(format!("bad duration component `{num}{unit}`")))?;
     let mult: i64 = match unit {
         "ns" => 1,
         "us" | "µs" => 1_000,

@@ -11,7 +11,11 @@ fn main() -> io::Result<()> {
     println!("cargo:rerun-if-changed=.git/HEAD");
     println!("cargo:rerun-if-changed=.git/refs/heads");
     let hash = git_short_hash();
-    let suffix = if hash.is_empty() { String::new() } else { format!("+{hash}") };
+    let suffix = if hash.is_empty() {
+        String::new()
+    } else {
+        format!("+{hash}")
+    };
     println!("cargo:rustc-env=NUB_VERSION_SUFFIX={suffix}");
     let mut over: Vec<(PathBuf, usize)> = Vec::new();
     walk(Path::new("src"), &mut over)?;

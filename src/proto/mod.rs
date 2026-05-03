@@ -227,4 +227,3 @@ pub enum OpResult {
     StreamStarted,
     Err { message: String },
 }
-

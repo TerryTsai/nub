@@ -140,5 +140,8 @@ async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(Stri
 }
 
 fn short_name(names: &[String]) -> String {
-    names.first().map(|n| n.trim_start_matches('/').to_string()).unwrap_or_default()
+    names
+        .first()
+        .map(|n| n.trim_start_matches('/').to_string())
+        .unwrap_or_default()
 }

@@ -10,7 +10,12 @@ use super::TokenCmd;
 
 pub fn run(action: TokenCmd) -> Result<()> {
     match action {
-        TokenCmd::Mint { sub, scope, expires, aud } => mint(sub, scope, expires, aud),
+        TokenCmd::Mint {
+            sub,
+            scope,
+            expires,
+            aud,
+        } => mint(sub, scope, expires, aud),
     }
 }
 

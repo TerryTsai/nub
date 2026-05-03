@@ -32,7 +32,11 @@ pub(crate) async fn run(h: &EngineHandler, name: String) -> Result<Box<StackDeta
         None => (Vec::new(), HashMap::new()),
     };
     Ok(Box::new(StackDetail {
-        network_name: if containers.is_empty() { String::new() } else { network_name(&name) },
+        network_name: if containers.is_empty() {
+            String::new()
+        } else {
+            network_name(&name)
+        },
         name,
         yaml,
         modified_at,

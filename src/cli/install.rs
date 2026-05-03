@@ -23,9 +23,7 @@ fn systemd(user_flag: bool, system_flag: bool, print: bool) -> Result<()> {
     }
     let path = unit_path(scope);
     if scope == Scope::System && !is_root() {
-        return Err(anyhow!(
-            "system-level install needs root; run with sudo or pass --user"
-        ));
+        return Err(anyhow!("system-level install needs root; run with sudo or pass --user"));
     }
     write_unit(&path, &unit)?;
     println!("wrote {}", path.display());
@@ -102,7 +100,10 @@ fn enable_now(scope: Scope) -> Result<()> {
     if scope == Scope::User {
         cmd.arg("--user");
     }
-    let status = cmd.args(["enable", "--now", "nub"]).status().context("running systemctl enable --now nub")?;
+    let status = cmd
+        .args(["enable", "--now", "nub"])
+        .status()
+        .context("running systemctl enable --now nub")?;
     if !status.success() {
         return Err(anyhow!("systemctl enable --now nub failed (exit {:?})", status.code()));
     }

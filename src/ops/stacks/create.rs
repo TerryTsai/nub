@@ -27,17 +27,16 @@ pub(crate) async fn run(h: &EngineHandler, name: String, yaml: String) -> Result
         return Err(anyhow!("stack `{name}` has no services"));
     }
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
-    deploy_from_spec(h, &name, spec).await.map(|ids| StackCreated { name, container_ids: ids })
+    deploy_from_spec(h, &name, spec).await.map(|ids| StackCreated {
+        name,
+        container_ids: ids,
+    })
 }
 
 /// Provision engine resources from an already-parsed spec. Used by both
 /// `create_stack` and `redeploy_stack`. Caller is responsible for the
 /// on-disk manifest and for tearing down any prior resources.
-pub(super) async fn deploy_from_spec(
-    h: &EngineHandler,
-    name: &str,
-    spec: compose::StackSpec,
-) -> Result<Vec<String>> {
+pub(super) async fn deploy_from_spec(h: &EngineHandler, name: &str, spec: compose::StackSpec) -> Result<Vec<String>> {
     let stack_label_only = label_only(name);
     engine::create_network(h, &network_name(name), stack_label_only.clone()).await?;
 

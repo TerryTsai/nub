@@ -57,7 +57,10 @@ fn build_port_bindings(ports: &[PortPublish]) -> HashMap<String, Vec<PortBinding
     for p in ports {
         let cp = normalize_container_port(&p.container);
         let (host_ip, host_port) = parse_host(&p.host);
-        bindings.entry(cp).or_default().push(PortBindingWire { host_ip, host_port });
+        bindings
+            .entry(cp)
+            .or_default()
+            .push(PortBindingWire { host_ip, host_port });
     }
     bindings
 }
@@ -77,7 +80,11 @@ fn build_devices(devs: &[DeviceMapping]) -> Vec<DeviceWire> {
     devs.iter()
         .map(|d| DeviceWire {
             path_on_host: d.host.clone(),
-            path_in_container: if d.container.is_empty() { d.host.clone() } else { d.container.clone() },
+            path_in_container: if d.container.is_empty() {
+                d.host.clone()
+            } else {
+                d.container.clone()
+            },
             cgroup_permissions: d.permissions.clone().unwrap_or_else(|| "rwm".into()),
         })
         .collect()
@@ -132,12 +139,18 @@ fn parse_host(s: &str) -> (String, String) {
 
 fn restart_policy_wire(spec: &RestartPolicySpec) -> RestartPolicyWire {
     match spec {
-        RestartPolicySpec::No => RestartPolicyWire { name: "no", maximum_retry_count: None },
+        RestartPolicySpec::No => RestartPolicyWire {
+            name: "no",
+            maximum_retry_count: None,
+        },
         RestartPolicySpec::OnFailure { max_retries } => RestartPolicyWire {
             name: "on-failure",
             maximum_retry_count: *max_retries,
         },
-        RestartPolicySpec::Always => RestartPolicyWire { name: "always", maximum_retry_count: None },
+        RestartPolicySpec::Always => RestartPolicyWire {
+            name: "always",
+            maximum_retry_count: None,
+        },
         RestartPolicySpec::UnlessStopped => RestartPolicyWire {
             name: "unless-stopped",
             maximum_retry_count: None,

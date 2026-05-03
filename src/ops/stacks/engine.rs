@@ -29,7 +29,11 @@ struct VolumeCreateBody {
 }
 
 pub(super) async fn create_network(h: &EngineHandler, name: &str, labels: HashMap<String, String>) -> Result<()> {
-    let body = NetworkCreateBody { name: name.into(), driver: "bridge", labels };
+    let body = NetworkCreateBody {
+        name: name.into(),
+        driver: "bridge",
+        labels,
+    };
     h.engine
         .conn()
         .await?
@@ -40,7 +44,10 @@ pub(super) async fn create_network(h: &EngineHandler, name: &str, labels: HashMa
 }
 
 pub(super) async fn create_volume(h: &EngineHandler, name: &str, labels: HashMap<String, String>) -> Result<()> {
-    let body = VolumeCreateBody { name: name.into(), labels };
+    let body = VolumeCreateBody {
+        name: name.into(),
+        labels,
+    };
     h.engine
         .conn()
         .await?

@@ -40,7 +40,10 @@ async fn pull_image(h: &EngineHandler, reference: &str) -> Result<()> {
     if !res.status().is_success() {
         let status = res.status().as_u16();
         let body = res.into_body().collect().await?.to_bytes();
-        return Err(anyhow!("engine returned {status} pulling `{reference}`: {}", String::from_utf8_lossy(&body)));
+        return Err(anyhow!(
+            "engine returned {status} pulling `{reference}`: {}",
+            String::from_utf8_lossy(&body)
+        ));
     }
     let mut lines = LineStream::new(res.into_body());
     while let Some(line) = lines.next().await {

@@ -26,5 +26,8 @@ pub(crate) async fn run(h: &EngineHandler, name: String, yaml: String) -> Result
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
     delete::teardown_resources(h, &name).await?;
     let ids = create::deploy_from_spec(h, &name, spec).await?;
-    Ok(StackCreated { name, container_ids: ids })
+    Ok(StackCreated {
+        name,
+        container_ids: ids,
+    })
 }
