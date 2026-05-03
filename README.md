@@ -75,14 +75,21 @@ The installer downloads the binary, runs `nub init` to drop a starter config
 in `$XDG_CONFIG_HOME/nub/nub.toml`, and (when systemd is present) installs a
 unit file, enables lingering, and starts nub as a managed service.
 
-Defaults — runs as the invoking user with a user-level unit
-(`~/.config/systemd/user/nub.service`); falls back to a system-level unit
-(`/etc/systemd/system/nub.service`) when invoked as root.
+Defaults — installs to `$HOME/.local/bin/nub`, runs as the invoking user
+with a user-level unit (`~/.config/systemd/user/nub.service`). When invoked
+as root: installs to `/usr/local/bin/nub` and uses a system-level unit
+(`/etc/systemd/system/nub.service`).
+
+The script doesn't ask for sudo unless you explicitly opt into a system
+destination (`NUB_PREFIX=/usr/local/bin`) or system-level systemd
+(`NUB_SERVICE=system`). One opportunistic sudo prompt is left in the
+user-level path: `loginctl enable-linger` so nub survives your SSH
+session ending — skipped with a warning if sudo isn't available.
 
 Env overrides:
 
 - `NUB_VERSION=v0.0.1` — pin a specific release (default: latest)
-- `NUB_PREFIX=$HOME/.local/bin` — install destination
+- `NUB_PREFIX=/usr/local/bin` — install destination (default: `$HOME/.local/bin`)
 - `NUB_SERVICE=user|system|none` — service-level override (default: auto)
 
 Re-run the script to upgrade — it replaces the binary and `systemctl restart`

@@ -6,10 +6,16 @@
 #
 # Env overrides:
 #   NUB_VERSION=v0.0.1            # pin a specific release (default: latest)
-#   NUB_PREFIX=$HOME/.local/bin   # install destination (default: /usr/local/bin
-#                                  with sudo fallback, else $HOME/.local/bin)
+#   NUB_PREFIX=/usr/local/bin     # install destination (default: $HOME/.local/bin
+#                                  for normal users, /usr/local/bin for root)
 #   NUB_SERVICE=user|system|none  # systemd unit setup (default: auto — system
 #                                  if running as root, else user)
+#
+# Sudo is not used unless the destination needs it (e.g. NUB_PREFIX is
+# /usr/local/bin and you're not root) or you opt into a system-level
+# systemd unit. Single sudo prompt is left for `loginctl enable-linger`,
+# which is needed for nub to survive logout — opportunistic; skipped
+# with a warning if sudo isn't available.
 
 set -eu
 
@@ -44,21 +50,25 @@ resolve_version() {
 }
 
 choose_prefix() {
+  # Default destination: $HOME/.local/bin for normal users, /usr/local/bin for root.
+  # Personal-tool shape — sudo isn't asked for unless the operator explicitly
+  # opts in by setting NUB_PREFIX=/usr/local/bin (or running the script as root).
   if [ -n "${NUB_PREFIX:-}" ]; then
     PREFIX="${NUB_PREFIX}"
-    SUDO=""
-    return
-  fi
-  if [ -w /usr/local/bin ] || [ "$(id -u)" = "0" ]; then
+  elif [ "$(id -u)" = "0" ]; then
     PREFIX="/usr/local/bin"
-    SUDO=""
-  elif command -v sudo >/dev/null 2>&1; then
-    PREFIX="/usr/local/bin"
-    SUDO="sudo"
   else
     PREFIX="${HOME}/.local/bin"
     mkdir -p "${PREFIX}"
+  fi
+
+  if [ -w "${PREFIX}" ] || [ "$(id -u)" = "0" ]; then
     SUDO=""
+  elif command -v sudo >/dev/null 2>&1; then
+    SUDO="sudo"
+    info "writing to ${PREFIX} requires sudo"
+  else
+    err "${PREFIX} is not writable and sudo isn't available; try NUB_PREFIX=\$HOME/.local/bin"
   fi
 }
 
