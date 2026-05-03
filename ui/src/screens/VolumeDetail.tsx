@@ -34,9 +34,9 @@ export function VolumeDetail() {
   });
   const volume = volumes?.find((v) => v.name === vname);
 
-  const inspectKey = host && session.session && vname ? `${host.url}:inspect_volume:${vname}` : null;
+  const inspectKey = host && session.session && vname ? `${host.url}:get_volume:${vname}` : null;
   const { data: detail } = useQuery<VolumeDetailT>(inspectKey, async () => {
-    const r = unwrap(await call(host!, { op: "inspect_volume", name: vname! }), "volume_detail");
+    const r = unwrap(await call(host!, { op: "get_volume", name: vname! }), "volume_detail");
     return r.data;
   });
 
@@ -45,7 +45,7 @@ export function VolumeDetail() {
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "remove_volume", name: vname, force }), "ok");
+      unwrap(await call(host, { op: "delete_volume", name: vname, force }), "ok");
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/volumes`, { replace: true });
     } catch (e) {
@@ -66,8 +66,8 @@ export function VolumeDetail() {
     { kind: "link", label: shortTitle },
   ];
   const denyReason =
-    session.session && !session.session.can("remove_volume")
-      ? "your token doesn't allow remove_volume"
+    session.session && !session.session.can("volumes:delete")
+      ? "your token doesn't allow volumes:delete"
       : undefined;
 
   return (

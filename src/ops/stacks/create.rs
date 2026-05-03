@@ -10,6 +10,7 @@ use anyhow::{anyhow, Result};
 
 use crate::compose;
 use crate::ops::containers;
+use crate::ops::secrets;
 use crate::ops::EngineHandler;
 use crate::proto::{CreateContainerReq, StackCreated, VolumeMount};
 
@@ -49,8 +50,10 @@ pub(super) async fn deploy_from_spec(h: &EngineHandler, name: &str, spec: compos
     }
 
     let mut ids = Vec::with_capacity(spec.services.len());
-    for svc in spec.services {
-        let id = create_service(h, name, svc, &declared_volumes).await?;
+    let mut spec = spec;
+    let services = std::mem::take(&mut spec.services);
+    for svc in services {
+        let id = create_service(h, name, svc, &spec, &declared_volumes).await?;
         ids.push(id);
     }
     Ok(ids)
@@ -66,14 +69,23 @@ async fn create_service(
     h: &EngineHandler,
     stack: &str,
     svc: compose::ServiceSpec,
+    stack_spec: &compose::StackSpec,
     declared_volumes: &HashSet<String>,
 ) -> Result<String> {
-    let req = build_request(stack, svc, declared_volumes);
+    let secret_mounts =
+        secrets::runtime::materialize_for_service(&h.policy.secrets_root, stack_spec, stack, &svc.name, &svc.secrets)
+            .await?;
+    let req = build_request(stack, svc, declared_volumes, secret_mounts);
     let created = containers::create::run(h, req).await?;
     Ok(created.id)
 }
 
-fn build_request(stack: &str, svc: compose::ServiceSpec, declared_volumes: &HashSet<String>) -> CreateContainerReq {
+fn build_request(
+    stack: &str,
+    svc: compose::ServiceSpec,
+    declared_volumes: &HashSet<String>,
+    secret_mounts: Vec<VolumeMount>,
+) -> CreateContainerReq {
     let mut req = svc.container;
     req.name = Some(container_name(stack, &svc.name, req.name.as_deref()));
     if req.network.is_none() {
@@ -83,6 +95,7 @@ fn build_request(stack: &str, svc: compose::ServiceSpec, declared_volumes: &Hash
         .volumes
         .into_iter()
         .map(|v| rewrite_volume(stack, v, declared_volumes))
+        .chain(secret_mounts)
         .collect();
     merge_labels(&mut req.labels, stack, &svc.name);
     req.start = true;

@@ -68,8 +68,8 @@ export function HostImages() {
 
   const visible = images?.filter((i) => matchesImageFilter(i, filter)) ?? null;
   const canCreate =
-    (session.session?.can("pull_image") ?? false) ||
-    (session.session?.can("build_image") ?? false);
+    (session.session?.can("images:pull") ?? false) ||
+    (session.session?.can("images:build") ?? false);
 
   return (
     <Page

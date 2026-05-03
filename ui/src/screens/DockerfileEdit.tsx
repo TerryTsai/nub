@@ -39,7 +39,7 @@ export function DockerfileEdit() {
     let cancelled = false;
     (async () => {
       try {
-        const r = unwrap(await call(host, { op: "read_dockerfile", name }), "dockerfile");
+        const r = unwrap(await call(host, { op: "get_dockerfile", name }), "dockerfile");
         if (cancelled) return;
         setContent((r.data as DockerfileContent).content);
         setOriginal((r.data as DockerfileContent).content);
@@ -63,7 +63,7 @@ export function DockerfileEdit() {
     setError(null);
     try {
       unwrap(
-        await call(host, { op: "write_dockerfile", name: targetName, content }),
+        await call(host, { op: "put_dockerfile", name: targetName, content }),
         "ok",
       );
       invalidate(`${host.url}:list_dockerfiles`);
@@ -103,10 +103,10 @@ export function DockerfileEdit() {
     { kind: "link", label: title },
   ];
   const dirty = isNew ? draftName.trim() !== "" || content !== "" : content !== original;
-  const canWrite = session.session?.can("write_dockerfile") ?? false;
-  const canDelete = session.session?.can("delete_dockerfile") ?? false;
-  const denySave = !canWrite ? "your token doesn't allow write_dockerfile" : undefined;
-  const denyDel = !canDelete ? "your token doesn't allow delete_dockerfile" : undefined;
+  const canWrite = session.session?.can("dockerfiles:put") ?? false;
+  const canDelete = session.session?.can("dockerfiles:delete") ?? false;
+  const denySave = !canWrite ? "your token doesn't allow dockerfiles:put" : undefined;
+  const denyDel = !canDelete ? "your token doesn't allow dockerfiles:delete" : undefined;
 
   return (
     <Page crumbs={crumbs}>

@@ -5,27 +5,27 @@ export type Op =
   | { op: "host_info" }
   | { op: "whoami" }
   | { op: "list_containers"; all: boolean }
-  | { op: "inspect_container"; id: string }
+  | { op: "get_container"; id: string }
   | { op: "container_action"; id: string; action: Action }
   | { op: "create_container"; image: string; name?: string; cmd?: string[]; entrypoint?: string[]; env?: string[]; working_dir?: string; user?: string; labels?: Record<string, string>; ports?: PortPublish[]; volumes?: VolumeMount[]; network?: string; restart?: RestartPolicySpec; memory_limit?: number; cpu_shares?: number; start?: boolean }
   | { op: "stream_logs"; id: string; follow?: boolean; tail?: number }
   | { op: "stream_stats"; id: string }
   | { op: "exec"; id: string; cmd: string[]; tty?: boolean }
   | { op: "list_images" }
-  | { op: "inspect_image"; id: string }
-  | { op: "remove_image"; id: string; force?: boolean }
+  | { op: "get_image"; id: string }
+  | { op: "delete_image"; id: string; force?: boolean }
   | { op: "pull_image"; reference: string }
   | { op: "build_image"; dockerfile: string; tag: string; build_args: Record<string, string> }
   | { op: "list_volumes" }
-  | { op: "inspect_volume"; name: string }
-  | { op: "remove_volume"; name: string; force?: boolean }
+  | { op: "get_volume"; name: string }
+  | { op: "delete_volume"; name: string; force?: boolean }
   | { op: "list_networks" }
-  | { op: "inspect_network"; id: string }
+  | { op: "get_network"; id: string }
   | { op: "create_network"; name: string; internal?: boolean }
-  | { op: "remove_network"; id: string }
+  | { op: "delete_network"; id: string }
   | { op: "list_dockerfiles" }
-  | { op: "read_dockerfile"; name: string }
-  | { op: "write_dockerfile"; name: string; content: string }
+  | { op: "get_dockerfile"; name: string }
+  | { op: "put_dockerfile"; name: string; content: string }
   | { op: "delete_dockerfile"; name: string }
   | { op: "create_stack"; name: string; yaml: string }
   | { op: "list_stacks" }
@@ -34,7 +34,11 @@ export type Op =
   | { op: "redeploy_stack"; name: string }
   | { op: "update_stack"; name: string; yaml: string }
   | { op: "pull_stack"; name: string }
-  | { op: "stream_stack_logs"; name: string; follow?: boolean; tail?: number };
+  | { op: "stream_stack_logs"; name: string; follow?: boolean; tail?: number }
+  | { op: "list_secrets" }
+  | { op: "put_secret"; name: string; value: string }
+  | { op: "delete_secret"; name: string }
+  | { op: "get_secret"; name: string };
 
 export type Action =
   | { kind: "start" }
@@ -69,6 +73,8 @@ export type OpResult =
   | { type: "stacks"; data: StackSummary[] }
   | { type: "stack_detail"; data: StackDetail }
   | { type: "stack_created"; data: StackCreated }
+  | { type: "secrets"; data: SecretSummary[] }
+  | { type: "secret"; data: SecretValue }
   | { type: "ok" }
   | { type: "stream_started" }
   | { type: "err"; data: { message: string } };
@@ -149,6 +155,9 @@ export interface StackDetail {
   service_unsupported: Record<string, string[]>;
 }
 export interface StackCreated { name: string; container_ids: string[] }
+
+export interface SecretSummary { name: string; size: number; modified_at: string }
+export interface SecretValue { name: string; value: string }
 
 // Stream chunks (internally tagged with `type`).
 export type StreamChunk =

@@ -6,6 +6,7 @@
 use anyhow::Result;
 
 use crate::ops::containers;
+use crate::ops::secrets;
 use crate::ops::EngineHandler;
 use crate::proto::Action;
 
@@ -41,5 +42,6 @@ pub(super) async fn teardown_resources(h: &EngineHandler, name: &str) -> Result<
         .await;
     }
     engine::remove_network(h, &network_name(name)).await?;
+    secrets::runtime::cleanup_stack(name).await;
     Ok(())
 }

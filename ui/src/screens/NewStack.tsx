@@ -38,8 +38,8 @@ export function NewStack() {
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new" }];
-  const canCreate = session.session?.can("create_stack") ?? false;
-  const denyCreate = !canCreate ? "your token doesn't allow create_stack" : undefined;
+  const canCreate = session.session?.can("stacks:create") ?? false;
+  const denyCreate = !canCreate ? "your token doesn't allow stacks:create" : undefined;
 
   async function onCreate() {
     if (!host) return;

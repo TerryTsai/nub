@@ -28,7 +28,7 @@ export function HostStacks() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
-  const canCreate = session.session?.can("create_stack") ?? false;
+  const canCreate = session.session?.can("stacks:create") ?? false;
 
   return (
     <Page

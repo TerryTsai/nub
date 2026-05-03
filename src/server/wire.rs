@@ -53,7 +53,7 @@ fn start_request(id: u64, op: Op, h: &Shared, caller: &Claims, out: &mpsc::Sende
         });
         return;
     }
-    if !caller.allows(op.name()) {
+    if !caller.allows(&op) {
         tracing::warn!("caller {} denied op {}", caller.sub, op.name());
         let out = out.clone();
         let name = op.name().to_string();

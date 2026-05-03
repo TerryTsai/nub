@@ -24,7 +24,7 @@ export function HostDockerfiles() {
   });
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "dockerfiles");
-  const canWrite = session.session?.can("write_dockerfile") ?? false;
+  const canWrite = session.session?.can("dockerfiles:put") ?? false;
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 

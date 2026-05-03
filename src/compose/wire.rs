@@ -11,6 +11,7 @@ use std::collections::HashMap;
 pub(super) struct Compose {
     pub services: HashMap<String, ServiceYaml>,
     pub volumes: HashMap<String, VolumeYaml>,
+    pub secrets: HashMap<String, SecretYaml>,
     /// Compose schema version. Informational; ignored.
     pub version: Option<String>,
     #[serde(flatten)]
@@ -40,6 +41,7 @@ pub(super) struct ServiceYaml {
     pub extra_hosts: Vec<String>,
     pub init: Option<bool>,
     pub expose: Vec<String>,
+    pub secrets: Vec<ServiceSecretYaml>,
     #[serde(flatten)]
     pub extra: HashMap<String, serde_yaml::Value>,
 }
@@ -59,6 +61,42 @@ pub(super) struct HealthcheckYaml {
 #[serde(default)]
 pub(super) struct VolumeYaml {
     pub external: bool,
+}
+
+/// Top-level `secrets:` declaration. nub supports `external: true`
+/// (resolves to a `nub secret` named identically); `file:` is rejected
+/// with a clear error so paste-and-deploy stacks don't silently lose
+/// values.
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct SecretYaml {
+    pub file: Option<String>,
+    pub external: bool,
+    /// Compose allows `name:` to override the lookup key. We accept and
+    /// thread it through.
+    pub name: Option<String>,
+    pub environment: Option<String>,
+}
+
+/// Per-service `secrets:` entry. Compose accepts a short form (just the
+/// name) or a long form with a target path override.
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub(super) enum ServiceSecretYaml {
+    Short(String),
+    Long(ServiceSecretLong),
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct ServiceSecretLong {
+    pub source: String,
+    pub target: Option<String>,
+    /// File mode in octal (e.g. "0440"). Parsed but currently advisory —
+    /// the host file is mode 0400 and read-only inside the container.
+    pub mode: Option<String>,
+    pub uid: Option<String>,
+    pub gid: Option<String>,
 }
 
 #[derive(Deserialize)]

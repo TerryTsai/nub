@@ -11,6 +11,8 @@ use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 
 use super::issuer::Issuer;
+use super::scope::{self, Scope};
+use crate::proto::Op;
 
 /// JWT claims emitted by nub. Field order mirrors the registered IANA
 /// claims (RFC 7519) followed by OAuth's `scope` (RFC 6749 §3.3).
@@ -22,17 +24,27 @@ pub struct Claims {
     pub exp: i64,
     pub nbf: i64,
     pub iat: i64,
-    /// Space-separated op names. `*` means all ops.
+    /// Space-separated scopes. Grammar lives in `auth::scope`:
+    /// `<resource>:<action>`, with `*` and `<resource>:*` wildcards.
     pub scope: String,
 }
 
 impl Claims {
-    /// True if the token authorizes invoking `op_name`.
-    pub fn allows(&self, op_name: &str) -> bool {
-        self.scope.split_ascii_whitespace().any(|s| s == "*" || s == op_name)
+    /// True if the token authorizes invoking `op`. Ops with no required
+    /// scope (introspection like `whoami`, `host_info`) are always allowed.
+    pub fn allows(&self, op: &Op) -> bool {
+        match op.required_scope() {
+            None => true,
+            Some(needed) => self.allows_scope(needed),
+        }
     }
 
-    /// Scope claim split into individual op names.
+    /// True if the token authorizes the named scope.
+    pub fn allows_scope(&self, needed: Scope) -> bool {
+        scope::granted_allows(&self.scope, needed)
+    }
+
+    /// Scope claim split into individual tokens (for whoami responses).
     pub fn scopes(&self) -> Vec<String> {
         self.scope.split_ascii_whitespace().map(str::to_string).collect()
     }
@@ -128,7 +140,7 @@ mod tests {
         let jwt = encode(&claims, &issuer).unwrap();
         let decoded = verify(&jwt, &issuer, "host-a").unwrap();
         assert_eq!(decoded.sub, "test");
-        assert!(decoded.allows("anything"));
+        assert!(decoded.allows(&Op::ListContainers { all: false }));
     }
 
     #[test]
@@ -161,13 +173,41 @@ mod tests {
     #[test]
     fn scope_allows() {
         let mut claims = fresh_claims("host-a", 3600);
-        claims.scope = "host_info list_containers".into();
-        assert!(claims.allows("host_info"));
-        assert!(claims.allows("list_containers"));
-        assert!(!claims.allows("create_container"));
+        claims.scope = "containers:list stacks:get".into();
+        assert!(claims.allows(&Op::ListContainers { all: false }));
+        assert!(claims.allows(&Op::GetStack { name: "x".into() }));
+        assert!(!claims.allows(&Op::CreateStack {
+            name: "x".into(),
+            yaml: "".into()
+        }));
 
         let mut wild = fresh_claims("host-a", 3600);
         wild.scope = "*".into();
-        assert!(wild.allows("anything"));
+        assert!(wild.allows(&Op::ListContainers { all: false }));
+        assert!(wild.allows(&Op::CreateStack {
+            name: "x".into(),
+            yaml: "".into()
+        }));
+    }
+
+    #[test]
+    fn scope_allows_introspection_without_scope() {
+        let mut claims = fresh_claims("host-a", 3600);
+        claims.scope = "".into();
+        assert!(claims.allows(&Op::Whoami));
+        assert!(claims.allows(&Op::HostInfo));
+        assert!(!claims.allows(&Op::ListContainers { all: false }));
+    }
+
+    #[test]
+    fn scope_allows_resource_wildcard() {
+        let mut claims = fresh_claims("host-a", 3600);
+        claims.scope = "stacks:*".into();
+        assert!(claims.allows(&Op::ListStacks));
+        assert!(claims.allows(&Op::CreateStack {
+            name: "x".into(),
+            yaml: "".into()
+        }));
+        assert!(!claims.allows(&Op::ListContainers { all: false }));
     }
 }

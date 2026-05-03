@@ -1,10 +1,8 @@
-//! `nub token` — token operations. Today: `mint` only. Future slots:
-//! `list` and `revoke` (need a JWT-revocation backend; reserved here
-//! so the noun-verb shape is stable).
+//! `nub token` — token operations. Today: `mint` and `scopes`.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 
-use crate::auth::{jwt, Issuer};
+use crate::auth::{jwt, scope, Issuer};
 
 use super::TokenCmd;
 
@@ -13,13 +11,21 @@ pub fn run(action: TokenCmd) -> Result<()> {
         TokenCmd::Mint {
             sub,
             scope,
+            preset,
             expires,
             aud,
-        } => mint(sub, scope, expires, aud),
+        } => mint(sub, scope, preset, expires, aud),
+        TokenCmd::Scopes => print_scopes(),
     }
 }
 
-fn mint(sub: String, scope: String, expires: String, audience: Option<String>) -> Result<()> {
+fn mint(
+    sub: String,
+    scope_arg: Option<String>,
+    preset_arg: Option<String>,
+    expires: String,
+    audience: Option<String>,
+) -> Result<()> {
     let issuer_path = crate::config::default_issuer_key();
     let issuer = Issuer::load_or_generate(&issuer_path)?;
     if !issuer.can_mint() {
@@ -32,6 +38,7 @@ fn mint(sub: String, scope: String, expires: String, audience: Option<String>) -
         Some(a) => a,
         None => crate::cli::hostname(),
     };
+    let scope_str = resolve_scope(scope_arg, preset_arg)?;
     let ttl = parse_duration(&expires)?;
     let now = jwt::current_unix_seconds();
     let claims = jwt::Claims {
@@ -41,10 +48,74 @@ fn mint(sub: String, scope: String, expires: String, audience: Option<String>) -
         exp: now + ttl,
         nbf: now,
         iat: now,
-        scope,
+        scope: scope_str,
     };
     let token = jwt::encode(&claims, &issuer)?;
     println!("{token}");
+    Ok(())
+}
+
+/// Resolve `--scope` / `--preset` (mutually exclusive at the CLI layer)
+/// into the literal scope string embedded in the JWT.
+///
+/// Default (neither flag) is the `admin` preset, preserving prior UX
+/// where `nub token mint --sub foo` produced a wildcard token.
+fn resolve_scope(scope_arg: Option<String>, preset_arg: Option<String>) -> Result<String> {
+    if let Some(name) = preset_arg {
+        return preset_to_scope_string(&name);
+    }
+    if let Some(raw) = scope_arg {
+        // Accept comma OR whitespace as separators for human convenience;
+        // normalize to single spaces in the JWT.
+        let normalized: String = raw
+            .split(|c: char| c.is_whitespace() || c == ',')
+            .filter(|t| !t.is_empty())
+            .collect::<Vec<_>>()
+            .join(" ");
+        if normalized.is_empty() {
+            bail!("--scope was empty");
+        }
+        if let Err(bad) = scope::validate_string(&normalized) {
+            bail!(
+                "unknown scope(s): {}. Run `nub token scopes` for the valid set.",
+                bad.join(", ")
+            );
+        }
+        return Ok(normalized);
+    }
+    // Default: admin preset.
+    preset_to_scope_string("admin")
+}
+
+fn preset_to_scope_string(name: &str) -> Result<String> {
+    match name {
+        "admin" => Ok(scope::presets::ADMIN_LITERAL.to_string()),
+        "phone" => Ok(scope::join_scopes(scope::presets::PHONE)),
+        "readonly" | "read-only" => Ok(scope::join_scopes(scope::presets::READONLY)),
+        other => bail!("unknown preset `{other}`. Valid: admin, phone, readonly"),
+    }
+}
+
+fn print_scopes() -> Result<()> {
+    println!("Scopes (one per network-exposed op):");
+    for s in scope::Scope::ALL {
+        println!("  {s}");
+    }
+    println!();
+    println!("Wildcards:");
+    println!("  *              all scopes");
+    println!("  <resource>:*   all actions on a resource");
+    println!();
+    println!("Presets:");
+    println!("  admin     → *");
+    println!(
+        "  phone     → {} scopes (everyday operator surface; no secrets:reveal)",
+        scope::presets::PHONE.len()
+    );
+    println!(
+        "  readonly  → {} scopes (state-changing ops excluded)",
+        scope::presets::READONLY.len()
+    );
     Ok(())
 }
 

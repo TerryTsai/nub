@@ -85,7 +85,7 @@ export function NewContainer() {
     let cancelled = false;
     (async () => {
       try {
-        const r = unwrap(await call(host, { op: "inspect_container", id: cid }), "container_detail");
+        const r = unwrap(await call(host, { op: "get_container", id: cid }), "container_detail");
         if (cancelled) return;
         const d = r.data as ContainerDetailT;
         setSourceName(d.name);
@@ -116,8 +116,8 @@ export function NewContainer() {
   }, [cloning, host?.url, host?.token, !!session.session, cid]);
 
   const denyReason =
-    session.session && !session.session.can("create_container")
-      ? "your token doesn't allow create_container"
+    session.session && !session.session.can("containers:create")
+      ? "your token doesn't allow containers:create"
       : undefined;
 
   async function onSubmit(e: React.FormEvent) {

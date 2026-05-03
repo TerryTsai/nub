@@ -7,6 +7,7 @@ mod dockerfiles;
 mod host;
 mod images;
 mod networks;
+pub mod secrets;
 pub mod stacks;
 mod volumes;
 
@@ -41,7 +42,8 @@ pub fn closed_input() -> mpsc::Receiver<StreamChunk> {
 }
 
 /// Security policy applied at op boundaries. Currently constrains
-/// container creation and locates the dockerfiles directory.
+/// container creation and locates the dockerfiles / stacks / secrets
+/// roots.
 pub struct Policy {
     /// Host paths permitted as bind-mount sources in CreateContainer.
     /// Empty = no host bind mounts allowed.
@@ -52,6 +54,10 @@ pub struct Policy {
     /// Directory holding compose-stack manifests, one subdir per stack.
     /// Always set — caller resolves config override or XDG default.
     pub stacks_root: PathBuf,
+    /// Directory holding age-encrypted secrets and the per-host
+    /// encryption identity. Always set — caller resolves config
+    /// override or XDG default.
+    pub secrets_root: PathBuf,
 }
 
 pub struct EngineHandler {
@@ -80,7 +86,7 @@ impl OpHandler for EngineHandler {
             Op::HostInfo => unary(host::run(self).await, OpResult::HostInfo),
 
             Op::ListContainers { all } => unary(containers::list::run(self, all).await, OpResult::Containers),
-            Op::InspectContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
+            Op::GetContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
             Op::ContainerAction { id, action } => unary(containers::action::run(self, id, action).await, ok),
             Op::CreateContainer(req) => unary(containers::create::run(self, *req).await, OpResult::ContainerCreated),
             Op::StreamLogs { id, follow, tail } => stream(containers::logs::run(self, id, follow, tail)),
@@ -88,8 +94,8 @@ impl OpHandler for EngineHandler {
             Op::Exec { id, cmd, tty } => stream(containers::exec::run(self, id, cmd, tty, input)),
 
             Op::ListImages => unary(images::list::run(self).await, OpResult::Images),
-            Op::InspectImage { id } => unary(images::inspect::run(self, id).await, OpResult::ImageDetail),
-            Op::RemoveImage { id, force } => unary(images::remove::run(self, id, force).await, ok),
+            Op::GetImage { id } => unary(images::inspect::run(self, id).await, OpResult::ImageDetail),
+            Op::DeleteImage { id, force } => unary(images::remove::run(self, id, force).await, ok),
             Op::PullImage { reference } => stream(images::pull::run(self, reference)),
             Op::BuildImage {
                 dockerfile,
@@ -98,17 +104,17 @@ impl OpHandler for EngineHandler {
             } => stream(images::build::run(self, dockerfile, tag, build_args)),
 
             Op::ListVolumes => unary(volumes::list(self).await, OpResult::Volumes),
-            Op::InspectVolume { name } => unary(volumes::inspect(self, &name).await, OpResult::VolumeDetail),
-            Op::RemoveVolume { name, force } => unary(volumes::remove(self, name, force).await, ok),
+            Op::GetVolume { name } => unary(volumes::inspect(self, &name).await, OpResult::VolumeDetail),
+            Op::DeleteVolume { name, force } => unary(volumes::remove(self, name, force).await, ok),
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
-            Op::InspectNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
+            Op::GetNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
             Op::CreateNetwork { name, internal } => unary(networks::create(self, name, internal).await, ok),
-            Op::RemoveNetwork { id } => unary(networks::remove(self, id).await, ok),
+            Op::DeleteNetwork { id } => unary(networks::remove(self, id).await, ok),
 
             Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),
-            Op::ReadDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),
-            Op::WriteDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
+            Op::GetDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),
+            Op::PutDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
             Op::DeleteDockerfile { name } => unary(dockerfiles::delete(self, &name).await, ok),
 
             Op::CreateStack { name, yaml } => {
@@ -123,6 +129,11 @@ impl OpHandler for EngineHandler {
             }
             Op::PullStack { name } => unary(stacks::pull::run(self, name).await, OpResult::StackCreated),
             Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
+
+            Op::ListSecrets => unary(secrets::list(&self.policy.secrets_root).await, OpResult::Secrets),
+            Op::PutSecret { name, value } => unary(secrets::put(&self.policy.secrets_root, &name, &value).await, ok),
+            Op::DeleteSecret { name } => unary(secrets::delete(&self.policy.secrets_root, &name).await, ok),
+            Op::GetSecret { name } => unary(secrets::get(&self.policy.secrets_root, &name).await, OpResult::Secret),
         }
     }
 }

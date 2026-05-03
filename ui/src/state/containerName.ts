@@ -12,7 +12,7 @@ import { peek, useQuery } from "@/state/cache";
 export function useContainerName(host: Host | undefined, cid: string | undefined): string {
   const key = host && cid ? `${host.url}:inspect:${cid}` : null;
   const { data } = useQuery<ContainerDetail>(key, async () => {
-    const r = unwrap(await call(host!, { op: "inspect_container", id: cid! }), "container_detail");
+    const r = unwrap(await call(host!, { op: "get_container", id: cid! }), "container_detail");
     return r.data;
   });
   if (data?.name) return data.name;

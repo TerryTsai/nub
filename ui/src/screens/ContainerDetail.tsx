@@ -30,7 +30,7 @@ export function ContainerDetail() {
 
   const queryKey = host && session.session && cid ? `${host.url}:inspect:${cid}` : null;
   const { data: detail, error: queryError, reload } = useQuery<ContainerDetailT>(queryKey, async () => {
-    const r = unwrap(await call(host!, { op: "inspect_container", id: cid! }), "container_detail");
+    const r = unwrap(await call(host!, { op: "get_container", id: cid! }), "container_detail");
     return r.data;
   });
   const error = actionError ?? queryError;
@@ -124,7 +124,7 @@ export function ContainerDetail() {
                 <Button
                   variant="ghost"
                   className="w-full"
-                  disallowReason={denyReason("stream_logs")}
+                  disallowReason={denyReason("containers:logs")}
                 >
                   Logs →
                 </Button>
@@ -133,7 +133,7 @@ export function ContainerDetail() {
                 <Button
                   variant="ghost"
                   className="w-full"
-                  disallowReason={denyReason("stream_stats")}
+                  disallowReason={denyReason("containers:stats")}
                 >
                   Stats →
                 </Button>
@@ -143,7 +143,7 @@ export function ContainerDetail() {
                   variant="ghost"
                   className="w-full"
                   disallowReason={
-                    !detail.running ? "container is not running" : denyReason("exec")
+                    !detail.running ? "container is not running" : denyReason("containers:exec")
                   }
                 >
                   Exec →
@@ -156,7 +156,7 @@ export function ContainerDetail() {
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="primary"
-                disallowReason={denyReason("container_action")}
+                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || detail.running}
                 onClick={() => act("start", { kind: "start" })}
               >
@@ -164,7 +164,7 @@ export function ContainerDetail() {
               </Button>
               <Button
                 variant="ghost"
-                disallowReason={denyReason("container_action")}
+                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || !detail.running}
                 onClick={() => act("stop", { kind: "stop" })}
               >
@@ -172,14 +172,14 @@ export function ContainerDetail() {
               </Button>
               <Button
                 variant="ghost"
-                disallowReason={denyReason("container_action")}
+                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || !detail.running}
                 onClick={() => act("restart", { kind: "restart" })}
               >
                 {pending === "restart" ? "…" : "Restart"}
               </Button>
               <RemoveButton
-                disallow={denyReason("container_action")}
+                disallow={denyReason("containers:action")}
                 pending={pending}
                 running={detail.running}
                 onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
@@ -188,7 +188,7 @@ export function ContainerDetail() {
             <Button
               variant="ghost"
               className="mt-2 w-full"
-              disallowReason={denyReason("create_container")}
+              disallowReason={denyReason("containers:create")}
               onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
             >
               Clone

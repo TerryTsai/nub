@@ -1,3 +1,5 @@
+mod secrets;
+
 use super::*;
 use std::collections::HashMap;
 
@@ -186,12 +188,12 @@ services:
     build: ./Dockerfile
     depends_on:
       - db
-secrets:
-  api_key:
-    file: ./key
+configs:
+  cfg:
+    file: ./cfg
 "#;
     let spec = parse(yaml, &HashMap::new()).unwrap();
-    assert!(spec.unsupported.contains(&"secrets".to_string()));
+    assert!(spec.unsupported.contains(&"configs".to_string()));
     let svc = &spec.services[0];
     assert!(svc.unsupported.contains(&"build".to_string()));
     assert!(svc.unsupported.contains(&"depends_on".to_string()));

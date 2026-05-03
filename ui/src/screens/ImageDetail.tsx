@@ -34,9 +34,9 @@ export function ImageDetail() {
   });
   const image = images?.find((i) => i.id === iid);
 
-  const inspectKey = host && session.session && iid ? `${host.url}:inspect_image:${iid}` : null;
+  const inspectKey = host && session.session && iid ? `${host.url}:get_image:${iid}` : null;
   const { data: detail } = useQuery<ImageDetailT>(inspectKey, async () => {
-    const r = unwrap(await call(host!, { op: "inspect_image", id: iid! }), "image_detail");
+    const r = unwrap(await call(host!, { op: "get_image", id: iid! }), "image_detail");
     return r.data;
   });
 
@@ -45,7 +45,7 @@ export function ImageDetail() {
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "remove_image", id: iid, force }), "ok");
+      unwrap(await call(host, { op: "delete_image", id: iid, force }), "ok");
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/images`, { replace: true });
     } catch (e) {
@@ -65,8 +65,8 @@ export function ImageDetail() {
     { kind: "link", label: title },
   ];
   const denyReason =
-    session.session && !session.session.can("remove_image")
-      ? "your token doesn't allow remove_image"
+    session.session && !session.session.can("images:delete")
+      ? "your token doesn't allow images:delete"
       : undefined;
 
   return (

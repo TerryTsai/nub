@@ -23,6 +23,7 @@ fn deploy(name: String, file: String) -> Result<()> {
         allowed_binds: cfg.allowed_binds,
         dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
         stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
+        secrets_root: cfg.secrets.unwrap_or_else(config::default_secrets_dir),
     };
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;
     runtime.block_on(async move {

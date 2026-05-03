@@ -139,6 +139,7 @@ async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Resu
         allowed_binds: cfg.allowed_binds,
         dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
         stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
+        secrets_root: cfg.secrets.unwrap_or_else(config::default_secrets_dir),
     };
     let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 

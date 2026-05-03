@@ -57,7 +57,7 @@ export function HostHome() {
     );
   }
 
-  const canCreate = session.session?.can("create_container") ?? false;
+  const canCreate = session.session?.can("containers:create") ?? false;
 
   const subnav = session.session && containers !== null ? (
     <Filters

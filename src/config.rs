@@ -28,6 +28,10 @@ pub struct Config {
     /// containing `compose.yml` and optional `.env`. When unset, falls
     /// back to `$XDG_DATA_HOME/nub/stacks`.
     pub stacks: Option<PathBuf>,
+    /// Directory holding age-encrypted secrets and the per-host
+    /// encryption identity (`.identity`). When unset, falls back to
+    /// `$XDG_DATA_HOME/nub/secrets`.
+    pub secrets: Option<PathBuf>,
     /// Base64url-encoded Ed25519 public key. When set, nub validates
     /// presented JWTs against this key only — the operator mints tokens
     /// elsewhere (their laptop, latch, etc.) and nub never holds a
@@ -83,6 +87,12 @@ pub fn default_dockerfiles_dir() -> PathBuf {
 /// per stack with the YAML manifest inside.
 pub fn default_stacks_dir() -> PathBuf {
     xdg_data_home().join("nub/stacks")
+}
+
+/// Default secrets directory: `$XDG_DATA_HOME/nub/secrets`. Holds the
+/// age `.identity` file plus one `<name>.age` blob per secret.
+pub fn default_secrets_dir() -> PathBuf {
+    xdg_data_home().join("nub/secrets")
 }
 
 /// Default issuer key path: `$XDG_DATA_HOME/nub/issuer.key`. PKCS#8

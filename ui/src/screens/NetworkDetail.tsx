@@ -34,9 +34,9 @@ export function NetworkDetail() {
   });
   const network = networks?.find((n) => n.id === nid);
 
-  const inspectKey = host && session.session && nid ? `${host.url}:inspect_network:${nid}` : null;
+  const inspectKey = host && session.session && nid ? `${host.url}:get_network:${nid}` : null;
   const { data: detail } = useQuery<NetworkDetailT>(inspectKey, async () => {
-    const r = unwrap(await call(host!, { op: "inspect_network", id: nid! }), "network_detail");
+    const r = unwrap(await call(host!, { op: "get_network", id: nid! }), "network_detail");
     return r.data;
   });
 
@@ -45,7 +45,7 @@ export function NetworkDetail() {
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "remove_network", id: nid }), "ok");
+      unwrap(await call(host, { op: "delete_network", id: nid }), "ok");
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/networks`, { replace: true });
     } catch (e) {
@@ -65,8 +65,8 @@ export function NetworkDetail() {
     { kind: "link", label: title },
   ];
   const denyReason =
-    session.session && !session.session.can("remove_network")
-      ? "your token doesn't allow remove_network"
+    session.session && !session.session.can("networks:delete")
+      ? "your token doesn't allow networks:delete"
       : undefined;
 
   return (

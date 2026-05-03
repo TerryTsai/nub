@@ -2,7 +2,7 @@ import { useHosts, type SavedHost } from "@/state/hosts";
 import { MenuCrumb, type MenuItem } from "@/components/MenuCrumb";
 import type { Crumb } from "@/components/Page";
 
-export type Section = "containers" | "stacks" | "images" | "volumes" | "networks" | "dockerfiles";
+export type Section = "containers" | "stacks" | "images" | "volumes" | "networks" | "dockerfiles" | "secrets";
 
 const SECTIONS: { key: Section; label: string; subpath: string }[] = [
   { key: "containers", label: "containers", subpath: "" },
@@ -11,6 +11,7 @@ const SECTIONS: { key: Section; label: string; subpath: string }[] = [
   { key: "volumes", label: "volumes", subpath: "/volumes" },
   { key: "networks", label: "networks", subpath: "/networks" },
   { key: "dockerfiles", label: "dockerfiles", subpath: "/dockerfiles" },
+  { key: "secrets", label: "secrets", subpath: "/secrets" },
 ];
 
 /** Two-segment breadcrumb prefix for any per-host page: host dropdown

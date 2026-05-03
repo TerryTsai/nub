@@ -13,7 +13,7 @@ import { Section } from "@/components/Section";
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 
-export function NewNetwork() {
+export function NewSecret() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
   const { hosts } = useHosts();
@@ -22,29 +22,33 @@ export function NewNetwork() {
   const session = useSession(host);
 
   const [name, setName] = useState("");
-  const [internal, setInternal] = useState(false);
+  const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const denyReason =
-    session.session && !session.session.can("networks:create")
-      ? "your token doesn't allow networks:create"
+    session.session && !session.session.can("secrets:put")
+      ? "your token doesn't allow secrets:put"
       : undefined;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
     const trimmed = name.trim();
-    if (!NAME_RE.test(trimmed)) {
+    if (!NAME_RE.test(trimmed) || trimmed.length > 128) {
       setError("name must start with a letter or digit; letters/digits/dot/underscore/dash only");
+      return;
+    }
+    if (value.length === 0) {
+      setError("value can't be empty");
       return;
     }
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "create_network", name: trimmed, internal }), "ok");
-      invalidate(`${host.url}:list_networks`);
-      nav(`/h/${hid}/networks`, { replace: true });
+      unwrap(await call(host, { op: "put_secret", name: trimmed, value }), "ok");
+      invalidate(`${host.url}:list_secrets`);
+      nav(`/h/${hid}/secrets`, { replace: true });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -52,20 +56,20 @@ export function NewNetwork() {
     }
   }
 
-  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "networks");
+  const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "secrets");
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new network" }];
+  const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new secret" }];
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Network" title="New network" />
+      <Heading category="Secret" title="New secret" />
 
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="Network">
+        <Section label="Secret">
           <Field label="Name" hint="letters, digits, dot, underscore, dash">
             <input
               className="input mono"
@@ -73,22 +77,26 @@ export function NewNetwork() {
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="web"
+              placeholder="db_password"
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
             />
           </Field>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={internal}
-              onChange={(e) => setInternal(e.target.checked)}
+          <Field label="Value" hint="encrypted at rest with the host's age key. The value is never read back over the network — read it with `nub secret get` on the host.">
+            <textarea
+              className="input mono"
+              spellCheck={false}
+              autoCapitalize="off"
+              autoCorrect="off"
+              rows={4}
+              placeholder="value…"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              required
+              style={{ minHeight: "96px" }}
             />
-            <span className="text-xs">
-              Internal — block external traffic; attached containers can only reach each other
-            </span>
-          </label>
+          </Field>
         </Section>
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
@@ -98,14 +106,14 @@ export function NewNetwork() {
             <Button
               variant="ghost"
               type="button"
-              onClick={() => nav(`/h/${hid}/networks`)}
+              onClick={() => nav(`/h/${hid}/secrets`)}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={pending || !name.trim()}
+              disabled={pending || !name.trim() || !value}
               disallowReason={denyReason}
               className="flex-1"
             >

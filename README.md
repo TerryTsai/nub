@@ -161,10 +161,10 @@ curl -sS http://127.0.0.1:8080/op \
   -d '{"op":"list_containers","all":true}'
 ```
 
-The admin token is regenerated on every restart and authorizes everything —
+The admin token persists across restarts and authorizes everything —
 it's there so the operator on the host can always poke their own nub for
-debugging. For phones and other long-lived clients, define `[[trust]]` entries
-in a config file (see below).
+debugging. For phones and other long-lived clients, mint scoped tokens
+with `nub token mint` (see [Scopes](#scopes)).
 
 ### Streaming ops over WebSocket
 
@@ -195,18 +195,21 @@ Replies come back framed:
 ### What you can do
 
 - **Host** — `host_info`
-- **Containers** — `list_containers`, `inspect_container`, `container_action`
+- **Containers** — `list_containers`, `get_container`, `container_action`
   (start / stop / restart / kill / remove), `create_container`, `stream_logs`,
   `stream_stats`, `exec`
-- **Images** — `list_images`, `inspect_image`, `remove_image`, `pull_image`
+- **Images** — `list_images`, `get_image`, `delete_image`, `pull_image`
   (streams progress), `build_image` (streams /build progress; reads a stored
   Dockerfile, applies a tag)
-- **Volumes** — `list_volumes`, `inspect_volume`, `remove_volume`
-- **Networks** — `list_networks`, `inspect_network`, `create_network`,
-  `remove_network`
-- **Dockerfiles** — `list_dockerfiles`, `read_dockerfile`, `write_dockerfile`,
+- **Volumes** — `list_volumes`, `get_volume`, `delete_volume`
+- **Networks** — `list_networks`, `get_network`, `create_network`,
+  `delete_network`
+- **Dockerfiles** — `list_dockerfiles`, `get_dockerfile`, `put_dockerfile`,
   `delete_dockerfile` (CRUD on text files in a configured flat directory; not
   compose, not orchestration — just stored build inputs for `build_image`)
+- **Secrets** — `list_secrets`, `put_secret`, `delete_secret`,
+  `get_secret` (admin-only; reads plaintext back). Encrypted at rest with
+  age; mounted into containers via compose `secrets:`. See [Secrets](#secrets).
 
 ## Configuration
 
@@ -236,6 +239,8 @@ bind = "127.0.0.1:8080"                     # also: --bind 127.0.0.1:8080
 # tls_key  = "/etc/nub/key.pem"             # also: --tls-key
 # allowed_binds = ["/data/nub"]             # host paths usable as bind-mount sources
 # dockerfiles   = "/srv/nub/dockerfiles"    # default: $XDG_DATA_HOME/nub/dockerfiles
+# stacks        = "/srv/nub/stacks"         # default: $XDG_DATA_HOME/nub/stacks
+# secrets       = "/srv/nub/secrets"        # default: $XDG_DATA_HOME/nub/secrets
 # trusted_issuer = "<base64url ed25519 pubkey>"  # external token issuer; default: nub mints its own
 ```
 
@@ -254,21 +259,53 @@ Two modes:
   starts re-print the same admin token, so phones paired once stay paired
   across restarts. Adding a device:
   ```
-  nub mint --sub phone-1 --scope '*' --expires 1y
+  nub token mint --sub phone-1 --preset phone --expires 1y
   ```
   Paste/scan the output to the phone. Rotating to invalidate everything:
-  `nub keygen --rotate`.
+  `nub key rotate`.
 
 - **External issuer.** Set `trusted_issuer = "<base64url pubkey>"` in
-  config. nub becomes verify-only — no auto-admin, no `nub mint` (the
-  private key lives elsewhere: your laptop, latch, a CI signer). Any
-  token validly signed by the configured key is accepted; scope drives
-  authorization the same way.
+  config. nub becomes verify-only — no auto-admin, no `nub token mint`
+  (the private key lives elsewhere: your laptop, latch, a CI signer).
+  Any token validly signed by the configured key is accepted; scope
+  drives authorization the same way.
+
+#### Scopes
 
 Tokens carry `sub` (caller identity), `aud` (which host the token is for),
-`exp` (expiry), and `scope` (space-separated op names; `*` is wildcard).
-Mismatched audience or expired tokens are 401. Valid token requesting
-an op not in scope is 403.
+`exp` (expiry), and `scope` — a space-separated list of granular
+`<resource>:<action>` strings. Two wildcards: `*` (everything) and
+`<resource>:*` (every action on one resource). Mismatched audience or
+expired tokens are 401. A valid token requesting an op outside its scope
+is 403.
+
+Resources: `containers`, `images`, `volumes`, `networks`, `dockerfiles`,
+`stacks`, `secrets`. Each op declares exactly one required scope —
+`list_containers` needs `containers:list`, `delete_image` needs
+`images:delete`, and so on. `host_info` and `whoami` are introspection
+ops and require no scope.
+
+Mint a token by listing scopes explicitly, or pick a named preset:
+
+```
+nub token mint --sub ci  --scope containers:list,stacks:get,images:pull
+nub token mint --sub me  --preset admin                  # *
+nub token mint --sub box --preset phone                  # everyday phone
+nub token mint --sub ro  --preset readonly               # all :get/:list
+nub token scopes                                         # full inventory
+```
+
+`--preset` and `--scope` are mutually exclusive. The default (neither
+flag) is `--preset admin`. Presets are CLI sugar — they expand to
+explicit scope lists at mint time, so the JWT contents are always
+auditable end-to-end. Preset definitions live in
+[`src/auth/scope/presets.rs`](src/auth/scope/presets.rs).
+
+The `secrets:reveal` scope (which authorizes reading a secret's
+plaintext value back over the wire) is intentionally **not** included
+in any preset. Phone tokens can write and delete secrets but cannot
+read them — only `*` (admin) authorizes `secrets:reveal`. Operators
+read values via `nub secret get` on the host.
 
 ### File layout
 
@@ -280,6 +317,7 @@ an op not in scope is 403.
 | Dockerfiles directory | `$XDG_DATA_HOME/nub/dockerfiles` | `dockerfiles = "<path>"` in the config |
 | Issuer keypair | `$XDG_DATA_HOME/nub/issuer.key` | `trusted_issuer` in the config (verify-only) |
 | Admin token | `$XDG_DATA_HOME/nub/admin.jwt` | none — delete + restart to re-mint |
+| Secrets directory | `$XDG_DATA_HOME/nub/secrets` | `secrets = "<path>"` in the config |
 
 To wipe all nub state on a host, run `nub uninstall` (prompts for
 confirmation; pass `--yes` to skip). The binary itself stays put — `rm
@@ -290,10 +328,10 @@ confirmation; pass `--yes` to skip). The binary itself stays put — `rm
 The Docker socket is root-equivalent. Anyone with a valid token can do
 everything Docker can within their `allowed` list. Two layers of protection:
 
-1. **Per-token op allowlist.** Each `[[trust]]` entry constrains which ops
-   that token may invoke. Grant `host_info` to a read-only viewer; grant
-   `["*"]` only to operators you'd give SSH to.
-2. **Constrained `create_container`.** Even with `create_container` allowed,
+1. **Per-token scope allowlist.** Each token's `scope` claim constrains
+   which ops it may invoke (see [Scopes](#scopes)). Mint a `readonly`
+   preset for viewers; reserve `*` (admin) for operators you'd give SSH to.
+2. **Constrained `create_container`.** Even with `containers:create` allowed,
    the binary rejects:
    - `network = "host"` and `network = "container:..."`
    - bind-mount sources outside the configured `allowed_binds` list (default
@@ -307,6 +345,64 @@ To allow specific host paths as bind sources:
 ```toml
 allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
+
+### Secrets
+
+nub stores per-host secrets as
+[age](https://age-encryption.org/v1)-encrypted blobs at
+`$XDG_DATA_HOME/nub/secrets/<name>.age`, encrypted to a per-host X25519
+identity at `secrets/.identity` (mode 0600). Compose `secrets:` blocks
+reference them with `external: true`; at deploy time nub decrypts each
+referenced secret to a tmpfs file under `/run/nub/secrets/<stack>/<svc>/<name>`
+(mode 0400) and bind-mounts it read-only into the container at
+`/run/secrets/<name>`.
+
+Manage from the host CLI:
+
+```sh
+echo 'hunter2' | nub secret put db_password
+nub secret list
+nub secret get db_password         # admin-only; prints plaintext
+nub secret rm db_password
+```
+
+Or from the phone UI under the *secrets* section. The phone API
+intentionally cannot read secret values back — only `get_secret` and
+the on-host `nub secret get` command return plaintext, both gated
+behind the `secrets:reveal` scope which is admin-only.
+
+In a compose stack:
+
+```yaml
+services:
+  db:
+    image: postgres
+    secrets:
+      - db_password
+secrets:
+  db_password:
+    external: true
+```
+
+The `db` container will see the value at `/run/secrets/db_password`.
+Override the in-container path with the long-form ref:
+
+```yaml
+    secrets:
+      - source: db_password
+        target: /etc/postgres.pw
+```
+
+**Threat model.** at-rest encryption protects against backup leaks,
+accidental `git add`, and non-root filesystem reads — same posture as
+Docker Swarm workers, Kubernetes nodes, and Vault Agent on a host.
+Root on the host can read the identity and decrypt; nub does not try
+to defend against that. `/run` is a tmpfs, so plaintext does not
+persist across reboots — operators must `nub stack redeploy <name>`
+after a host reboot to re-materialize secrets.
+
+`file:` and `environment:` sources in compose `secrets:` blocks are
+rejected; use `nub secret put` + `external: true` instead.
 
 ### TLS
 

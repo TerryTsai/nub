@@ -25,7 +25,7 @@ export function HostNetworks() {
   });
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "networks");
-  const canCreate = session.session?.can("create_network") ?? false;
+  const canCreate = session.session?.can("networks:create") ?? false;
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 

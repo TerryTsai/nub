@@ -40,7 +40,7 @@ async fn op(
             allowed: claims.scopes(),
         })));
     }
-    if !claims.allows(op.name()) {
+    if !claims.allows(&op) {
         tracing::warn!("caller {} denied op {}", claims.sub, op.name());
         return Err(StatusCode::FORBIDDEN);
     }

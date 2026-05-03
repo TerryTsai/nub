@@ -4,6 +4,8 @@
 //! startup, no diff/recreate); we just translate the YAML into nub
 //! primitives and let the engine do the rest.
 
+mod duration;
+mod secrets;
 mod spec;
 mod substitute;
 mod transform;
@@ -12,7 +14,7 @@ mod wire;
 #[cfg(test)]
 mod tests;
 
-pub use spec::{ParseError, ServiceSpec, StackSpec};
+pub use spec::{ParseError, ServiceSecretRef, ServiceSpec, StackSpec};
 
 use std::collections::HashMap;
 

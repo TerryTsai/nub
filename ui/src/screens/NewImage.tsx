@@ -73,7 +73,7 @@ export function NewImage() {
     (async () => {
       try {
         const r = unwrap(
-          await call(host, { op: "read_dockerfile", name: dockerfileName }),
+          await call(host, { op: "get_dockerfile", name: dockerfileName }),
           "dockerfile",
         );
         if (cancelled) return;
@@ -88,12 +88,12 @@ export function NewImage() {
   }, [host?.url, host?.token, dockerfileName]);
 
   const denyPull =
-    session.session && !session.session.can("pull_image")
-      ? "your token doesn't allow pull_image"
+    session.session && !session.session.can("images:pull")
+      ? "your token doesn't allow images:pull"
       : undefined;
   const denyBuild =
-    session.session && !session.session.can("build_image")
-      ? "your token doesn't allow build_image"
+    session.session && !session.session.can("images:build")
+      ? "your token doesn't allow images:build"
       : undefined;
   const denyReason = source === "pull" ? denyPull : denyBuild;
 

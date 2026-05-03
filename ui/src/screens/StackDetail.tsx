@@ -104,14 +104,14 @@ export function StackDetailScreen() {
   }
 
   const dirty = yaml !== original;
-  const canRedeploy = session.session?.can("redeploy_stack") ?? false;
-  const canPull = session.session?.can("pull_stack") ?? false;
-  const canUpdate = session.session?.can("update_stack") ?? false;
-  const canDelete = session.session?.can("delete_stack") ?? false;
-  const denyRedeploy = !canRedeploy ? "your token doesn't allow redeploy_stack" : undefined;
-  const denyPull = !canPull ? "your token doesn't allow pull_stack" : undefined;
-  const denyUpdate = !canUpdate ? "your token doesn't allow update_stack" : undefined;
-  const denyDelete = !canDelete ? "your token doesn't allow delete_stack" : undefined;
+  const canRedeploy = session.session?.can("stacks:redeploy") ?? false;
+  const canPull = session.session?.can("stacks:pull") ?? false;
+  const canUpdate = session.session?.can("stacks:update") ?? false;
+  const canDelete = session.session?.can("stacks:delete") ?? false;
+  const denyRedeploy = !canRedeploy ? "your token doesn't allow stacks:redeploy" : undefined;
+  const denyPull = !canPull ? "your token doesn't allow stacks:pull" : undefined;
+  const denyUpdate = !canUpdate ? "your token doesn't allow stacks:update" : undefined;
+  const denyDelete = !canDelete ? "your token doesn't allow stacks:delete" : undefined;
 
   return (
     <Page crumbs={crumbs}>

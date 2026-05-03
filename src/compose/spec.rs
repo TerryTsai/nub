@@ -9,8 +9,9 @@ use crate::proto::CreateContainerReq;
 pub struct StackSpec {
     pub services: Vec<ServiceSpec>,
     pub volumes: Vec<VolumeSpec>,
-    /// Top-level keys we don't process (e.g. `secrets`, `configs`,
-    /// `x-extensions`). Sorted alphabetically.
+    pub secrets: Vec<SecretSpec>,
+    /// Top-level keys we don't process (e.g. `configs`, `x-extensions`).
+    /// Sorted alphabetically.
     pub unsupported: Vec<String>,
 }
 
@@ -21,8 +22,12 @@ pub struct ServiceSpec {
     /// Translated container spec. The slice-2 runtime applies stack
     /// labels and resolves the container name before calling create.
     pub container: CreateContainerReq,
+    /// Secret references resolved from this service's `secrets:` list.
+    /// Each entry's `source` matches a `SecretSpec.name` in the parent
+    /// `StackSpec`. Empty when the service uses no secrets.
+    pub secrets: Vec<ServiceSecretRef>,
     /// Service-level keys we don't translate (e.g. `build`,
-    /// `depends_on`, `secrets`). Sorted alphabetically.
+    /// `depends_on`). Sorted alphabetically.
     pub unsupported: Vec<String>,
 }
 
@@ -30,6 +35,27 @@ pub struct ServiceSpec {
 pub struct VolumeSpec {
     pub name: String,
     pub external: bool,
+}
+
+#[derive(Debug)]
+pub struct SecretSpec {
+    /// Compose key (the entry under top-level `secrets:`). Used both as
+    /// the default container-side filename and as the lookup key when
+    /// `name` isn't set.
+    pub name: String,
+    /// Resolved lookup key against `nub secret`. Same as `name` unless
+    /// the YAML overrode it via `name:`.
+    pub lookup: String,
+}
+
+/// One service's reference to a top-level secret.
+#[derive(Debug)]
+pub struct ServiceSecretRef {
+    /// Matches `SecretSpec.name`.
+    pub source: String,
+    /// Container-side mount target. Defaults to `/run/secrets/<source>`
+    /// per the compose spec.
+    pub target: String,
 }
 
 #[derive(Debug)]

@@ -2,17 +2,22 @@
 //! intentionally close to `CreateContainerReq` so the slice-2 stack
 //! runtime can call `create_container` with minimal additional work.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::proto::{CreateContainerReq, HealthcheckSpec, PortPublish, RestartPolicySpec, VolumeMount};
 
+use super::duration::parse_ns;
+use super::secrets::{transform_service_refs, transform_top_level};
 use super::spec::{ParseError, ServiceSpec, StackSpec, VolumeSpec};
 use super::wire::{Compose, HealthcheckYaml, MapOrList, ServiceYaml, StringOrList};
 
 pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
+    let secrets = transform_top_level(raw.secrets)?;
+    let secret_names: HashSet<String> = secrets.iter().map(|s| s.name.clone()).collect();
+
     let mut services = Vec::with_capacity(raw.services.len());
     for (name, svc) in raw.services {
-        services.push(transform_service(name, svc)?);
+        services.push(transform_service(name, svc, &secret_names)?);
     }
     services.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -29,15 +34,21 @@ pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
     Ok(StackSpec {
         services,
         volumes,
+        secrets,
         unsupported: sorted_keys(&raw.extra),
     })
 }
 
-fn transform_service(name: String, svc: ServiceYaml) -> Result<ServiceSpec, ParseError> {
+fn transform_service(
+    name: String,
+    svc: ServiceYaml,
+    declared_secrets: &HashSet<String>,
+) -> Result<ServiceSpec, ParseError> {
     let image = svc
         .image
         .ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
     let unsupported = sorted_keys(&svc.extra);
+    let secrets = transform_service_refs(&name, svc.secrets, declared_secrets)?;
     let container = CreateContainerReq {
         image,
         name: svc.container_name,
@@ -72,6 +83,7 @@ fn transform_service(name: String, svc: ServiceYaml) -> Result<ServiceSpec, Pars
     Ok(ServiceSpec {
         name,
         container,
+        secrets,
         unsupported,
     })
 }
@@ -157,57 +169,11 @@ fn transform_healthcheck(hc: HealthcheckYaml) -> Result<HealthcheckSpec, ParseEr
     }
     Ok(HealthcheckSpec {
         test: hc.test.map(StringOrList::into_list).unwrap_or_default(),
-        interval_ns: hc.interval.as_deref().map(parse_duration_ns).transpose()?,
-        timeout_ns: hc.timeout.as_deref().map(parse_duration_ns).transpose()?,
+        interval_ns: hc.interval.as_deref().map(parse_ns).transpose()?,
+        timeout_ns: hc.timeout.as_deref().map(parse_ns).transpose()?,
         retries: hc.retries,
-        start_period_ns: hc.start_period.as_deref().map(parse_duration_ns).transpose()?,
+        start_period_ns: hc.start_period.as_deref().map(parse_ns).transpose()?,
     })
-}
-
-/// Compose-style duration: `1h30m`, `500ms`, `10s`. Output is nanoseconds
-/// (the engine wire unit). Bare numbers are interpreted as seconds, matching
-/// compose's behavior.
-fn parse_duration_ns(s: &str) -> Result<i64, ParseError> {
-    let trimmed = s.trim();
-    if trimmed.is_empty() {
-        return Err(ParseError("empty duration".into()));
-    }
-    if let Ok(n) = trimmed.parse::<i64>() {
-        return Ok(n.saturating_mul(1_000_000_000));
-    }
-    let mut total: i64 = 0;
-    let mut num = String::new();
-    let mut unit = String::new();
-    for ch in trimmed.chars() {
-        if ch.is_ascii_digit() {
-            if !unit.is_empty() {
-                total = total.saturating_add(consume_unit(&num, &unit)?);
-                num.clear();
-                unit.clear();
-            }
-            num.push(ch);
-        } else {
-            unit.push(ch);
-        }
-    }
-    total = total.saturating_add(consume_unit(&num, &unit)?);
-    Ok(total)
-}
-
-fn consume_unit(num: &str, unit: &str) -> Result<i64, ParseError> {
-    let n: i64 = num
-        .parse()
-        .map_err(|_| ParseError(format!("bad duration component `{num}{unit}`")))?;
-    let mult: i64 = match unit {
-        "ns" => 1,
-        "us" | "µs" => 1_000,
-        "ms" => 1_000_000,
-        "s" => 1_000_000_000,
-        "m" => 60_000_000_000,
-        "h" => 3_600_000_000_000,
-        other => return Err(ParseError(format!("unknown duration unit `{other}`"))),
-    };
-    Ok(n.saturating_mul(mult))
 }
 
 fn sorted_keys<V>(m: &HashMap<String, V>) -> Vec<String> {

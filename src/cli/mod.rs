@@ -11,13 +11,14 @@ pub mod install;
 pub mod key;
 pub mod man;
 pub mod restart;
+pub mod secret;
 pub mod stack;
 pub mod status;
 pub mod token;
 pub mod uninstall;
 pub mod update;
 
-pub use cmds::{BindCmd, ConfigCmd, InstallTarget, KeyCmd, StackCmd, TokenCmd};
+pub use cmds::{BindCmd, ConfigCmd, InstallTarget, KeyCmd, SecretCmd, StackCmd, TokenCmd};
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -64,10 +65,11 @@ Connect
   qr                    Print connect URL as a QR
 
 Management
-  bind list|allow|deny  Manage the bind-mount allowlist
-  key  gen|rotate       Manage the Ed25519 issuer keypair
-  token mint            Mint a JWT
-  stack deploy          Deploy a compose file as a stack
+  bind   list|allow|deny  Manage the bind-mount allowlist
+  key    gen|rotate       Manage the Ed25519 issuer keypair
+  token  mint|scopes      Mint JWTs and inspect scope vocabulary
+  stack  deploy           Deploy a compose file as a stack
+  secret put|list|rm|get  Manage age-encrypted secrets
 
 Tools
   completions <SHELL>   Shell completion script
@@ -83,6 +85,7 @@ Examples:
   nub url                      Print connect URL
   nub bind allow /data         Permit a bind-mount source
   nub stack deploy app app.yml Deploy a stack from YAML
+  echo s3cr3t | nub secret put db_password   Store an encrypted secret
   nub update                   Pull latest release and restart
 
 For per-command help: nub <COMMAND> --help
@@ -188,6 +191,11 @@ pub enum Cmd {
         #[command(subcommand)]
         action: StackCmd,
     },
+    /// Manage encrypted secrets.
+    Secret {
+        #[command(subcommand)]
+        action: SecretCmd,
+    },
     /// Print shell completion script.
     Completions {
         #[arg(value_name = "SHELL")]
@@ -213,6 +221,7 @@ pub fn dispatch(cmd: Cmd) -> Result<()> {
         Cmd::Key { action } => key::run(action),
         Cmd::Token { action } => token::run(action),
         Cmd::Stack { action } => stack::run(action),
+        Cmd::Secret { action } => secret::run(action),
         Cmd::Completions { shell } => completions::run(shell),
         Cmd::Man => man::run(),
     }

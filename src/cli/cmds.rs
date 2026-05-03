@@ -56,9 +56,15 @@ pub enum TokenCmd {
         /// Subject claim — the identity this token represents.
         #[arg(long, value_name = "ID")]
         sub: String,
-        /// Space-separated op names, or `*` for all ops.
-        #[arg(long, value_name = "OPS", default_value = "*")]
-        scope: String,
+        /// Explicit scope list (space- or comma-separated). Each entry is
+        /// a `<resource>:<action>` scope, `*`, or `<resource>:*`. Mutually
+        /// exclusive with `--preset`. See `nub token scopes`.
+        #[arg(long, value_name = "SCOPES", conflicts_with = "preset")]
+        scope: Option<String>,
+        /// Named preset: `admin`, `phone`, or `readonly`. Expanded to an
+        /// explicit scope list at mint time.
+        #[arg(long, value_name = "NAME", conflicts_with = "scope")]
+        preset: Option<String>,
         /// TTL: e.g. `90d`, `1y`, `12h`.
         #[arg(long, value_name = "DUR", default_value = "90d")]
         expires: String,
@@ -66,6 +72,8 @@ pub enum TokenCmd {
         #[arg(long, value_name = "HOST")]
         aud: Option<String>,
     },
+    /// List every recognized scope, plus the named presets.
+    Scopes,
 }
 
 #[derive(Subcommand)]
@@ -78,5 +86,31 @@ pub enum StackCmd {
         /// Path to compose file. Use `-` for stdin.
         #[arg(value_name = "FILE")]
         file: String,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum SecretCmd {
+    /// Store a secret value. Reads from stdin by default — pipe or
+    /// type-then-Ctrl-D — to keep the value out of shell history.
+    Put {
+        /// Secret name. Letters, digits, dot, underscore, dash.
+        #[arg(value_name = "NAME")]
+        name: String,
+        /// Read the value from this file instead of stdin.
+        #[arg(long, value_name = "PATH")]
+        from_file: Option<String>,
+    },
+    /// List secret names + sizes. Values are never printed.
+    List,
+    /// Delete a secret. Idempotent — succeeds if the name doesn't exist.
+    Rm {
+        #[arg(value_name = "NAME")]
+        name: String,
+    },
+    /// Print a secret's plaintext value to stdout. Admin-only by policy.
+    Get {
+        #[arg(value_name = "NAME")]
+        name: String,
     },
 }

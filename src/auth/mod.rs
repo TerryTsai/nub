@@ -5,6 +5,7 @@
 
 pub mod issuer;
 pub mod jwt;
+pub mod scope;
 
 use std::sync::Arc;
 
