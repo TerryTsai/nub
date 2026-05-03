@@ -65,9 +65,12 @@ async fn serve(args: Args) -> Result<()> {
 
     println!("issuer key:  ed25519:{}", issuer.public_key_b64());
     println!("admin token: {admin}");
-    if cfg!(feature = "embed-ui") {
+    #[cfg(feature = "embed-ui")]
+    {
         let scheme = if tls.is_some() { "https" } else { "http" };
-        println!("connect:     {scheme}://{}/add#t={admin}", display_authority(&bind),);
+        let url = format!("{scheme}://{}/add#t={admin}", display_authority(&bind));
+        println!("connect:     {url}");
+        print_connect_qr(&url);
     }
 
     let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
@@ -164,8 +167,30 @@ async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Resu
     Ok(app)
 }
 
+/// Render the connect URL as a terminal QR. Phones scan this with their
+/// camera and land directly on `/add#t=...`, sidestepping the need to
+/// type or paste a 270-char JWT. Colors are inverted for dark terminals
+/// (the common case for ssh/journalctl).
+#[cfg(feature = "embed-ui")]
+fn print_connect_qr(url: &str) {
+    use qrcode::render::unicode::Dense1x2;
+    use qrcode::{EcLevel, QrCode};
+    match QrCode::with_error_correction_level(url.as_bytes(), EcLevel::L) {
+        Ok(code) => {
+            let image = code
+                .render::<Dense1x2>()
+                .dark_color(Dense1x2::Light)
+                .light_color(Dense1x2::Dark)
+                .build();
+            println!("\n{image}");
+        }
+        Err(e) => tracing::warn!("could not render connect QR: {e}"),
+    }
+}
+
 // Substitute hostname for unspecified bind addresses so the printed URL is
 // usable on the LAN. Specific binds pass through unchanged.
+#[cfg(feature = "embed-ui")]
 fn display_authority(bind: &str) -> String {
     let (host, port) = bind.rsplit_once(':').unwrap_or((bind, ""));
     let host = match host.trim_matches(['[', ']']) {
