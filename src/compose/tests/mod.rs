@@ -1,3 +1,4 @@
+mod configs;
 mod secrets;
 
 use super::*;
@@ -181,6 +182,8 @@ services:
 
 #[test]
 fn parse_collects_unsupported_top_level_and_service_keys() {
+    // `configs:` is now supported (see configs.rs tests). Use an
+    // x-extension to verify the unsupported-key plumbing still works.
     let yaml = r#"
 services:
   app:
@@ -188,12 +191,11 @@ services:
     build: ./Dockerfile
     depends_on:
       - db
-configs:
-  cfg:
-    file: ./cfg
+x-custom:
+  ignored: true
 "#;
     let spec = parse(yaml, &HashMap::new()).unwrap();
-    assert!(spec.unsupported.contains(&"configs".to_string()));
+    assert!(spec.unsupported.contains(&"x-custom".to_string()));
     let svc = &spec.services[0];
     assert!(svc.unsupported.contains(&"build".to_string()));
     assert!(svc.unsupported.contains(&"depends_on".to_string()));

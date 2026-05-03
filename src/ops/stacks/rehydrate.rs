@@ -14,7 +14,7 @@ use std::collections::HashMap;
 use std::path::Path;
 
 use crate::compose;
-use crate::ops::secrets;
+use crate::ops::{configs, secrets};
 
 use super::store;
 
@@ -45,14 +45,17 @@ fn list_stacks_or_warn(stacks_root: &Path) -> Vec<String> {
 async fn rehydrate_one(stacks_root: &Path, secrets_root: &Path, name: &str) -> anyhow::Result<()> {
     let yaml = store::read_yaml(stacks_root, name)?;
     let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow::anyhow!("compose: {e}"))?;
-    if spec.secrets.is_empty() {
+    if spec.secrets.is_empty() && spec.configs.is_empty() {
         return Ok(());
     }
     for service in &spec.services {
-        if service.secrets.is_empty() {
-            continue;
+        if !service.secrets.is_empty() {
+            secrets::runtime::materialize_for_service(secrets_root, &spec, name, &service.name, &service.secrets)
+                .await?;
         }
-        secrets::runtime::materialize_for_service(secrets_root, &spec, name, &service.name, &service.secrets).await?;
+        if !service.configs.is_empty() {
+            configs::runtime::materialize_for_service(&spec, name, &service.name, &service.configs).await?;
+        }
     }
     Ok(())
 }

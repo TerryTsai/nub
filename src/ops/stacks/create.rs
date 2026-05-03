@@ -9,6 +9,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::{anyhow, Result};
 
 use crate::compose;
+use crate::ops::configs;
 use crate::ops::containers;
 use crate::ops::secrets;
 use crate::ops::EngineHandler;
@@ -75,7 +76,9 @@ async fn create_service(
     let secret_mounts =
         secrets::runtime::materialize_for_service(&h.policy.secrets_root, stack_spec, stack, &svc.name, &svc.secrets)
             .await?;
-    let req = build_request(stack, svc, declared_volumes, secret_mounts);
+    let config_mounts = configs::runtime::materialize_for_service(stack_spec, stack, &svc.name, &svc.configs).await?;
+    let extra_mounts = secret_mounts.into_iter().chain(config_mounts).collect();
+    let req = build_request(stack, svc, declared_volumes, extra_mounts);
     let created = containers::create::run(h, req).await?;
     Ok(created.id)
 }
@@ -84,7 +87,7 @@ fn build_request(
     stack: &str,
     svc: compose::ServiceSpec,
     declared_volumes: &HashSet<String>,
-    secret_mounts: Vec<VolumeMount>,
+    extra_mounts: Vec<VolumeMount>,
 ) -> CreateContainerReq {
     let mut req = svc.container;
     req.name = Some(container_name(stack, &svc.name, req.name.as_deref()));
@@ -95,7 +98,7 @@ fn build_request(
         .volumes
         .into_iter()
         .map(|v| rewrite_volume(stack, v, declared_volumes))
-        .chain(secret_mounts)
+        .chain(extra_mounts)
         .collect();
     merge_labels(&mut req.labels, stack, &svc.name);
     req.start = true;

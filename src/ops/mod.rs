@@ -2,6 +2,7 @@
 //! build the engine path, send, decode JSON or stream, return proto types.
 //! No middle layer between proto and the socket.
 
+pub mod configs;
 mod containers;
 mod dockerfiles;
 mod host;

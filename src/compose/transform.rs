@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::proto::{CreateContainerReq, HealthcheckSpec, PortPublish, RestartPolicySpec, VolumeMount};
 
+use super::configs as configs_xform;
 use super::duration::parse_ns;
 use super::secrets::{transform_service_refs, transform_top_level};
 use super::spec::{ParseError, ServiceSpec, StackSpec, VolumeSpec};
@@ -14,10 +15,12 @@ use super::wire::{Compose, HealthcheckYaml, MapOrList, ServiceYaml, StringOrList
 pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
     let secrets = transform_top_level(raw.secrets)?;
     let secret_names: HashSet<String> = secrets.iter().map(|s| s.name.clone()).collect();
+    let configs = configs_xform::transform_top_level(raw.configs)?;
+    let config_names: HashSet<String> = configs.iter().map(|c| c.name.clone()).collect();
 
     let mut services = Vec::with_capacity(raw.services.len());
     for (name, svc) in raw.services {
-        services.push(transform_service(name, svc, &secret_names)?);
+        services.push(transform_service(name, svc, &secret_names, &config_names)?);
     }
     services.sort_by(|a, b| a.name.cmp(&b.name));
 
@@ -35,6 +38,7 @@ pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
         services,
         volumes,
         secrets,
+        configs,
         unsupported: sorted_keys(&raw.extra),
     })
 }
@@ -43,12 +47,14 @@ fn transform_service(
     name: String,
     svc: ServiceYaml,
     declared_secrets: &HashSet<String>,
+    declared_configs: &HashSet<String>,
 ) -> Result<ServiceSpec, ParseError> {
     let image = svc
         .image
         .ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
     let unsupported = sorted_keys(&svc.extra);
     let secrets = transform_service_refs(&name, svc.secrets, declared_secrets)?;
+    let configs = configs_xform::transform_service_refs(&name, svc.configs, declared_configs)?;
     let container = CreateContainerReq {
         image,
         name: svc.container_name,
@@ -84,6 +90,7 @@ fn transform_service(
         name,
         container,
         secrets,
+        configs,
         unsupported,
     })
 }

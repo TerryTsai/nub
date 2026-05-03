@@ -61,10 +61,10 @@ fn validate(req: &CreateContainerReq, allowed_binds: &[PathBuf]) -> Result<()> {
             continue;
         }
         let src = Path::new(&v.source);
-        // nub-managed secret tmpfs is implicitly allowed — these paths
-        // live in `/run` (tmpfs, no persistence) and are written by nub
-        // itself during stack deploy, not user-supplied.
-        if crate::ops::secrets::runtime::is_managed_path(src) {
+        // nub-managed tmpfs paths are implicitly allowed — they live in
+        // `/run` (no persistence) and are written by nub itself during
+        // stack deploy, not user-supplied.
+        if crate::ops::secrets::runtime::is_managed_path(src) || crate::ops::configs::runtime::is_managed_path(src) {
             continue;
         }
         if !allowed_binds.iter().any(|p| src.starts_with(p)) {

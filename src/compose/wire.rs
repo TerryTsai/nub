@@ -12,6 +12,7 @@ pub(super) struct Compose {
     pub services: HashMap<String, ServiceYaml>,
     pub volumes: HashMap<String, VolumeYaml>,
     pub secrets: HashMap<String, SecretYaml>,
+    pub configs: HashMap<String, ConfigYaml>,
     /// Compose schema version. Informational; ignored.
     pub version: Option<String>,
     #[serde(flatten)]
@@ -42,6 +43,7 @@ pub(super) struct ServiceYaml {
     pub init: Option<bool>,
     pub expose: Vec<String>,
     pub secrets: Vec<ServiceSecretYaml>,
+    pub configs: Vec<ServiceConfigYaml>,
     #[serde(flatten)]
     pub extra: HashMap<String, serde_yaml::Value>,
 }
@@ -94,6 +96,39 @@ pub(super) struct ServiceSecretLong {
     pub target: Option<String>,
     /// File mode in octal (e.g. "0440"). Parsed but currently advisory —
     /// the host file is mode 0400 and read-only inside the container.
+    pub mode: Option<String>,
+    pub uid: Option<String>,
+    pub gid: Option<String>,
+}
+
+/// Top-level `configs:` declaration. nub supports `content:` (inline
+/// text in the manifest) only; `file:`, `external:`, and `environment:`
+/// are rejected with clear errors so paste-and-deploy stacks don't
+/// silently lose values.
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct ConfigYaml {
+    pub content: Option<String>,
+    pub file: Option<String>,
+    pub external: bool,
+    pub environment: Option<String>,
+}
+
+/// Per-service `configs:` entry. Same short/long shape as secrets.
+#[derive(Deserialize)]
+#[serde(untagged)]
+pub(super) enum ServiceConfigYaml {
+    Short(String),
+    Long(ServiceConfigLong),
+}
+
+#[derive(Deserialize, Default)]
+#[serde(default)]
+pub(super) struct ServiceConfigLong {
+    pub source: String,
+    pub target: Option<String>,
+    /// File mode in octal. Parsed but advisory — the host file is
+    /// mode 0444 (world-readable, since configs are non-sensitive).
     pub mode: Option<String>,
     pub uid: Option<String>,
     pub gid: Option<String>,
