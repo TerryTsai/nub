@@ -84,6 +84,13 @@ pub enum Op {
     InspectNetwork {
         id: String,
     },
+    CreateNetwork {
+        name: String,
+        /// Block external traffic; only attached containers can reach each
+        /// other. Default `false`.
+        #[serde(default)]
+        internal: bool,
+    },
     RemoveNetwork {
         id: String,
     },
@@ -124,6 +131,7 @@ impl Op {
             Op::RemoveVolume { .. } => "remove_volume",
             Op::ListNetworks => "list_networks",
             Op::InspectNetwork { .. } => "inspect_network",
+            Op::CreateNetwork { .. } => "create_network",
             Op::RemoveNetwork { .. } => "remove_network",
             Op::ListDockerfiles => "list_dockerfiles",
             Op::ReadDockerfile { .. } => "read_dockerfile",

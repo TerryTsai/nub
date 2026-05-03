@@ -55,6 +55,16 @@ enum Cmd {
         #[arg(long)]
         yes: bool,
     },
+    /// Print a systemd unit file for nub on stdout. Default is `--user`
+    /// (drop into ~/.config/systemd/user); `--system` for /etc/systemd/system.
+    SystemdUnit {
+        /// User-level unit (default).
+        #[arg(long, conflicts_with = "system")]
+        user: bool,
+        /// System-level unit (runs as root unless edited).
+        #[arg(long, conflicts_with = "user")]
+        system: bool,
+    },
 }
 
 fn main() -> Result<()> {
@@ -63,6 +73,7 @@ fn main() -> Result<()> {
     match args.cmd {
         Some(Cmd::Init { path, force }) => return init::run(path, force),
         Some(Cmd::Uninstall { yes }) => return init::uninstall(yes),
+        Some(Cmd::SystemdUnit { system, user: _ }) => return init::systemd_unit(!system),
         None => {}
     }
     tokio::runtime::Builder::new_multi_thread()

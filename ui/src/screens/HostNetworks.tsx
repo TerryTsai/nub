@@ -5,6 +5,7 @@ import { useHosts } from "@/state/hosts";
 import { useSession } from "@/state/session";
 import { useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
+import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
@@ -24,11 +25,15 @@ export function HostNetworks() {
   });
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "networks");
+  const canCreate = session.session?.can("create_network") ?? false;
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
   return (
-    <Page crumbs={crumbs}>
+    <Page
+      crumbs={crumbs}
+      fab={session.session && canCreate ? <FAB to={`/h/${hid}/networks/new`} label="network" /> : undefined}
+    >
       {session.loading && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
       {session.error && <p className="text-[var(--error)] text-xs">Couldn't connect: {session.error}</p>}
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}

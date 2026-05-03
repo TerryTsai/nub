@@ -99,6 +99,7 @@ impl OpHandler for EngineHandler {
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
             Op::InspectNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
+            Op::CreateNetwork { name, internal } => unary(networks::create(self, name, internal).await, ok),
             Op::RemoveNetwork { id } => unary(networks::remove(self, id).await, ok),
 
             Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),

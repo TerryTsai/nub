@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::collections::HashSet;
 
 use anyhow::Result;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::client::{short_id, EngineKind, Query, Req};
 use crate::proto::{NetworkDetail, NetworkSummary};
@@ -82,6 +82,21 @@ async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 
 pub(super) async fn inspect(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     inspect::run(h, id).await
+}
+
+pub(super) async fn create(h: &EngineHandler, name: String, internal: bool) -> Result<()> {
+    let body = CreateBody {
+        name,
+        driver: "bridge".into(),
+        internal,
+    };
+    h.engine
+        .conn()
+        .await?
+        .send_unary(Req::post("/networks/create").json(&body)?.build()?)
+        .await?
+        .ok()?;
+    Ok(())
 }
 
 pub(super) async fn remove(h: &EngineHandler, id: String) -> Result<()> {
@@ -160,6 +175,14 @@ struct LibpodNet {
     #[serde(default)]
     created: String,
     #[serde(default)]
+    internal: bool,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+struct CreateBody {
+    name: String,
+    driver: String,
     internal: bool,
 }
 

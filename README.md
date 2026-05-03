@@ -71,9 +71,26 @@ Pre-built binaries (Linux x86_64 / aarch64; macOS not built yet — see below):
 curl -fsSL https://raw.githubusercontent.com/TerryTsai/nub/main/install.sh | sh
 ```
 
-Pin a version with `NUB_VERSION=v0.0.1`; install elsewhere with
-`NUB_PREFIX=$HOME/.local/bin`. The binary uses rustls (not OpenSSL) and is
-statically linked against musl on Linux — works on any glibc/musl distro.
+The installer downloads the binary, runs `nub init` to drop a starter config
+in `$XDG_CONFIG_HOME/nub/nub.toml`, and (when systemd is present) installs a
+unit file, enables lingering, and starts nub as a managed service.
+
+Defaults — runs as the invoking user with a user-level unit
+(`~/.config/systemd/user/nub.service`); falls back to a system-level unit
+(`/etc/systemd/system/nub.service`) when invoked as root.
+
+Env overrides:
+
+- `NUB_VERSION=v0.0.1` — pin a specific release (default: latest)
+- `NUB_PREFIX=$HOME/.local/bin` — install destination
+- `NUB_SERVICE=user|system|none` — service-level override (default: auto)
+
+Re-run the script to upgrade — it replaces the binary and `systemctl restart`
+picks up the new version. Plain binary install with no daemon setup:
+`NUB_SERVICE=none curl … | sh`.
+
+The binary uses rustls (not OpenSSL) and is statically linked against musl on
+Linux — works on any glibc/musl distro.
 
 From source (for development):
 
@@ -87,6 +104,17 @@ sudo install -m 0755 target/release/nub /usr/local/bin/nub
 
 Drop `--features embed-ui` (and the `npm` step) if you don't want the UI
 baked in — the binary is API-only and any web server can serve `ui/dist`.
+
+For an existing install, refresh the systemd unit any time without
+re-running the installer:
+
+```sh
+nub systemd-unit --user > ~/.config/systemd/user/nub.service && \
+  systemctl --user daemon-reload && \
+  systemctl --user restart nub
+```
+
+(`--system` for `/etc/systemd/system/nub.service`.)
 
 ## Usage
 
@@ -167,7 +195,8 @@ Replies come back framed:
   (streams progress), `build_image` (streams /build progress; reads a stored
   Dockerfile, applies a tag)
 - **Volumes** — `list_volumes`, `inspect_volume`, `remove_volume`
-- **Networks** — `list_networks`, `inspect_network`, `remove_network`
+- **Networks** — `list_networks`, `inspect_network`, `create_network`,
+  `remove_network`
 - **Dockerfiles** — `list_dockerfiles`, `read_dockerfile`, `write_dockerfile`,
   `delete_dockerfile` (CRUD on text files in a configured flat directory; not
   compose, not orchestration — just stored build inputs for `build_image`)

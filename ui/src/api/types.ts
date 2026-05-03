@@ -21,6 +21,7 @@ export type Op =
   | { op: "remove_volume"; name: string; force?: boolean }
   | { op: "list_networks" }
   | { op: "inspect_network"; id: string }
+  | { op: "create_network"; name: string; internal?: boolean }
   | { op: "remove_network"; id: string }
   | { op: "list_dockerfiles" }
   | { op: "read_dockerfile"; name: string }

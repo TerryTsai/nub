@@ -18,6 +18,7 @@ import { ImageDetail } from "./screens/ImageDetail";
 import { NetworkDetail } from "./screens/NetworkDetail";
 import { NewContainer } from "./screens/NewContainer";
 import { NewImage } from "./screens/NewImage";
+import { NewNetwork } from "./screens/NewNetwork";
 import { VolumeDetail } from "./screens/VolumeDetail";
 
 // Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/h/:hid/volumes" element={<HostVolumes />} />
           <Route path="/h/:hid/volumes/:vname" element={<VolumeDetail />} />
           <Route path="/h/:hid/networks" element={<HostNetworks />} />
+          <Route path="/h/:hid/networks/new" element={<NewNetwork />} />
           <Route path="/h/:hid/networks/:nid" element={<NetworkDetail />} />
           <Route path="/h/:hid/dockerfiles" element={<HostDockerfiles />} />
           <Route path="/h/:hid/dockerfiles/:name" element={<DockerfileEdit />} />
