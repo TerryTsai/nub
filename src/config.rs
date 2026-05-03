@@ -24,21 +24,12 @@ pub struct Config {
     /// Flat directory holding Dockerfile text files. When unset, falls
     /// back to `$XDG_DATA_HOME/nub/dockerfiles` (created on first write).
     pub dockerfiles: Option<PathBuf>,
-    #[serde(default)]
-    pub trust: Vec<TrustEntry>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-pub struct TrustEntry {
-    pub id: String,
-    pub token: String,
-    pub allowed: Vec<String>,
-}
-
-impl TrustEntry {
-    pub fn allows(&self, op_name: &str) -> bool {
-        self.allowed.iter().any(|s| s == "*" || s == op_name)
-    }
+    /// Base64url-encoded Ed25519 public key. When set, nub validates
+    /// presented JWTs against this key only — the operator mints tokens
+    /// elsewhere (their laptop, latch, etc.) and nub never holds a
+    /// private key. When unset, nub auto-generates and persists its
+    /// own keypair at `$XDG_DATA_HOME/nub/issuer.key`.
+    pub trusted_issuer: Option<String>,
 }
 
 impl Config {
@@ -84,6 +75,19 @@ pub fn default_dockerfiles_dir() -> PathBuf {
     xdg_data_home().join("nub/dockerfiles")
 }
 
+/// Default issuer key path: `$XDG_DATA_HOME/nub/issuer.key`. PKCS#8
+/// binary; written mode 600 by `Issuer::load_or_generate`.
+pub fn default_issuer_key() -> PathBuf {
+    xdg_data_home().join("nub/issuer.key")
+}
+
+/// Default admin JWT path: `$XDG_DATA_HOME/nub/admin.jwt`. Persisted
+/// once at first run; re-printed on subsequent starts so phone pairings
+/// survive restart.
+pub fn default_admin_jwt() -> PathBuf {
+    xdg_data_home().join("nub/admin.jwt")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -101,38 +105,27 @@ mod tests {
         assert_eq!(cfg.bind.as_deref(), Some("127.0.0.1:8080"));
         assert_eq!(cfg.allowed_binds, vec![PathBuf::from("/data/nub")]);
         assert_eq!(cfg.dockerfiles, Some(PathBuf::from("/srv/nub/dockerfiles")));
+        assert_eq!(cfg.trusted_issuer, None);
+    }
+
+    #[test]
+    fn parses_trusted_issuer() {
+        let s = r#"
+            id = "host1"
+            trusted_issuer = "abcdef"
+        "#;
+        let cfg: Config = toml::from_str(s).unwrap();
+        assert_eq!(cfg.trusted_issuer.as_deref(), Some("abcdef"));
     }
 
     #[test]
     fn rejects_unknown_field() {
-        // The pre-0.0.10 `[engine]` and `[dockerfiles]` sections are now
-        // unknown keys; `deny_unknown_fields` makes that a load-time error
-        // rather than a silently-ignored stale section.
         let s = r#"
             id = "x"
-            [engine]
-            allowed_binds = []
+            [[trust]]
+            id = "phone"
         "#;
         let err = toml::from_str::<Config>(s).unwrap_err().to_string();
         assert!(err.contains("unknown field"), "got: {err}");
-    }
-
-    #[test]
-    fn trust_allows_star_and_explicit() {
-        let t = TrustEntry {
-            id: "phone".into(),
-            token: "x".into(),
-            allowed: vec!["host_info".into(), "list_containers".into()],
-        };
-        assert!(t.allows("host_info"));
-        assert!(t.allows("list_containers"));
-        assert!(!t.allows("create_container"));
-
-        let admin = TrustEntry {
-            id: "admin".into(),
-            token: "x".into(),
-            allowed: vec!["*".into()],
-        };
-        assert!(admin.allows("anything"));
     }
 }

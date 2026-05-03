@@ -1,4 +1,4 @@
-use crate::config::TrustEntry;
+use crate::auth::Claims;
 use crate::ops::OpHandler;
 
 use super::wire;
@@ -18,7 +18,7 @@ type Shared = Arc<dyn OpHandler>;
 pub async fn ws_handler(
     ws: WebSocketUpgrade,
     State(h): State<Shared>,
-    Extension(caller): Extension<TrustEntry>,
+    Extension(caller): Extension<Claims>,
 ) -> Response {
     // Browser clients offer ["nub", "bearer.<token>"]; we echo back "nub" so
     // the handshake completes. The bearer is consumed by the auth middleware.
@@ -26,7 +26,7 @@ pub async fn ws_handler(
         .on_upgrade(move |socket| handle_socket(socket, h, caller))
 }
 
-async fn handle_socket(socket: WebSocket, h: Shared, caller: TrustEntry) {
+async fn handle_socket(socket: WebSocket, h: Shared, caller: Claims) {
     let (sink, stream) = socket.split();
     let (in_tx, in_rx) = mpsc::channel::<String>(WS_BUF);
     let (out_tx, out_rx) = mpsc::channel::<String>(WS_BUF);

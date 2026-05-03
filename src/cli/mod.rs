@@ -3,6 +3,8 @@
 //! and the dispatch table.
 
 pub mod init;
+pub mod keygen;
+pub mod mint;
 pub mod systemd;
 pub mod uninstall;
 
@@ -36,6 +38,29 @@ pub enum Cmd {
         #[arg(long, conflicts_with = "user")]
         system: bool,
     },
+    /// Generate (or rotate) the Ed25519 issuer keypair nub uses to sign
+    /// tokens. With no flags, prints the existing public key.
+    Keygen {
+        /// Replace the existing key. Invalidates ALL previously-issued tokens.
+        #[arg(long)]
+        rotate: bool,
+    },
+    /// Mint a JWT signed by nub's issuer key. Prints the token on stdout.
+    Mint {
+        /// Subject claim — the identity this token represents (e.g. `phone-1`).
+        #[arg(long)]
+        sub: String,
+        /// Space-separated op names, or `*` for all ops.
+        #[arg(long, default_value = "*")]
+        scope: String,
+        /// TTL: e.g. `90d`, `1y`, `12h`. Default: 90 days.
+        #[arg(long, default_value = "90d")]
+        expires: String,
+        /// Audience claim — the host id this token is for.
+        /// Defaults to this machine's hostname.
+        #[arg(long)]
+        aud: Option<String>,
+    },
 }
 
 pub fn dispatch(cmd: Cmd) -> Result<()> {
@@ -43,6 +68,13 @@ pub fn dispatch(cmd: Cmd) -> Result<()> {
         Cmd::Init { path, force } => init::run(path, force),
         Cmd::Uninstall { yes } => uninstall::run(yes),
         Cmd::SystemdUnit { system, user: _ } => systemd::print_unit(!system),
+        Cmd::Keygen { rotate } => keygen::run(rotate),
+        Cmd::Mint {
+            sub,
+            scope,
+            expires,
+            aud,
+        } => mint::run(sub, scope, expires, aud),
     }
 }
 

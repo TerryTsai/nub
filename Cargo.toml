@@ -1,6 +1,6 @@
 [package]
 name = "nub"
-version = "0.0.17"
+version = "0.0.18"
 edition = "2021"
 description = "Minimal Docker/Podman control plane: hub + nub"
 license = "MIT OR Apache-2.0"
@@ -20,6 +20,8 @@ hyper = { version = "1", features = ["client", "http1"] }
 hyper-util = { version = "0.1", features = ["tokio", "server-auto", "service"] }
 tokio-rustls = { version = "0.26", default-features = false, features = ["ring", "tls12"] }
 rustls-pemfile = "2"
+ring = "0.17"
+base64 = "0.22"
 http-body = "1"
 http-body-util = "0.1"
 bytes = "1"

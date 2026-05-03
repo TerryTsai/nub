@@ -1,4 +1,4 @@
-use crate::config::TrustEntry;
+use crate::auth::Claims;
 use crate::ops::{HandlerOutput, OpHandler};
 use crate::proto::*;
 use futures::stream::BoxStream;
@@ -21,12 +21,7 @@ enum Inbound {
 /// Drive the wire protocol on a transport-agnostic mpsc pair. The connection
 /// has been authenticated as `caller`; per-Request `caller.allows()` gates
 /// what can run. Returns when `in_rx` is closed.
-pub async fn serve(
-    handler: Shared,
-    caller: TrustEntry,
-    mut in_rx: mpsc::Receiver<String>,
-    out_tx: mpsc::Sender<String>,
-) {
+pub async fn serve(handler: Shared, caller: Claims, mut in_rx: mpsc::Receiver<String>, out_tx: mpsc::Sender<String>) {
     let routes: Routes = Arc::new(Mutex::new(HashMap::new()));
     while let Some(text) = in_rx.recv().await {
         if out_tx.is_closed() {
@@ -36,7 +31,7 @@ pub async fn serve(
     }
 }
 
-async fn dispatch(text: &str, h: &Shared, caller: &TrustEntry, out: &mpsc::Sender<String>, routes: &Routes) {
+async fn dispatch(text: &str, h: &Shared, caller: &Claims, out: &mpsc::Sender<String>, routes: &Routes) {
     match parse_inbound(text) {
         Ok(Inbound::Request { id, op }) => start_request(id, op, h, caller, out, routes),
         Ok(Inbound::Stream { id, chunk }) => forward_to_route(id, chunk, routes).await,
@@ -46,12 +41,12 @@ async fn dispatch(text: &str, h: &Shared, caller: &TrustEntry, out: &mpsc::Sende
     }
 }
 
-fn start_request(id: u64, op: Op, h: &Shared, caller: &TrustEntry, out: &mpsc::Sender<String>, routes: &Routes) {
+fn start_request(id: u64, op: Op, h: &Shared, caller: &Claims, out: &mpsc::Sender<String>, routes: &Routes) {
     if matches!(op, Op::Whoami) {
         let out = out.clone();
         let info = OpResult::Whoami(WhoamiInfo {
-            id: caller.id.clone(),
-            allowed: caller.allowed.clone(),
+            id: caller.sub.clone(),
+            allowed: caller.scopes(),
         });
         tokio::spawn(async move {
             send_frame(&out, response(id, info)).await;
@@ -59,7 +54,7 @@ fn start_request(id: u64, op: Op, h: &Shared, caller: &TrustEntry, out: &mpsc::S
         return;
     }
     if !caller.allows(op.name()) {
-        tracing::warn!("caller {} denied op {}", caller.id, op.name());
+        tracing::warn!("caller {} denied op {}", caller.sub, op.name());
         let out = out.clone();
         let name = op.name().to_string();
         tokio::spawn(async move {

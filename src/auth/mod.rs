@@ -1,14 +1,28 @@
-use crate::config::TrustEntry;
+//! Authentication: Ed25519-signed JWT bearer tokens. nub trusts a single
+//! issuer key (auto-generated and persisted, or pinned externally via
+//! `trusted_issuer` in config). Authorization derives from the token's
+//! `scope` claim.
+
+pub mod issuer;
+pub mod jwt;
+
+use std::sync::Arc;
+
 use axum::{
     extract::{Request, State},
     http::{header, HeaderMap, StatusCode},
     middleware::Next,
     response::Response,
 };
-use std::sync::Arc;
 
+pub use issuer::Issuer;
+pub use jwt::Claims;
+
+/// State injected into the auth middleware.
 pub struct AuthState {
-    pub trust: Vec<TrustEntry>,
+    pub issuer: Arc<Issuer>,
+    /// Audience this nub validates against — typically the host id.
+    pub audience: String,
 }
 
 pub async fn require_token(
@@ -20,16 +34,16 @@ pub async fn require_token(
     let Some(token) = presented else {
         return Err(StatusCode::UNAUTHORIZED);
     };
-    let entry = state
-        .trust
-        .iter()
-        .find(|e| ct_eq(e.token.as_bytes(), token.as_bytes()))
-        .cloned();
-    let Some(entry) = entry else {
-        return Err(StatusCode::UNAUTHORIZED);
-    };
-    req.extensions_mut().insert(entry);
-    Ok(next.run(req).await)
+    match jwt::verify(&token, &state.issuer, &state.audience) {
+        Ok(claims) => {
+            req.extensions_mut().insert(claims);
+            Ok(next.run(req).await)
+        }
+        Err(e) => {
+            tracing::debug!("jwt verify failed: {e}");
+            Err(StatusCode::UNAUTHORIZED)
+        }
+    }
 }
 
 fn bearer_from_header(h: &HeaderMap) -> Option<String> {
@@ -49,15 +63,4 @@ fn ws_bearer_subprotocol(h: &HeaderMap) -> Option<String> {
         .flat_map(|s| s.split(','))
         .map(str::trim)
         .find_map(|s| s.strip_prefix("bearer.").map(str::to_owned))
-}
-
-fn ct_eq(a: &[u8], b: &[u8]) -> bool {
-    if a.len() != b.len() {
-        return false;
-    }
-    let mut diff = 0u8;
-    for (x, y) in a.iter().zip(b.iter()) {
-        diff |= x ^ y;
-    }
-    diff == 0
 }

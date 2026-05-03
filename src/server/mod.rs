@@ -3,8 +3,7 @@ pub mod ui;
 mod wire;
 mod ws;
 
-use crate::auth::{require_token, AuthState};
-use crate::config::TrustEntry;
+use crate::auth::{require_token, AuthState, Claims};
 use crate::ops::{closed_input, HandlerOutput, OpHandler};
 use crate::proto::*;
 use axum::{
@@ -30,19 +29,19 @@ pub fn router(handler: Shared, auth: Arc<AuthState>) -> Router {
 
 async fn op(
     State(h): State<Shared>,
-    Extension(caller): Extension<TrustEntry>,
+    Extension(claims): Extension<Claims>,
     Json(op): Json<Op>,
 ) -> Result<Json<OpResult>, StatusCode> {
-    // whoami is auth-layer info; bypass permission gate so empty-allowed
-    // tokens can still introspect themselves.
+    // whoami is auth-layer info; bypass permission gate so any valid
+    // token can introspect itself.
     if matches!(op, Op::Whoami) {
         return Ok(Json(OpResult::Whoami(WhoamiInfo {
-            id: caller.id,
-            allowed: caller.allowed,
+            id: claims.sub.clone(),
+            allowed: claims.scopes(),
         })));
     }
-    if !caller.allows(op.name()) {
-        tracing::warn!("caller {} denied op {}", caller.id, op.name());
+    if !claims.allows(op.name()) {
+        tracing::warn!("caller {} denied op {}", claims.sub, op.name());
         return Err(StatusCode::FORBIDDEN);
     }
     match h.handle(op, closed_input()).await {

@@ -225,33 +225,43 @@ starter file at path #1.
 ```toml
 id   = "host1"                              # also: --id host1
 bind = "127.0.0.1:8080"                     # also: --bind 127.0.0.1:8080
-# tls_cert = "/etc/nub/cert.pem"            # also: --tls-cert (recognized; not wired yet)
-# tls_key  = "/etc/nub/key.pem"             # also: --tls-key  (recognized; not wired yet)
+# tls_cert = "/etc/nub/cert.pem"            # also: --tls-cert
+# tls_key  = "/etc/nub/key.pem"             # also: --tls-key
 # allowed_binds = ["/data/nub"]             # host paths usable as bind-mount sources
 # dockerfiles   = "/srv/nub/dockerfiles"    # default: $XDG_DATA_HOME/nub/dockerfiles
-
-[[trust]]
-id      = "phone1"
-token   = "use-a-long-random-string"
-allowed = ["host_info", "list_containers", "stream_logs", "stream_stats"]
-
-[[trust]]
-id      = "admin-laptop"
-token   = "..."
-allowed = ["*"]                             # everything
+# trusted_issuer = "<base64url ed25519 pubkey>"  # external token issuer; default: nub mints its own
 ```
 
-### Trust entries
+### Authentication
 
-Each `[[trust]]` pairs an `id` (operator-facing label, shown in deny logs),
-a `token` (bearer secret), and `allowed` (list of op names this caller may
-invoke; `"*"` for all). Authentication is constant-time bearer compare; an
-unrecognized bearer is 401, a recognized bearer asking for a disallowed op
-is 403.
+nub uses **Ed25519-signed JWTs** as bearer tokens (RFC 7519 + RFC 8037).
+Authorization derives from each token's `scope` claim per OAuth 2.0
+(RFC 6749 §3.3). There's no user database — only a single trusted issuer
+key against which every presented token is validated.
 
-A trust list isn't required to start — without one, only the random admin
-token works. Most useful for first-run; add real entries when you have a
-phone client to authorize.
+Two modes:
+
+- **Self-managed (default).** On first start, nub generates an Ed25519
+  keypair at `$XDG_DATA_HOME/nub/issuer.key` (mode 0600) and mints a
+  long-lived admin token at `$XDG_DATA_HOME/nub/admin.jwt`. Subsequent
+  starts re-print the same admin token, so phones paired once stay paired
+  across restarts. Adding a device:
+  ```
+  nub mint --sub phone-1 --scope '*' --expires 1y
+  ```
+  Paste/scan the output to the phone. Rotating to invalidate everything:
+  `nub keygen --rotate`.
+
+- **External issuer.** Set `trusted_issuer = "<base64url pubkey>"` in
+  config. nub becomes verify-only — no auto-admin, no `nub mint` (the
+  private key lives elsewhere: your laptop, latch, a CI signer). Any
+  token validly signed by the configured key is accepted; scope drives
+  authorization the same way.
+
+Tokens carry `sub` (caller identity), `aud` (which host the token is for),
+`exp` (expiry), and `scope` (space-separated op names; `*` is wildcard).
+Mismatched audience or expired tokens are 401. Valid token requesting
+an op not in scope is 403.
 
 ### File layout
 
@@ -261,6 +271,8 @@ phone client to authorize.
 |---------|------|----------|
 | Config file | `$XDG_CONFIG_HOME/nub/nub.toml` | `--config <path>` or any of the lookup paths above |
 | Dockerfiles directory | `$XDG_DATA_HOME/nub/dockerfiles` | `dockerfiles = "<path>"` in the config |
+| Issuer keypair | `$XDG_DATA_HOME/nub/issuer.key` | `trusted_issuer` in the config (verify-only) |
+| Admin token | `$XDG_DATA_HOME/nub/admin.jwt` | none — delete + restart to re-mint |
 
 To wipe all nub state on a host, run `nub uninstall` (prompts for
 confirmation; pass `--yes` to skip). The binary itself stays put — `rm

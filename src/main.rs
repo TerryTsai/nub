@@ -8,12 +8,13 @@ mod server;
 
 use anyhow::{Context, Result};
 use clap::Parser;
-use config::TrustEntry;
-use std::io::Read;
+use std::os::unix::fs::OpenOptionsExt as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio_rustls::rustls;
 use tracing_subscriber::EnvFilter;
+
+use auth::{jwt, AuthState, Issuer};
 
 #[derive(Parser)]
 #[command(name = "nub", about = "Minimal Docker/Podman control plane")]
@@ -58,20 +59,18 @@ async fn serve(args: Args) -> Result<()> {
     let id = cfg.id.clone().unwrap_or_else(cli::hostname);
     let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
     let tls = resolve_tls(&cfg)?;
-    let admin = admin_entry()?;
-    println!(
-        "admin token: {}   (regenerates each restart, allows everything)",
-        admin.token
-    );
+
+    let issuer = Arc::new(resolve_issuer(&cfg)?);
+    let admin = ensure_admin_token(&issuer, &id)?;
+
+    println!("issuer key:  ed25519:{}", issuer.public_key_b64());
+    println!("admin token: {admin}");
     if cfg!(feature = "embed-ui") {
         let scheme = if tls.is_some() { "https" } else { "http" };
-        println!(
-            "connect:     {scheme}://{}/add#t={}",
-            display_authority(&bind),
-            admin.token
-        );
+        println!("connect:     {scheme}://{}/add#t={admin}", display_authority(&bind),);
     }
-    let app = build_app(cfg, admin).await?;
+
+    let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     let scheme = if tls.is_some() { "https" } else { "http" };
     tracing::info!("nub {id} listening on {bind} ({scheme})");
@@ -83,6 +82,58 @@ async fn serve(args: Args) -> Result<()> {
         tracing::error!("axum serve failed: {e}");
     }
     Ok(())
+}
+
+/// Either load nub's auto-managed keypair from disk (auto-generating
+/// on first run) or build a verify-only issuer from the configured
+/// `trusted_issuer` public key.
+fn resolve_issuer(cfg: &config::Config) -> Result<Issuer> {
+    if let Some(b64) = &cfg.trusted_issuer {
+        return Issuer::from_public_key_b64(b64);
+    }
+    Issuer::load_or_generate(&config::default_issuer_key())
+}
+
+/// Persist a long-lived admin JWT so it survives restarts. The admin
+/// token is just a normal minted token — `sub=admin`, `scope=*`, with a
+/// long TTL — that nub mints to itself on first run.
+///
+/// In external-issuer mode we can't mint, so there's no admin token;
+/// the operator brings their own.
+fn ensure_admin_token(issuer: &Issuer, host_id: &str) -> Result<String> {
+    if !issuer.can_mint() {
+        return Ok(String::from("(no auto-admin: trusted_issuer is set; mint your own)"));
+    }
+    let path = config::default_admin_jwt();
+    if path.exists() {
+        return std::fs::read_to_string(&path)
+            .with_context(|| format!("reading {}", path.display()))
+            .map(|s| s.trim().to_string());
+    }
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
+    }
+    let now = jwt::current_unix_seconds();
+    // 10 years. Effectively "until you rotate the issuer key."
+    let ten_years = 10 * 365 * 86400;
+    let claims = jwt::Claims {
+        iss: "nub".into(),
+        sub: "admin".into(),
+        aud: host_id.to_string(),
+        exp: now + ten_years,
+        nbf: now,
+        iat: now,
+        scope: "*".into(),
+    };
+    let token = jwt::encode(&claims, issuer)?;
+    let mut f = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(&path)
+        .with_context(|| format!("creating {}", path.display()))?;
+    std::io::Write::write_all(&mut f, token.as_bytes())?;
+    Ok(token)
 }
 
 /// Loads the TLS config when both cert and key paths are set. Half-set
@@ -98,16 +149,14 @@ fn resolve_tls(cfg: &config::Config) -> Result<Option<Arc<rustls::ServerConfig>>
     }
 }
 
-async fn build_app(cfg: config::Config, admin: TrustEntry) -> Result<axum::Router> {
+async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Result<axum::Router> {
     let policy = ops::Policy {
         allowed_binds: cfg.allowed_binds,
         dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
     };
     let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 
-    let mut trust = vec![admin];
-    trust.extend(cfg.trust);
-    let auth = Arc::new(auth::AuthState { trust });
+    let auth = Arc::new(AuthState { issuer, audience: id });
     let mut app = server::router(handler, auth);
     if let Some(ui) = server::ui::ui_fallback() {
         app = app.merge(ui);
@@ -145,20 +194,6 @@ fn resolve_config(args: &Args) -> Result<config::Config> {
         cfg.tls_key = Some(v.clone());
     }
     Ok(cfg)
-}
-
-fn admin_entry() -> Result<TrustEntry> {
-    let mut buf = [0u8; 16];
-    std::fs::File::open("/dev/urandom")
-        .context("opening /dev/urandom")?
-        .read_exact(&mut buf)
-        .context("reading /dev/urandom")?;
-    let token = buf.iter().map(|b| format!("{b:02x}")).collect();
-    Ok(TrustEntry {
-        id: "admin".into(),
-        token,
-        allowed: vec!["*".into()],
-    })
 }
 
 fn init_tracing() -> Result<()> {

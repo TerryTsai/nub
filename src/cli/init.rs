@@ -18,15 +18,12 @@ bind = "0.0.0.0:8080"
 # allowed_binds = ["/data/nub"]             # host paths usable as bind-mount sources
 # dockerfiles   = "/srv/nub/dockerfiles"    # default: $XDG_DATA_HOME/nub/dockerfiles
 
-# [[trust]]
-# id      = "phone"
-# token   = "long-random-string-share-with-the-phone"
-# allowed = ["host_info", "list_containers", "stream_logs", "stream_stats"]
-
-# [[trust]]
-# id      = "admin-laptop"
-# token   = "..."
-# allowed = ["*"]
+# Set this to mint tokens elsewhere (your laptop, latch, a CI job).
+# When set, nub becomes verify-only and can't mint admin tokens itself.
+# When unset (the default), nub auto-generates and persists its own
+# keypair at $XDG_DATA_HOME/nub/issuer.key.
+#
+# trusted_issuer = "<base64url ed25519 public key>"
 "#;
 
 pub fn run(path: Option<String>, force: bool) -> Result<()> {
