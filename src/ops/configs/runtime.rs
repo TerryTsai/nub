@@ -10,14 +10,13 @@ use anyhow::{Context, Result};
 use crate::compose::{ServiceConfigRef, StackSpec};
 use crate::proto::VolumeMount;
 
-/// Root of the tmpfs we mount config files into. Same XDG-aware
-/// resolution as secrets — `<XDG_RUNTIME_DIR>/nub/configs` for user
-/// installs, `/run/nub/configs` for system installs.
+/// Root of the tmpfs we mount config files into. Same path shape as
+/// secrets — `/tmp/nub-<USER>/configs` — chosen so rootless containers
+/// (mapped sub-UIDs) can traverse to the materialized files. See
+/// `crate::ops::secrets::runtime::tmpfs_root` for the rationale.
 pub fn tmpfs_root() -> PathBuf {
-    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
-        return PathBuf::from(xdg).join("nub/configs");
-    }
-    PathBuf::from("/run/nub/configs")
+    let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
+    PathBuf::from(format!("/tmp/nub-{user}/configs"))
 }
 
 pub fn service_dir(stack: &str, service: &str) -> PathBuf {

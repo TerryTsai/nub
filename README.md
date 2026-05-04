@@ -24,9 +24,9 @@ clearly when it won't deploy the parts you wouldn't.
 happen. Open a shell in any container without SSHing the host first.
 
 **Stash secrets without thinking.** Add a value once on the host,
-reference it by name from any stack. Encrypted at rest. Phones can
-write secrets but can't read them back over the network — the value
-only ever leaves the host into the container that needs it.
+reference it by name from any stack. Encrypted at rest with age.
+Decrypted only while a stack uses it. Phones can write secrets but
+can't read them back over the network.
 
 **Hand out limited access.** Mint a token for your phone that does
 phone things. Mint another for CI that only deploys stacks. Each token
@@ -161,10 +161,10 @@ secrets:
 ```
 
 The container sees the value at `/run/secrets/db_password`. Plaintext
-is only decrypted to a tmpfs file during deploy and never leaves the
-host over the network. `file:` and `environment:` sources are rejected
-on parse — use `nub secret put` instead. Internals (rehydrate ordering,
-identity rotation): [docs/security.md](docs/security.md#secrets).
+is decrypted to a tmpfs file at deploy time and never leaves the host
+over the network. `file:` and `environment:` sources are rejected on
+parse — use `nub secret put` instead. Internals (threat model, rehydrate
+ordering, identity rotation): [docs/security.md](docs/security.md#secrets).
 
 ## TLS
 

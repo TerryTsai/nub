@@ -92,9 +92,10 @@ secrets:
 ```
 
 At deploy time nub decrypts each referenced secret to a tmpfs file
-under `/run/nub/secrets/<stack>/<svc>/<name>` (mode 0400) and
-bind-mounts it read-only into the container at `/run/secrets/<name>`.
-Override the in-container path with the long-form ref:
+under `/tmp/nub-<USER>/secrets/<stack>/<svc>/<name>` (mode 0444, parent
+dirs 0755) and bind-mounts it read-only into the container at
+`/run/secrets/<name>`. Override the in-container path with the
+long-form ref:
 
 ```yaml
     secrets:
@@ -107,11 +108,14 @@ rejected on parse — use `nub secret put` + `external: true`.
 
 ### Reboot rehydrate
 
-`/run/nub/secrets/` is tmpfs and is wiped on reboot. The daemon
-re-materializes every stack's referenced secrets on startup, before
-serving, so containers with `restart: always` come back cleanly.
-Per-stack failures are logged and skipped — one broken stack must not
-block boot. Lives in `ops::stacks::rehydrate::rehydrate_all`.
+`/tmp/nub-<USER>/secrets/` is tmpfs on systemd-default Linux distros
+(Fedora, Arch); on Debian/Ubuntu `/tmp` is on disk by default but the
+cleanup-on-stack-delete + rehydrate-on-boot behavior keeps stale
+plaintext bounded. The daemon re-materializes every stack's referenced
+secrets on startup, before serving, so containers with `restart: always`
+come back cleanly. Per-stack failures are logged and skipped — one
+broken stack must not block boot. Lives in
+`ops::stacks::rehydrate::rehydrate_all`.
 
 A small race remains: if the engine starts containers before nub's
 daemon comes up (because nub's systemd unit is `After=docker.service`),
@@ -121,23 +125,39 @@ shipped, deliberately deferred until someone reports the bite.
 
 ### Threat model
 
-At-rest encryption protects against:
+The threat model is split deliberately by lifecycle phase.
+
+**At rest** (the encrypted `.age` blob in `$XDG_DATA_HOME/nub/secrets/`):
+mode 0600, owned by the user running nub. Protects against:
 
 - Backup leaks
 - Accidental `git add` of `$XDG_DATA_HOME`
-- Filesystem reads by non-root users (perms enforce 0600/0400)
+- Filesystem reads by other host users
 
-It does **not** protect against an attacker with root on the host —
-same posture as Docker Swarm workers, Kubernetes nodes, and Vault
-Agent on a host. Root can read the identity file and decrypt any
-secret. nub does not try to defend against host-root and will not
-add a fake "secure enclave" story.
+**During deploy** (the materialized plaintext under `/tmp/nub-<USER>/secrets/`):
+mode 0444 inside a 0755 parent dir. **Readable by any local host user
+while the stack is up.** This matches what docker compose, Kubernetes
+pod-mounted secrets, and Vault Agent do — the materialized copy needs
+to be reachable by container UIDs after rootless engine userns mapping,
+which means it can't be locked to the owner. nub's threat model
+assumes a single trusted operator account per host; if you run nub on
+a multi-user box and care about isolation between local user accounts,
+this is a real exposure window.
+
+**Out of scope, all phases:** root on the host. Same posture as Docker
+Swarm workers, Kubernetes nodes, and Vault Agent on a host. Root can
+read the identity file and decrypt any secret. nub does not try to
+defend against host-root and will not add a fake "secure enclave"
+story.
 
 Realistic future hardening (deferred until asked):
 
-- TPM2 sealing of the identity
+- TPM2 sealing of the identity (at-rest)
 - Linux kernel keyring (in-memory only)
 - Passphrase on `nub run`
+- Use podman's native `--secret` mechanism when the engine is podman,
+  so plaintext lives in a tmpfs the kernel scopes to the container's
+  userns — eliminates the host-readable-during-deploy exposure
 
 ## TLS
 

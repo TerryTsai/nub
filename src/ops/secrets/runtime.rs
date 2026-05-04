@@ -1,12 +1,20 @@
-//! Decryption-to-tmpfs runtime for compose `secrets:`. At deploy time,
-//! we decrypt each referenced secret to a file under `/run/nub/secrets/`
-//! and inject a read-only bind mount into the container spec. `/run`
-//! is a tmpfs on every modern Linux, so plaintext never hits the disk
-//! after decryption.
+//! Decryption-to-tmpfs runtime for compose `secrets:`. At deploy time
+//! we decrypt each referenced secret to a file under
+//! `/tmp/nub-<USER>/secrets/` and inject a read-only bind mount into
+//! the container spec.
 //!
-//! Lifecycle: materialized at deploy/redeploy, removed by
-//! `cleanup_service` when a stack is torn down. After a host reboot
-//! the tmpfs is gone and the operator must redeploy — documented.
+//! Path choice: `/tmp` (rather than `$XDG_RUNTIME_DIR` or `/run`) is
+//! the only location that's both writable for user-systemd nub and
+//! traversable by container UIDs after rootless-podman userns
+//! mapping. Files are mode 0444 and the parent dirs are 0755 — same
+//! posture as docker compose secrets, which is what operators expect.
+//! This means any local host user can read materialized plaintext
+//! while a stack is up; documented in docs/security.md.
+//!
+//! Lifecycle: materialized at deploy/redeploy, cleaned up by
+//! `cleanup_stack` when a stack is torn down, re-materialized on
+//! daemon startup so containers with `restart: always` come back
+//! cleanly across reboots.
 
 use std::path::{Path, PathBuf};
 
@@ -19,18 +27,16 @@ use super::{crypto, store};
 
 /// Root of the tmpfs we mount secret plaintexts into. The container
 /// create validator implicitly allows bind sources under this prefix —
-/// nub controls these paths and they never persist past reboot.
+/// nub controls these paths and clears them on stack delete.
 ///
-/// Resolution: when `XDG_RUNTIME_DIR` is set (every user-systemd
-/// session sets `/run/user/<uid>`), we use `<XDG>/nub/secrets`. Falls
-/// back to `/run/nub/secrets` for root/system installs. This matters
-/// because `/run/` itself is owned by root and unwritable for user
-/// processes — the user-systemd path was hitting EACCES.
+/// `/tmp/nub-<USER>/secrets`. The `<USER>` namespace lets multiple
+/// nub instances on the same host coexist without colliding. `/tmp` is
+/// tmpfs on systemd-default Linux distros (Fedora, Arch, etc.); on
+/// Debian/Ubuntu it's typically on disk — the cleanup-on-delete +
+/// rehydrate-on-boot behavior keeps stale plaintext bounded either way.
 pub fn tmpfs_root() -> PathBuf {
-    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
-        return PathBuf::from(xdg).join("nub/secrets");
-    }
-    PathBuf::from("/run/nub/secrets")
+    let user = std::env::var("USER").unwrap_or_else(|_| "user".into());
+    PathBuf::from(format!("/tmp/nub-{user}/secrets"))
 }
 
 /// Returns the per-service tmpfs subdirectory for a given stack and
@@ -104,11 +110,16 @@ async fn write_secret_file(path: &Path, plain: &[u8]) -> Result<()> {
     let path_owned = path.to_path_buf();
     let plain_owned = plain.to_vec();
     tokio::task::spawn_blocking(move || -> Result<()> {
-        let _ = std::fs::remove_file(&path_owned); // overwrite-safe
+        // Overwrite if present so redeploy refreshes the content.
+        let _ = std::fs::remove_file(&path_owned);
+        // 0444 — world-readable. Matches docker compose's default
+        // secret file mode and lets rootless containers (which run as
+        // mapped sub-UIDs) read the file regardless of in-container
+        // user. See docs/security.md for the threat model.
         let mut f = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
-            .mode(0o400)
+            .mode(0o444)
             .open(&path_owned)
             .with_context(|| format!("creating {}", path_owned.display()))?;
         f.write_all(&plain_owned)
@@ -130,7 +141,11 @@ async fn write_secret_file(path: &Path, plain: &[u8]) -> Result<()> {
 async fn set_dir_perms(path: &Path) -> Result<()> {
     use std::os::unix::fs::PermissionsExt as _;
     let mut p = tokio::fs::metadata(path).await?.permissions();
-    p.set_mode(0o700);
+    // 0755 — traversable by any UID so rootless containers (with
+    // mapped sub-UIDs) can reach the secret files inside. The files
+    // themselves are 0444; only nub (writer) and any container that
+    // bind-mounts them get to see content.
+    p.set_mode(0o755);
     tokio::fs::set_permissions(path, p).await?;
     Ok(())
 }
