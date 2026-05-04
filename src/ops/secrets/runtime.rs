@@ -20,18 +20,29 @@ use super::{crypto, store};
 /// Root of the tmpfs we mount secret plaintexts into. The container
 /// create validator implicitly allows bind sources under this prefix —
 /// nub controls these paths and they never persist past reboot.
-pub const TMPFS_ROOT: &str = "/run/nub/secrets";
+///
+/// Resolution: when `XDG_RUNTIME_DIR` is set (every user-systemd
+/// session sets `/run/user/<uid>`), we use `<XDG>/nub/secrets`. Falls
+/// back to `/run/nub/secrets` for root/system installs. This matters
+/// because `/run/` itself is owned by root and unwritable for user
+/// processes — the user-systemd path was hitting EACCES.
+pub fn tmpfs_root() -> PathBuf {
+    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
+        return PathBuf::from(xdg).join("nub/secrets");
+    }
+    PathBuf::from("/run/nub/secrets")
+}
 
 /// Returns the per-service tmpfs subdirectory for a given stack and
 /// service. Caller is responsible for creating it.
 pub fn service_dir(stack: &str, service: &str) -> PathBuf {
-    PathBuf::from(TMPFS_ROOT).join(stack).join(service)
+    tmpfs_root().join(stack).join(service)
 }
 
-/// True if `path` lives under `TMPFS_ROOT`. Used by the bind validator
-/// to allow nub-managed mounts without growing `allowed_binds`.
+/// True if `path` lives under the tmpfs root. Used by the bind
+/// validator to allow nub-managed mounts without growing `allowed_binds`.
 pub fn is_managed_path(path: &Path) -> bool {
-    path.starts_with(TMPFS_ROOT)
+    path.starts_with(tmpfs_root())
 }
 
 /// Decrypt every secret referenced by `refs` and write the plaintext
@@ -79,7 +90,7 @@ pub async fn materialize_for_service(
 
 /// Best-effort cleanup of a stack's whole tmpfs subtree.
 pub async fn cleanup_stack(stack: &str) {
-    let dir = PathBuf::from(TMPFS_ROOT).join(stack);
+    let dir = tmpfs_root().join(stack);
     let _ = tokio::fs::remove_dir_all(&dir).await;
 }
 

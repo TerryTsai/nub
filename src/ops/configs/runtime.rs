@@ -10,19 +10,24 @@ use anyhow::{Context, Result};
 use crate::compose::{ServiceConfigRef, StackSpec};
 use crate::proto::VolumeMount;
 
-/// Root of the tmpfs we mount config plaintexts into. The container
-/// create validator implicitly allows bind sources under this prefix —
-/// nub controls these paths and they don't persist past reboot.
-pub const TMPFS_ROOT: &str = "/run/nub/configs";
-
-pub fn service_dir(stack: &str, service: &str) -> PathBuf {
-    PathBuf::from(TMPFS_ROOT).join(stack).join(service)
+/// Root of the tmpfs we mount config files into. Same XDG-aware
+/// resolution as secrets — `<XDG_RUNTIME_DIR>/nub/configs` for user
+/// installs, `/run/nub/configs` for system installs.
+pub fn tmpfs_root() -> PathBuf {
+    if let Some(xdg) = std::env::var_os("XDG_RUNTIME_DIR") {
+        return PathBuf::from(xdg).join("nub/configs");
+    }
+    PathBuf::from("/run/nub/configs")
 }
 
-/// True if `path` lives under `TMPFS_ROOT`. Used by the bind validator
-/// to allow nub-managed mounts without growing `allowed_binds`.
+pub fn service_dir(stack: &str, service: &str) -> PathBuf {
+    tmpfs_root().join(stack).join(service)
+}
+
+/// True if `path` lives under the tmpfs root. Used by the bind
+/// validator to allow nub-managed mounts without growing `allowed_binds`.
 pub fn is_managed_path(path: &Path) -> bool {
-    path.starts_with(TMPFS_ROOT)
+    path.starts_with(tmpfs_root())
 }
 
 /// Write each service-referenced config to the per-service tmpfs dir
@@ -63,7 +68,7 @@ pub async fn materialize_for_service(
 
 /// Best-effort cleanup of a stack's whole tmpfs subtree.
 pub async fn cleanup_stack(stack: &str) {
-    let dir = PathBuf::from(TMPFS_ROOT).join(stack);
+    let dir = tmpfs_root().join(stack);
     let _ = tokio::fs::remove_dir_all(&dir).await;
 }
 
