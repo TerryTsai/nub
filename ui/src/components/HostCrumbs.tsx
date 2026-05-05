@@ -4,13 +4,17 @@ import type { Crumb } from "@/components/Page";
 
 export type Section = "containers" | "stacks" | "images" | "volumes" | "networks" | "dockerfiles" | "secrets" | "info";
 
+// Ordering principle: workloads → artifacts → resources → security → meta.
+// Within workloads: containers (most-accessed) before stacks.
+// Within artifacts: images (the runnable thing) before dockerfiles (the recipe).
+// Within resources: volumes (data) before networks (connectivity).
 const SECTIONS: { key: Section; label: string; subpath: string }[] = [
   { key: "containers", label: "containers", subpath: "" },
   { key: "stacks", label: "stacks", subpath: "/stacks" },
   { key: "images", label: "images", subpath: "/images" },
+  { key: "dockerfiles", label: "dockerfiles", subpath: "/dockerfiles" },
   { key: "volumes", label: "volumes", subpath: "/volumes" },
   { key: "networks", label: "networks", subpath: "/networks" },
-  { key: "dockerfiles", label: "dockerfiles", subpath: "/dockerfiles" },
   { key: "secrets", label: "secrets", subpath: "/secrets" },
   { key: "info", label: "info", subpath: "/info" },
 ];

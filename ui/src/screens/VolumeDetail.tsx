@@ -80,10 +80,15 @@ export function VolumeDetail() {
       {volume && (
         <>
           <Section>
+            {/* identity */}
             <Row label="Name" value={volume.name} mono />
+            {/* spec */}
             <Row label="Driver" value={volume.driver} />
             {volume.scope && <Row label="Scope" value={volume.scope} />}
+            {/* on-disk facts */}
             <Row label="Mountpoint" value={volume.mountpoint} mono />
+            {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
+            {/* lifecycle + usage */}
             <Row label="Created" value={volume.created_at} mono />
             {detail && detail.ref_count >= 0 && (
               <Row
@@ -91,7 +96,6 @@ export function VolumeDetail() {
                 value={`${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`}
               />
             )}
-            {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
           </Section>
 
           {detail && Object.keys(detail.options).length > 0 && (

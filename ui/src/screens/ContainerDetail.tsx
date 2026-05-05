@@ -130,6 +130,7 @@ export function ContainerDetail() {
       {detail && (
         <>
           <Section>
+            {/* identity + spec config */}
             <Row label="Image" value={detail.image} mono />
             {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
             {detail.restart_policy && <Row label="Restart" value={detail.restart_policy} />}
@@ -137,12 +138,14 @@ export function ContainerDetail() {
             {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
             {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
             {detail.user && <Row label="User" value={detail.user} mono />}
+            {/* runtime status */}
+            {detail.health && <Row label="Health" value={detail.health} />}
+            {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
+            {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
+            {/* timestamps */}
             <Row label="Created" value={detail.created} mono />
             {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
             {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
-            {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
-            {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
-            {detail.health && <Row label="Health" value={detail.health} />}
           </Section>
 
           {detail.env.length > 0 && (

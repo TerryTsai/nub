@@ -79,11 +79,14 @@ export function ImageDetail() {
       {image && (
         <>
           <Section>
+            {/* identity */}
             <Row label="ID" value={image.id} mono />
             <Row label="Tag" value={image.repo_tag} mono />
-            <Row label="Size" value={formatBytes(image.size)} />
+            {/* artifact properties */}
             {detail?.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
             {detail && <Row label="Layers" value={String(detail.layers)} />}
+            <Row label="Size" value={formatBytes(image.size)} />
+            {/* process spec */}
             {detail && detail.entrypoint.length > 0 && (
               <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />
             )}
@@ -93,6 +96,7 @@ export function ImageDetail() {
             {detail && detail.exposed_ports.length > 0 && (
               <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
             )}
+            {/* lifecycle + usage */}
             <Row label="Created" value={formatTimestamp(image.created)} mono />
             <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
           </Section>
