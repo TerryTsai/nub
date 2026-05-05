@@ -1,6 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { copyText } from "@/lib/copy";
-import { useToast } from "./Toaster";
+import type { ReactNode } from "react";
+import { CopyLine } from "./CopyLine";
 
 /** Key/value row used inside a Section.
  *
@@ -12,10 +11,9 @@ import { useToast } from "./Toaster";
  * summaries ("12 MB"). When in doubt, ask: would you copy this string and
  * paste it elsewhere? Yes → `mono`. No → plain.
  *
- * Mono values are tap-to-copy. A short tap copies the whole value and
- * briefly flashes "copied" inline (so the feedback is at the tap point,
- * not far away in a toast). Long-press still triggers the browser's
- * native selection menu so the user can grab a substring. */
+ * Mono values are tap-to-copy and horizontally scrollable. See
+ * `<CopyLine />` for the implementation; long-press still triggers the
+ * browser's native selection menu so the user can grab a substring. */
 export function Row({
   label,
   value,
@@ -27,36 +25,14 @@ export function Row({
   mono?: boolean;
   right?: ReactNode;
 }) {
-  const toast = useToast();
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    if (!value) return;
-    const ok = await copyText(value);
-    if (ok) {
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1000);
-    } else {
-      toast.push("copy failed", "error");
-    }
-  }
-
   return (
     <div className="flex gap-3 items-baseline select-text">
       <span className="text-xs text-[var(--text-tertiary)] shrink-0 w-24">{label}</span>
       {right ? (
         <div className="flex-1 min-w-0">{right}</div>
       ) : mono ? (
-        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
-          <button
-            type="button"
-            onClick={copy}
-            className={`block text-left text-xs leading-5 whitespace-nowrap mono cursor-pointer transition-colors ${
-              copied ? "text-[var(--success)]" : "text-[var(--id-color)]"
-            }`}
-          >
-            {copied ? "copied" : value}
-          </button>
+        <div className="flex-1 min-w-0">
+          <CopyLine value={value ?? ""} />
         </div>
       ) : (
         <span className="flex-1 min-w-0 text-xs leading-5 break-words text-[var(--text-primary)]">

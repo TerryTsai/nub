@@ -9,6 +9,8 @@ use crate::proto::HostInfo;
 
 use super::EngineHandler;
 
+const NUB_VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), env!("NUB_VERSION_SUFFIX"));
+
 pub(super) async fn run(h: &EngineHandler) -> Result<HostInfo> {
     let info: InfoResp = h
         .engine
@@ -25,6 +27,7 @@ pub(super) async fn run(h: &EngineHandler) -> Result<HostInfo> {
         .await?
         .json()?;
     Ok(HostInfo {
+        nub: NUB_VERSION.to_string(),
         engine: engine_name(h.engine.kind(), &version),
         version: version.version,
         os: info.operating_system,

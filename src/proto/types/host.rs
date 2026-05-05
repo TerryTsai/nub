@@ -8,7 +8,11 @@ pub struct WhoamiInfo {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HostInfo {
+    /// nub's own version, including the git suffix from build.rs.
+    pub nub: String,
+    /// Container engine name (podman / docker / docker-desktop).
     pub engine: String,
+    /// Container engine version string.
     pub version: String,
     pub os: String,
     pub arch: String,

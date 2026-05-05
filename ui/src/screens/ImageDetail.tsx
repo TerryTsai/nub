@@ -7,6 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CopyLine } from "@/components/CopyLine";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -94,17 +95,13 @@ export function ImageDetail() {
             )}
             <Row label="Created" value={formatTimestamp(image.created)} mono />
             <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
-            {detail && detail.env.length > 0 && (
-              <Row
-                label={`Env (${detail.env.length})`}
-                right={
-                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
-                    {detail.env.join("\n")}
-                  </pre>
-                }
-              />
-            )}
           </Section>
+
+          {detail && detail.env.length > 0 && (
+            <Section label={`env (${detail.env.length})`}>
+              {detail.env.map((e, i) => <CopyLine key={i} value={e} />)}
+            </Section>
+          )}
 
           <Section label="danger">
             <Button

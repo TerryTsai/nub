@@ -2,7 +2,7 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useQuery } from "@/state/cache";
-import type { ContainerSummary } from "@/api/types";
+import type { ContainerSummary, HostInfo } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
@@ -44,6 +44,12 @@ export function HostHome() {
     return r.data;
   });
 
+  const infoKey = host ? `${host.url}:host_info` : null;
+  const { data: info } = useQuery<HostInfo>(infoKey, async () => {
+    const r = unwrap(await call(host!, { op: "host_info" }), "host_info");
+    return r.data;
+  });
+
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
   if (!saved) {
@@ -68,6 +74,15 @@ export function HostHome() {
 
   return (
     <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/c/new`} label="container" />}>
+      {info && (
+        <p className="text-[10px] tracking-wide text-[var(--text-tertiary)]">
+          nub <span className="mono text-[var(--text-secondary)]">{info.nub}</span>
+          {" · "}
+          <span className="mono text-[var(--text-secondary)]">{info.engine} {info.version}</span>
+          {" · "}
+          <span className="mono text-[var(--text-secondary)]">{info.os}/{info.arch}</span>
+        </p>
+      )}
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {containers === null && !error && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>

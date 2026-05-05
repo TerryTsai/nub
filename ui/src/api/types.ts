@@ -82,7 +82,13 @@ export type OpResult =
 export interface WhoamiInfo { id: string; allowed: string[] }
 
 export interface HostInfo {
-  engine: string; version: string; os: string; arch: string; kernel: string;
+  /** nub's own version (with git suffix). */
+  nub: string;
+  /** Container engine name (podman / docker / docker-desktop). */
+  engine: string;
+  /** Container engine version string. */
+  version: string;
+  os: string; arch: string; kernel: string;
   cpus: number; mem_total: number;
   containers_running: number; containers_total: number; images: number;
 }

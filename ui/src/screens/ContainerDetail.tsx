@@ -7,6 +7,7 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { CopyLine } from "@/components/CopyLine";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -142,17 +143,13 @@ export function ContainerDetail() {
             {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
             {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
             {detail.health && <Row label="Health" value={detail.health} />}
-            {detail.env.length > 0 && (
-              <Row
-                label={`Env (${detail.env.length})`}
-                right={
-                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
-                    {detail.env.join("\n")}
-                  </pre>
-                }
-              />
-            )}
           </Section>
+
+          {detail.env.length > 0 && (
+            <Section label={`env (${detail.env.length})`}>
+              {detail.env.map((e, i) => <CopyLine key={i} value={e} />)}
+            </Section>
+          )}
 
           <Section label="danger">
             <RemoveButton

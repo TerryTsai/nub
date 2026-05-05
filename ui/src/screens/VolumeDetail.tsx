@@ -7,6 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { CopyLine } from "@/components/CopyLine";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -91,27 +92,23 @@ export function VolumeDetail() {
               />
             )}
             {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
-            {detail && Object.keys(detail.options).length > 0 && (
-              <Row
-                label="Options"
-                right={
-                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
-                    {Object.entries(detail.options).map(([k, v]) => `${k}=${v}`).join("\n")}
-                  </pre>
-                }
-              />
-            )}
-            {detail && Object.keys(detail.labels).length > 0 && (
-              <Row
-                label="Labels"
-                right={
-                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
-                    {Object.entries(detail.labels).map(([k, v]) => `${k}=${v}`).join("\n")}
-                  </pre>
-                }
-              />
-            )}
           </Section>
+
+          {detail && Object.keys(detail.options).length > 0 && (
+            <Section label={`options (${Object.keys(detail.options).length})`}>
+              {Object.entries(detail.options).map(([k, v]) => (
+                <CopyLine key={k} value={`${k}=${v}`} />
+              ))}
+            </Section>
+          )}
+
+          {detail && Object.keys(detail.labels).length > 0 && (
+            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+              {Object.entries(detail.labels).map(([k, v]) => (
+                <CopyLine key={k} value={`${k}=${v}`} />
+              ))}
+            </Section>
+          )}
 
           <Section label="danger">
             <Button
