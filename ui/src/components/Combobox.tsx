@@ -72,7 +72,7 @@ export function Combobox({
         }}
         className={
           cell
-            ? `inline-flex items-center gap-1 text-left max-w-full text-xs leading-5 py-px border-b border-dashed border-transparent hover:border-[var(--border-strong)] transition-colors ${
+            ? `inline-flex items-center gap-1 text-left max-w-full text-base leading-snug py-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] transition-colors ${
                 mono ? "mono" : ""
               } ${displayLabel ? "text-[var(--id-color)]" : "text-[var(--text-tertiary)] italic"}`
             : `input flex items-center justify-between text-left ${mono ? "mono" : ""} ${

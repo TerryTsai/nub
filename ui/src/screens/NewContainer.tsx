@@ -13,10 +13,8 @@ import type {
   VolumeMount,
 } from "@/api/types";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
@@ -180,12 +178,24 @@ export function NewContainer() {
   const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new container" }];
   const networkOptions = (networks ?? []).map((n) => ({ value: n.name }));
   const imageOptions = Array.from(localTags).sort().map((t) => ({ value: t }));
-  const hasProcess =
-    form.entrypoint.length > 0 || form.cmd.length > 0 || !!form.workingDir || !!form.user;
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Container" title="new container" />
+      <header className="flex flex-col gap-1">
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+          CONTAINER
+        </span>
+        <input
+          className="bg-transparent border-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none text-base font-semibold w-full transition-colors placeholder:text-[var(--text-tertiary)] placeholder:font-normal placeholder:italic"
+          type="text"
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
+          placeholder="new container"
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+        />
+      </header>
 
       {cloning && sourceName && (
         <p className="text-xs text-[var(--text-secondary)]">
@@ -209,17 +219,6 @@ export function NewContainer() {
                 value={form.image}
                 onChange={(v) => setForm({ ...form, image: v })}
                 options={imageOptions}
-              />
-            }
-          />
-          <Row
-            label="Name"
-            right={
-              <EditCell
-                mono
-                placeholder="my-app (auto if blank)"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
             }
           />
@@ -251,94 +250,6 @@ export function NewContainer() {
               />
             }
           />
-        </Section>
-
-        <Section
-          label="ports"
-          right={
-            <AddBtn onClick={() => setForm({ ...form, ports: [...form.ports, { container: "", host: "" }] })}>
-              + port
-            </AddBtn>
-          }
-        >
-          {form.ports.length === 0 ? (
-            <Empty>no ports published</Empty>
-          ) : (
-            form.ports.map((p, i) => (
-              <PairRow
-                key={i}
-                left={p.container}
-                right={p.host}
-                placeholderLeft="80/tcp"
-                placeholderRight="8080"
-                onChange={(left, right) => {
-                  const next = form.ports.slice();
-                  next[i] = { container: left, host: right };
-                  setForm({ ...form, ports: next });
-                }}
-                onRemove={() => setForm({ ...form, ports: form.ports.filter((_, j) => j !== i) })}
-              />
-            ))
-          )}
-        </Section>
-
-        <Section
-          label="volumes"
-          right={
-            <AddBtn onClick={() => setForm({ ...form, volumes: [...form.volumes, { source: "", target: "" }] })}>
-              + volume
-            </AddBtn>
-          }
-        >
-          {form.volumes.length === 0 ? (
-            <Empty>no volumes mounted</Empty>
-          ) : (
-            form.volumes.map((m, i) => (
-              <VolumeEntry
-                key={i}
-                mount={m}
-                onChange={(patch) =>
-                  setForm({
-                    ...form,
-                    volumes: form.volumes.map((x, j) => (j === i ? { ...x, ...patch } : x)),
-                  })
-                }
-                onRemove={() =>
-                  setForm({ ...form, volumes: form.volumes.filter((_, j) => j !== i) })
-                }
-              />
-            ))
-          )}
-        </Section>
-
-        <Section
-          label="environment"
-          right={
-            <AddBtn onClick={() => setForm({ ...form, env: [...form.env, ""] })}>
-              + variable
-            </AddBtn>
-          }
-        >
-          {form.env.length === 0 ? (
-            <Empty>no environment set</Empty>
-          ) : (
-            form.env.map((v, i) => (
-              <SoloRow
-                key={i}
-                value={v}
-                placeholder="KEY=value"
-                onChange={(next) =>
-                  setForm({ ...form, env: form.env.map((x, j) => (j === i ? next : x)) })
-                }
-                onRemove={() =>
-                  setForm({ ...form, env: form.env.filter((_, j) => j !== i) })
-                }
-              />
-            ))
-          )}
-        </Section>
-
-        <Collapsible label="process" defaultOpen={hasProcess}>
           <Row
             label="Entrypoint"
             right={
@@ -385,7 +296,99 @@ export function NewContainer() {
               />
             }
           />
-        </Collapsible>
+        </Section>
+
+        <Section
+          label="ports"
+          right={
+            <AddBtn
+              label="add port"
+              onClick={() =>
+                setForm({ ...form, ports: [...form.ports, { container: "", host: "" }] })
+              }
+            />
+          }
+        >
+          {form.ports.length === 0 ? (
+            <Empty>no ports published</Empty>
+          ) : (
+            form.ports.map((p, i) => (
+              <PairRow
+                key={i}
+                left={p.container}
+                right={p.host}
+                placeholderLeft="80/tcp"
+                placeholderRight="8080"
+                onChange={(left, right) => {
+                  const next = form.ports.slice();
+                  next[i] = { container: left, host: right };
+                  setForm({ ...form, ports: next });
+                }}
+                onRemove={() => setForm({ ...form, ports: form.ports.filter((_, j) => j !== i) })}
+              />
+            ))
+          )}
+        </Section>
+
+        <Section
+          label="volumes"
+          right={
+            <AddBtn
+              label="add volume"
+              onClick={() =>
+                setForm({ ...form, volumes: [...form.volumes, { source: "", target: "" }] })
+              }
+            />
+          }
+        >
+          {form.volumes.length === 0 ? (
+            <Empty>no volumes mounted</Empty>
+          ) : (
+            form.volumes.map((m, i) => (
+              <VolumeEntry
+                key={i}
+                mount={m}
+                onChange={(patch) =>
+                  setForm({
+                    ...form,
+                    volumes: form.volumes.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                  })
+                }
+                onRemove={() =>
+                  setForm({ ...form, volumes: form.volumes.filter((_, j) => j !== i) })
+                }
+              />
+            ))
+          )}
+        </Section>
+
+        <Section
+          label="environment"
+          right={
+            <AddBtn
+              label="add variable"
+              onClick={() => setForm({ ...form, env: [...form.env, ""] })}
+            />
+          }
+        >
+          {form.env.length === 0 ? (
+            <Empty>no environment set</Empty>
+          ) : (
+            form.env.map((v, i) => (
+              <SoloRow
+                key={i}
+                value={v}
+                placeholder="KEY=value"
+                onChange={(next) =>
+                  setForm({ ...form, env: form.env.map((x, j) => (j === i ? next : x)) })
+                }
+                onRemove={() =>
+                  setForm({ ...form, env: form.env.filter((_, j) => j !== i) })
+                }
+              />
+            ))
+          )}
+        </Section>
 
         {pull && (
           <Section label="pull progress">
@@ -451,14 +454,15 @@ function splitTokens(s: string): string[] {
   return s.split(/\s+/).filter(Boolean);
 }
 
-function AddBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
+      aria-label={label}
+      className="text-sm leading-none text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors px-2"
     >
-      {children}
+      +
     </button>
   );
 }

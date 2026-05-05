@@ -4,7 +4,10 @@ import { forwardRef, type InputHTMLAttributes } from "react";
  * static spec value would render). Looks like text by default; focus reveals
  * a solid accent underline. Use `mono` for IDs/paths/identifiers — same
  * amber treatment Row applies to mono read-only values, so view and edit
- * share one visual language. */
+ * share one visual language.
+ *
+ * Font size is 16px so iOS Safari doesn't auto-zoom on focus — the same rule
+ * the `.input` class enforces for boxed inputs. */
 type Props = InputHTMLAttributes<HTMLInputElement> & { mono?: boolean };
 
 export const EditCell = forwardRef<HTMLInputElement, Props>(function EditCell(
@@ -20,7 +23,7 @@ export const EditCell = forwardRef<HTMLInputElement, Props>(function EditCell(
       autoCapitalize="off"
       autoCorrect="off"
       spellCheck={false}
-      className={`bg-transparent border-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none w-full text-xs leading-5 py-px transition-colors ${tone} placeholder:text-[var(--text-tertiary)] placeholder:italic ${className}`}
+      className={`bg-transparent border-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none w-full text-base leading-snug py-0 transition-colors ${tone} placeholder:text-[var(--text-tertiary)] placeholder:italic ${className}`}
       {...rest}
     />
   );
