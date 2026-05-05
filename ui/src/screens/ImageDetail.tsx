@@ -92,7 +92,7 @@ export function ImageDetail() {
             {detail && detail.exposed_ports.length > 0 && (
               <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
             )}
-            <Row label="Created" value={formatTimestamp(image.created)} />
+            <Row label="Created" value={formatTimestamp(image.created)} mono />
             <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
             {detail && detail.env.length > 0 && (
               <Row

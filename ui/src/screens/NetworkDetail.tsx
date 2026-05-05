@@ -79,7 +79,7 @@ export function NetworkDetail() {
         <>
           <Section>
             <Row label="ID" value={network.id} mono />
-            <Row label="Name" value={network.name} />
+            <Row label="Name" value={network.name} mono />
             <Row label="Driver" value={network.driver} />
             {network.scope && <Row label="Scope" value={network.scope} />}
             <Row label="Internal" value={network.internal ? "yes" : "no"} />

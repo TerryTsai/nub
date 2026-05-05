@@ -231,6 +231,7 @@ export function NewImage() {
             right={
               <Combobox
                 cell
+                dim={source === "pull"}
                 value={source}
                 onChange={(v) => setSource(v as Source)}
                 options={SOURCE_OPTIONS}

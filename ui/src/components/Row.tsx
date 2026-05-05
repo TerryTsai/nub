@@ -1,8 +1,14 @@
 import type { ReactNode } from "react";
 
-/** Key/value row used inside a Section. Mono values get amber treatment to
- * match foundry's "ID-as-link" convention — use `mono` for identifiers /
- * paths / timestamps; omit it for prose. */
+/** Key/value row used inside a Section.
+ *
+ * Color rule: pass `mono` for engine-returned data the user might
+ * select-copy — refs, IDs, names, paths, timestamps, code tokens, env
+ * values, network/volume identifiers. The amber treatment matches
+ * foundry's "ID-as-link" convention. Omit `mono` for human classifications:
+ * counts ("3 containers"), enums ("unless-stopped"), yes/no, formatted
+ * summaries ("12 MB"). When in doubt, ask: would you copy this string and
+ * paste it elsewhere? Yes → `mono`. No → plain. */
 export function Row({
   label,
   value,

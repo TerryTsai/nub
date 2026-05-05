@@ -28,6 +28,7 @@ export function Combobox({
   freeTextHint,
   mono,
   cell,
+  dim,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -40,6 +41,11 @@ export function Combobox({
   /** Render the trigger as an inline spec cell (mono amber + chev, no input
    * border) instead of a full-width `.input` button. */
   cell?: boolean;
+  /** Cell-only: render the value in placeholder tone (tertiary italic)
+   * instead of amber. Use when the current value is a default the user
+   * hasn't actively chosen, so the cell reads as "system default" rather
+   * than "configured". */
+  dim?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
@@ -74,7 +80,11 @@ export function Combobox({
           cell
             ? `inline-flex items-center gap-1 text-left max-w-full text-base leading-snug py-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] transition-colors ${
                 mono ? "mono" : ""
-              } ${displayLabel ? "text-[var(--id-color)]" : "text-[var(--text-tertiary)] italic"}`
+              } ${
+                !displayLabel || dim
+                  ? "text-[var(--text-tertiary)] italic"
+                  : "text-[var(--id-color)]"
+              }`
             : `input flex items-center justify-between text-left ${mono ? "mono" : ""} ${
                 displayLabel ? "" : "text-[var(--text-tertiary)]"
               }`

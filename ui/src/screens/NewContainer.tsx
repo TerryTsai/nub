@@ -227,6 +227,7 @@ export function NewContainer() {
             right={
               <Combobox
                 cell
+                dim={!cloning && form.restart.kind === EMPTY_FORM.restart.kind}
                 value={form.restart.kind}
                 onChange={(v) =>
                   setForm({ ...form, restart: { kind: v as RestartPolicySpec["kind"] } })
