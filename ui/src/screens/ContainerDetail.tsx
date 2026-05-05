@@ -7,6 +7,7 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary, PortMapping } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { KvLine } from "@/components/KvLine";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
@@ -152,7 +153,7 @@ export function ContainerDetail() {
           </Section>
 
           {detail.ports.length > 0 && (
-            <Section label={`ports (${detail.ports.length})`}>
+            <Collapsible label="ports" count={detail.ports.length}>
               {detail.ports.map((p, i) => (
                 <KvLine
                   key={i}
@@ -161,11 +162,11 @@ export function ContainerDetail() {
                   copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
                 />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           {detail.mounts.length > 0 && (
-            <Section label={`volumes (${detail.mounts.length})`}>
+            <Collapsible label="volumes" count={detail.mounts.length}>
               {detail.mounts.map((m, i) => (
                 <KvLine
                   key={i}
@@ -174,34 +175,34 @@ export function ContainerDetail() {
                   copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
                 />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           {Object.keys(detail.networks).length > 0 && (
-            <Section label={`networks (${Object.keys(detail.networks).length})`}>
+            <Collapsible label="networks" count={Object.keys(detail.networks).length}>
               {Object.entries(detail.networks).map(([name, ep]) => (
                 <KvLine key={name} k={name} v={ep.ip_address || "—"} />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           {detail.env.length > 0 && (
-            <Section label={`env (${detail.env.length})`}>
+            <Collapsible label="env" count={detail.env.length}>
               {detail.env.map((e, i) => {
                 const eq = e.indexOf("=");
                 const k = eq >= 0 ? e.slice(0, eq) : e;
                 const v = eq >= 0 ? e.slice(eq + 1) : "";
                 return <KvLine key={i} k={k} v={v} copyAs={e} />;
               })}
-            </Section>
+            </Collapsible>
           )}
 
           {Object.keys(detail.labels).length > 0 && (
-            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
               {Object.entries(detail.labels).map(([k, v]) => (
                 <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           <Section label="danger">

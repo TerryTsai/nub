@@ -6,6 +6,7 @@ import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyLine } from "@/components/CopyLine";
 import { KvLine } from "@/components/KvLine";
@@ -103,28 +104,28 @@ export function ImageDetail() {
           </Section>
 
           {detail && detail.repo_digests.length > 0 && (
-            <Section label={`digests (${detail.repo_digests.length})`}>
+            <Collapsible label="digests" count={detail.repo_digests.length}>
               {detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)}
-            </Section>
+            </Collapsible>
           )}
 
           {detail && detail.env.length > 0 && (
-            <Section label={`env (${detail.env.length})`}>
+            <Collapsible label="env" count={detail.env.length}>
               {detail.env.map((e, i) => {
                 const eq = e.indexOf("=");
                 const k = eq >= 0 ? e.slice(0, eq) : e;
                 const v = eq >= 0 ? e.slice(eq + 1) : "";
                 return <KvLine key={i} k={k} v={v} copyAs={e} />;
               })}
-            </Section>
+            </Collapsible>
           )}
 
           {detail && Object.keys(detail.labels).length > 0 && (
-            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
               {Object.entries(detail.labels).map(([k, v]) => (
                 <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           <Section label="danger">

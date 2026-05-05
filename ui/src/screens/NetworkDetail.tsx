@@ -6,6 +6,7 @@ import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { KvLine } from "@/components/KvLine";
 import { Heading } from "@/components/Heading";
@@ -100,27 +101,27 @@ export function NetworkDetail() {
           </Section>
 
           {detail && detail.containers.length > 0 && (
-            <Section label={`attached (${detail.containers.length})`}>
+            <Collapsible label="attached" count={detail.containers.length}>
               {detail.containers.map((c) => (
                 <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           {detail && Object.keys(detail.options).length > 0 && (
-            <Section label={`options (${Object.keys(detail.options).length})`}>
+            <Collapsible label="options" count={Object.keys(detail.options).length}>
               {Object.entries(detail.options).map(([k, v]) => (
                 <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           {detail && Object.keys(detail.labels).length > 0 && (
-            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
               {Object.entries(detail.labels).map(([k, v]) => (
                 <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
-            </Section>
+            </Collapsible>
           )}
 
           <Section label="danger">
