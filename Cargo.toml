@@ -1,6 +1,6 @@
 [package]
 name = "nub"
-version = "0.0.46"
+version = "0.0.47"
 edition = "2021"
 description = "A control plane for one container host."
 license = "MIT OR Apache-2.0"

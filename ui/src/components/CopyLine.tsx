@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { copyText } from "@/lib/copy";
 
-/** A copyable, horizontally-scrollable single line of mono amber text.
+/** A copyable, horizontally-scrollable single line of mono text.
  * Used as the value side of a Row, or stand-alone for variable-length
  * lists (env vars, labels) where each line should be tappable on its
  * own. Tap copies the whole value with a brief inline "copied" flash;
@@ -9,8 +9,20 @@ import { copyText } from "@/lib/copy";
  *
  * Pass `copyValue` when the displayed text is a slice of what should
  * actually go to the clipboard — e.g. an env var renders only the
- * VALUE half but should copy `KEY=VALUE`. */
-export function CopyLine({ value, copyValue }: { value: string; copyValue?: string }) {
+ * VALUE half but should copy `KEY=VALUE`.
+ *
+ * Pass `dim` to render in tertiary instead of amber — used for the
+ * key half of a KvLine, where the key sits in the label position and
+ * follows the same tertiary-mono treatment Row uses for static keys. */
+export function CopyLine({
+  value,
+  copyValue,
+  dim,
+}: {
+  value: string;
+  copyValue?: string;
+  dim?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
   const target = copyValue ?? value;
 
@@ -23,14 +35,18 @@ export function CopyLine({ value, copyValue }: { value: string; copyValue?: stri
     }
   }
 
+  const tone = copied
+    ? "text-[var(--success)]"
+    : dim
+    ? "text-[var(--text-tertiary)]"
+    : "text-[var(--id-color)]";
+
   return (
     <div className="min-w-0 overflow-x-auto no-scrollbar">
       <button
         type="button"
         onClick={copy}
-        className={`block text-left text-xs leading-5 whitespace-nowrap mono cursor-pointer transition-colors ${
-          copied ? "text-[var(--success)]" : "text-[var(--id-color)]"
-        }`}
+        className={`block text-left text-xs leading-5 whitespace-nowrap mono cursor-pointer transition-colors ${tone}`}
       >
         {copied ? "copied" : value}
       </button>
