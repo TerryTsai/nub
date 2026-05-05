@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import { copyText } from "@/lib/copy";
 import { useToast } from "./Toaster";
 
 /** Key/value row used inside a Section.
@@ -11,9 +12,10 @@ import { useToast } from "./Toaster";
  * summaries ("12 MB"). When in doubt, ask: would you copy this string and
  * paste it elsewhere? Yes → `mono`. No → plain.
  *
- * Mono values are tap-to-copy. A short tap copies the whole value to the
- * clipboard with a toast; long-press still triggers the browser's native
- * selection menu so the user can grab a substring. */
+ * Mono values are tap-to-copy. A short tap copies the whole value and
+ * briefly flashes "copied" inline (so the feedback is at the tap point,
+ * not far away in a toast). Long-press still triggers the browser's
+ * native selection menu so the user can grab a substring. */
 export function Row({
   label,
   value,
@@ -26,13 +28,17 @@ export function Row({
   right?: ReactNode;
 }) {
   const toast = useToast();
+  const [copied, setCopied] = useState(false);
 
-  function copy() {
+  async function copy() {
     if (!value) return;
-    navigator.clipboard.writeText(value).then(
-      () => toast.push("copied", "success"),
-      () => toast.push("copy failed", "error"),
-    );
+    const ok = await copyText(value);
+    if (ok) {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1000);
+    } else {
+      toast.push("copy failed", "error");
+    }
   }
 
   return (
@@ -44,9 +50,11 @@ export function Row({
         <button
           type="button"
           onClick={copy}
-          className="flex-1 min-w-0 text-left text-xs leading-5 break-words mono text-[var(--id-color)] cursor-pointer hover:underline underline-offset-2 decoration-[var(--border-subtle)]"
+          className={`flex-1 min-w-0 text-left text-xs leading-5 whitespace-nowrap overflow-x-auto no-scrollbar mono cursor-pointer transition-colors ${
+            copied ? "text-[var(--success)]" : "text-[var(--id-color)]"
+          }`}
         >
-          {value}
+          {copied ? "copied" : value}
         </button>
       ) : (
         <span className="flex-1 min-w-0 text-xs leading-5 break-words text-[var(--text-primary)]">
