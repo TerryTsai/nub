@@ -7,7 +7,7 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
-import { CopyLine } from "@/components/CopyLine";
+import { KvLine } from "@/components/KvLine";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -147,7 +147,12 @@ export function ContainerDetail() {
 
           {detail.env.length > 0 && (
             <Section label={`env (${detail.env.length})`}>
-              {detail.env.map((e, i) => <CopyLine key={i} value={e} />)}
+              {detail.env.map((e, i) => {
+                const eq = e.indexOf("=");
+                const k = eq >= 0 ? e.slice(0, eq) : e;
+                const v = eq >= 0 ? e.slice(eq + 1) : "";
+                return <KvLine key={i} k={k} v={v} copyAs={e} />;
+              })}
             </Section>
           )}
 

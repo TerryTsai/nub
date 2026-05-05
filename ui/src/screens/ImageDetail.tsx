@@ -7,7 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { CopyLine } from "@/components/CopyLine";
+import { KvLine } from "@/components/KvLine";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -99,7 +99,12 @@ export function ImageDetail() {
 
           {detail && detail.env.length > 0 && (
             <Section label={`env (${detail.env.length})`}>
-              {detail.env.map((e, i) => <CopyLine key={i} value={e} />)}
+              {detail.env.map((e, i) => {
+                const eq = e.indexOf("=");
+                const k = eq >= 0 ? e.slice(0, eq) : e;
+                const v = eq >= 0 ? e.slice(eq + 1) : "";
+                return <KvLine key={i} k={k} v={v} copyAs={e} />;
+              })}
             </Section>
           )}
 

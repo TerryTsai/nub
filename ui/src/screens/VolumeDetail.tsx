@@ -7,7 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { CopyLine } from "@/components/CopyLine";
+import { KvLine } from "@/components/KvLine";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -97,7 +97,7 @@ export function VolumeDetail() {
           {detail && Object.keys(detail.options).length > 0 && (
             <Section label={`options (${Object.keys(detail.options).length})`}>
               {Object.entries(detail.options).map(([k, v]) => (
-                <CopyLine key={k} value={`${k}=${v}`} />
+                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
             </Section>
           )}
@@ -105,7 +105,7 @@ export function VolumeDetail() {
           {detail && Object.keys(detail.labels).length > 0 && (
             <Section label={`labels (${Object.keys(detail.labels).length})`}>
               {Object.entries(detail.labels).map(([k, v]) => (
-                <CopyLine key={k} value={`${k}=${v}`} />
+                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
             </Section>
           )}

@@ -5,13 +5,18 @@ import { copyText } from "@/lib/copy";
  * Used as the value side of a Row, or stand-alone for variable-length
  * lists (env vars, labels) where each line should be tappable on its
  * own. Tap copies the whole value with a brief inline "copied" flash;
- * long-press still triggers the browser's native selection menu. */
-export function CopyLine({ value }: { value: string }) {
+ * long-press still triggers the browser's native selection menu.
+ *
+ * Pass `copyValue` when the displayed text is a slice of what should
+ * actually go to the clipboard — e.g. an env var renders only the
+ * VALUE half but should copy `KEY=VALUE`. */
+export function CopyLine({ value, copyValue }: { value: string; copyValue?: string }) {
   const [copied, setCopied] = useState(false);
+  const target = copyValue ?? value;
 
   async function copy() {
-    if (!value) return;
-    const ok = await copyText(value);
+    if (!target) return;
+    const ok = await copyText(target);
     if (ok) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1000);
