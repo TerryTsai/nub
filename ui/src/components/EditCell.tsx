@@ -23,7 +23,11 @@ export const EditCell = forwardRef<HTMLInputElement, Props>(function EditCell(
       autoCapitalize="off"
       autoCorrect="off"
       spellCheck={false}
-      className={`bg-transparent border-0 border-b border-dashed border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none w-full text-[16px] leading-snug py-0 transition-colors ${tone} placeholder:text-[var(--text-tertiary)] placeholder:italic ${className}`}
+      // Inline style is the only way I've found that iOS Safari respects
+      // for the 16px-no-zoom rule. Tailwind's `text-[16px]` was apparently
+      // getting overridden in some context I couldn't pin down.
+      style={{ fontSize: 16 }}
+      className={`bg-transparent border-0 border-b border-dashed border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none w-full leading-snug py-0 transition-colors ${tone} placeholder:text-[var(--text-tertiary)] placeholder:italic ${className}`}
       {...rest}
     />
   );

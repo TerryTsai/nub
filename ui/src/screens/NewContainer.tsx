@@ -286,25 +286,21 @@ export function NewContainer() {
         </Section>
 
         <Collapsible label="ports" count={form.ports.length} defaultOpen>
-          {form.ports.length === 0 ? (
-            <Empty>no ports published</Empty>
-          ) : (
-            form.ports.map((p, i) => (
-              <PairRow
-                key={i}
-                left={p.container}
-                right={p.host}
-                placeholderLeft="80/tcp"
-                placeholderRight="8080"
-                onChange={(left, right) => {
-                  const next = form.ports.slice();
-                  next[i] = { container: left, host: right };
-                  setForm({ ...form, ports: next });
-                }}
-                onRemove={() => setForm({ ...form, ports: form.ports.filter((_, j) => j !== i) })}
-              />
-            ))
-          )}
+          {form.ports.map((p, i) => (
+            <PairRow
+              key={i}
+              left={p.container}
+              right={p.host}
+              placeholderLeft="80/tcp"
+              placeholderRight="8080"
+              onChange={(left, right) => {
+                const next = form.ports.slice();
+                next[i] = { container: left, host: right };
+                setForm({ ...form, ports: next });
+              }}
+              onRemove={() => setForm({ ...form, ports: form.ports.filter((_, j) => j !== i) })}
+            />
+          ))}
           <AddBtn
             label="add port"
             onClick={() =>
@@ -314,25 +310,21 @@ export function NewContainer() {
         </Collapsible>
 
         <Collapsible label="volumes" count={form.volumes.length} defaultOpen>
-          {form.volumes.length === 0 ? (
-            <Empty>no volumes mounted</Empty>
-          ) : (
-            form.volumes.map((m, i) => (
-              <VolumeEntry
-                key={i}
-                mount={m}
-                onChange={(patch) =>
-                  setForm({
-                    ...form,
-                    volumes: form.volumes.map((x, j) => (j === i ? { ...x, ...patch } : x)),
-                  })
-                }
-                onRemove={() =>
-                  setForm({ ...form, volumes: form.volumes.filter((_, j) => j !== i) })
-                }
-              />
-            ))
-          )}
+          {form.volumes.map((m, i) => (
+            <VolumeEntry
+              key={i}
+              mount={m}
+              onChange={(patch) =>
+                setForm({
+                  ...form,
+                  volumes: form.volumes.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                })
+              }
+              onRemove={() =>
+                setForm({ ...form, volumes: form.volumes.filter((_, j) => j !== i) })
+              }
+            />
+          ))}
           <AddBtn
             label="add volume"
             onClick={() =>
@@ -342,23 +334,16 @@ export function NewContainer() {
         </Collapsible>
 
         <Collapsible label="env" count={form.env.length} defaultOpen>
-          {form.env.length === 0 ? (
-            <Empty>no environment set</Empty>
-          ) : (
-            form.env.map((v, i) => (
-              <SoloRow
-                key={i}
-                value={v}
-                placeholder="KEY=value"
-                onChange={(next) =>
-                  setForm({ ...form, env: form.env.map((x, j) => (j === i ? next : x)) })
-                }
-                onRemove={() =>
-                  setForm({ ...form, env: form.env.filter((_, j) => j !== i) })
-                }
-              />
-            ))
-          )}
+          {form.env.map((entry, i) => (
+            <EnvRow
+              key={i}
+              entry={entry}
+              onChange={(next) =>
+                setForm({ ...form, env: form.env.map((x, j) => (j === i ? next : x)) })
+              }
+              onRemove={() => setForm({ ...form, env: form.env.filter((_, j) => j !== i) })}
+            />
+          ))}
           <AddBtn
             label="add variable"
             onClick={() => setForm({ ...form, env: [...form.env, ""] })}
@@ -446,12 +431,6 @@ function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
   );
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-[12px] italic text-[var(--text-tertiary)]">{children}</span>
-  );
-}
-
 function PairRow({
   left,
   right,
@@ -489,25 +468,38 @@ function PairRow({
   );
 }
 
-function SoloRow({
-  value,
-  placeholder,
+// Env row matches the KvLine layout from detail pages: 96px key column +
+// flex-1 value column. The key column is mono and editable; the value
+// column is mono and editable. Form state stores each entry as
+// `KEY=VALUE`; we split on `=` for display and rejoin on edit.
+function EnvRow({
+  entry,
   onChange,
   onRemove,
 }: {
-  value: string;
-  placeholder: string;
-  onChange: (v: string) => void;
+  entry: string;
+  onChange: (next: string) => void;
   onRemove: () => void;
 }) {
+  const eq = entry.indexOf("=");
+  const k = eq >= 0 ? entry.slice(0, eq) : entry;
+  const v = eq >= 0 ? entry.slice(eq + 1) : "";
   return (
-    <div className="flex items-baseline gap-2">
+    <div className="flex items-baseline gap-3">
+      <div className="w-24 shrink-0">
+        <EditCell
+          mono
+          value={k}
+          placeholder="KEY"
+          onChange={(e) => onChange(`${e.target.value}=${v}`)}
+        />
+      </div>
       <EditCell
         mono
         className="flex-1"
-        value={value}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
+        value={v}
+        placeholder="value"
+        onChange={(e) => onChange(`${k}=${e.target.value}`)}
       />
       <RemoveBtn onClick={onRemove} />
     </div>
