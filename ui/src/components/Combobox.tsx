@@ -27,6 +27,7 @@ export function Combobox({
   placeholder,
   freeTextHint,
   mono,
+  cell,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -36,6 +37,9 @@ export function Combobox({
   freeTextHint?: string;
   /** Use mono font for value/options — reads better for image refs etc. */
   mono?: boolean;
+  /** Render the trigger as an inline spec cell (mono amber + chev, no input
+   * border) instead of a full-width `.input` button. */
+  cell?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
@@ -66,12 +70,26 @@ export function Combobox({
           setOpen(true);
           setFilter("");
         }}
-        className={`input flex items-center justify-between text-left ${mono ? "mono" : ""}`}
+        className={
+          cell
+            ? `inline-flex items-center gap-1 text-left max-w-full text-xs leading-5 py-px border-b border-dashed border-transparent hover:border-[var(--border-strong)] transition-colors ${
+                mono ? "mono" : ""
+              } ${displayLabel ? "text-[var(--id-color)]" : "text-[var(--text-tertiary)] italic"}`
+            : `input flex items-center justify-between text-left ${mono ? "mono" : ""} ${
+                displayLabel ? "" : "text-[var(--text-tertiary)]"
+              }`
+        }
       >
-        <span className={`truncate ${displayLabel ? "" : "text-[var(--text-tertiary)]"}`}>
-          {displayLabel || placeholder || "Select…"}
+        <span className="truncate">{displayLabel || placeholder || "Select…"}</span>
+        <span
+          className={
+            cell
+              ? "text-[var(--text-tertiary)] text-[10px] shrink-0"
+              : "text-[var(--text-tertiary)] text-sm pl-2 shrink-0"
+          }
+        >
+          ▾
         </span>
-        <span className="text-[var(--text-tertiary)] text-sm pl-2 shrink-0">▾</span>
       </button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>

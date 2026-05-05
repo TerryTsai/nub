@@ -15,11 +15,12 @@ import type {
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
-import { Field } from "@/components/Field";
+import { EditCell } from "@/components/EditCell";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
+import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 
 interface FormState {
@@ -51,6 +52,13 @@ const EMPTY_FORM: FormState = {
   restart: { kind: "unless_stopped" },
   start: true,
 };
+
+const RESTART_OPTIONS: { value: RestartPolicySpec["kind"]; label: string }[] = [
+  { value: "no", label: "no" },
+  { value: "on_failure", label: "on failure" },
+  { value: "always", label: "always" },
+  { value: "unless_stopped", label: "unless stopped" },
+];
 
 export function NewContainer() {
   const { hid, cid } = useParams<{ hid: string; cid?: string }>();
@@ -171,6 +179,9 @@ export function NewContainer() {
 
   const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new container" }];
   const networkOptions = (networks ?? []).map((n) => ({ value: n.name }));
+  const imageOptions = Array.from(localTags).sort().map((t) => ({ value: t }));
+  const hasProcess =
+    form.entrypoint.length > 0 || form.cmd.length > 0 || !!form.workingDir || !!form.user;
 
   return (
     <Page crumbs={crumbs}>
@@ -185,133 +196,196 @@ export function NewContainer() {
       {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="container">
-          <Field label="Image">
-            <Combobox
-              value={form.image}
-              onChange={(v) => setForm({ ...form, image: v })}
-              placeholder="nginx:alpine"
-              freeText
-              freeTextHint="type or pick"
-              mono
-              options={Array.from(localTags).sort().map((t) => ({ value: t }))}
-            />
-          </Field>
-          <Field label="Name">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="my-app (auto if blank)"
-              value={form.name}
-              onChange={(e) => setForm({ ...form, name: e.target.value })}
-            />
-          </Field>
+        <Section>
+          <Row
+            label="Image"
+            right={
+              <Combobox
+                cell
+                mono
+                freeText
+                freeTextHint="type or pick"
+                placeholder="nginx:alpine"
+                value={form.image}
+                onChange={(v) => setForm({ ...form, image: v })}
+                options={imageOptions}
+              />
+            }
+          />
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                placeholder="my-app (auto if blank)"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            }
+          />
+          <Row
+            label="Network"
+            right={
+              <Combobox
+                cell
+                mono
+                freeText
+                freeTextHint="type or pick"
+                placeholder="default"
+                value={form.network}
+                onChange={(v) => setForm({ ...form, network: v })}
+                options={networkOptions}
+              />
+            }
+          />
+          <Row
+            label="Restart"
+            right={
+              <Combobox
+                cell
+                value={form.restart.kind}
+                onChange={(v) =>
+                  setForm({ ...form, restart: { kind: v as RestartPolicySpec["kind"] } })
+                }
+                options={RESTART_OPTIONS}
+              />
+            }
+          />
         </Section>
 
-        <Collapsible label="ports" count={form.ports.length} defaultOpen={form.ports.length > 0}>
-          <PairList
-            pairs={form.ports.map((p) => [p.container, p.host])}
-            placeholder={["80/tcp", "8080"]}
-            addLabel="+ port"
-            onChange={(rows) =>
-              setForm({ ...form, ports: rows.map(([container, host]) => ({ container, host })) })
+        <Section
+          label="ports"
+          right={
+            <AddBtn onClick={() => setForm({ ...form, ports: [...form.ports, { container: "", host: "" }] })}>
+              + port
+            </AddBtn>
+          }
+        >
+          {form.ports.length === 0 ? (
+            <Empty>no ports published</Empty>
+          ) : (
+            form.ports.map((p, i) => (
+              <PairRow
+                key={i}
+                left={p.container}
+                right={p.host}
+                placeholderLeft="80/tcp"
+                placeholderRight="8080"
+                onChange={(left, right) => {
+                  const next = form.ports.slice();
+                  next[i] = { container: left, host: right };
+                  setForm({ ...form, ports: next });
+                }}
+                onRemove={() => setForm({ ...form, ports: form.ports.filter((_, j) => j !== i) })}
+              />
+            ))
+          )}
+        </Section>
+
+        <Section
+          label="volumes"
+          right={
+            <AddBtn onClick={() => setForm({ ...form, volumes: [...form.volumes, { source: "", target: "" }] })}>
+              + volume
+            </AddBtn>
+          }
+        >
+          {form.volumes.length === 0 ? (
+            <Empty>no volumes mounted</Empty>
+          ) : (
+            form.volumes.map((m, i) => (
+              <VolumeEntry
+                key={i}
+                mount={m}
+                onChange={(patch) =>
+                  setForm({
+                    ...form,
+                    volumes: form.volumes.map((x, j) => (j === i ? { ...x, ...patch } : x)),
+                  })
+                }
+                onRemove={() =>
+                  setForm({ ...form, volumes: form.volumes.filter((_, j) => j !== i) })
+                }
+              />
+            ))
+          )}
+        </Section>
+
+        <Section
+          label="environment"
+          right={
+            <AddBtn onClick={() => setForm({ ...form, env: [...form.env, ""] })}>
+              + variable
+            </AddBtn>
+          }
+        >
+          {form.env.length === 0 ? (
+            <Empty>no environment set</Empty>
+          ) : (
+            form.env.map((v, i) => (
+              <SoloRow
+                key={i}
+                value={v}
+                placeholder="KEY=value"
+                onChange={(next) =>
+                  setForm({ ...form, env: form.env.map((x, j) => (j === i ? next : x)) })
+                }
+                onRemove={() =>
+                  setForm({ ...form, env: form.env.filter((_, j) => j !== i) })
+                }
+              />
+            ))
+          )}
+        </Section>
+
+        <Collapsible label="process" defaultOpen={hasProcess}>
+          <Row
+            label="Entrypoint"
+            right={
+              <EditCell
+                mono
+                placeholder="/usr/bin/myprog"
+                value={form.entrypoint.join(" ")}
+                onChange={(e) =>
+                  setForm({ ...form, entrypoint: splitTokens(e.target.value) })
+                }
+              />
+            }
+          />
+          <Row
+            label="Cmd"
+            right={
+              <EditCell
+                mono
+                placeholder="--flag value"
+                value={form.cmd.join(" ")}
+                onChange={(e) => setForm({ ...form, cmd: splitTokens(e.target.value) })}
+              />
+            }
+          />
+          <Row
+            label="Working dir"
+            right={
+              <EditCell
+                mono
+                placeholder="/app"
+                value={form.workingDir}
+                onChange={(e) => setForm({ ...form, workingDir: e.target.value })}
+              />
+            }
+          />
+          <Row
+            label="User"
+            right={
+              <EditCell
+                mono
+                placeholder="1000 or 1000:1000"
+                value={form.user}
+                onChange={(e) => setForm({ ...form, user: e.target.value })}
+              />
             }
           />
         </Collapsible>
-
-        <Collapsible label="volumes" count={form.volumes.length} defaultOpen={form.volumes.length > 0}>
-          <VolumeList
-            mounts={form.volumes}
-            onChange={(volumes) => setForm({ ...form, volumes })}
-          />
-        </Collapsible>
-
-        <Collapsible label="environment" count={form.env.length} defaultOpen={form.env.length > 0}>
-          <StringList
-            values={form.env}
-            placeholder="KEY=value"
-            addLabel="+ variable"
-            onChange={(env) => setForm({ ...form, env })}
-          />
-        </Collapsible>
-
-        <Collapsible
-          label="network"
-          defaultOpen={!!form.network}
-        >
-          <Field label="Mode">
-            <Combobox
-              value={form.network}
-              onChange={(v) => setForm({ ...form, network: v })}
-              placeholder="default"
-              freeText
-              freeTextHint="type or pick"
-              mono
-              options={networkOptions}
-            />
-          </Field>
-        </Collapsible>
-
-        <Collapsible
-          label="process"
-          defaultOpen={form.entrypoint.length > 0 || form.cmd.length > 0 || !!form.workingDir || !!form.user}
-        >
-          <Field label="Entrypoint">
-            <StringList
-              values={form.entrypoint}
-              placeholder="/usr/bin/myprog"
-              addLabel="+ token"
-              onChange={(entrypoint) => setForm({ ...form, entrypoint })}
-            />
-          </Field>
-          <Field label="Cmd">
-            <StringList
-              values={form.cmd}
-              placeholder="--flag"
-              addLabel="+ token"
-              onChange={(cmd) => setForm({ ...form, cmd })}
-            />
-          </Field>
-          <Field label="Working dir">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="/app"
-              value={form.workingDir}
-              onChange={(e) => setForm({ ...form, workingDir: e.target.value })}
-            />
-          </Field>
-          <Field label="User">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="1000 or 1000:1000"
-              value={form.user}
-              onChange={(e) => setForm({ ...form, user: e.target.value })}
-            />
-          </Field>
-        </Collapsible>
-
-        <Section label="restart">
-          <RestartPicker value={form.restart} onChange={(restart) => setForm({ ...form, restart })} />
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={form.start}
-              onChange={(e) => setForm({ ...form, start: e.target.checked })}
-            />
-            <span className="text-xs">Start after create</span>
-          </label>
-        </Section>
 
         {pull && (
           <Section label="pull progress">
@@ -321,7 +395,15 @@ export function NewContainer() {
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="actions">
+        <Section label="create">
+          <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--text-secondary)]">
+            <input
+              type="checkbox"
+              checked={form.start}
+              onChange={(e) => setForm({ ...form, start: e.target.checked })}
+            />
+            start after create
+          </label>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
               Cancel
@@ -361,165 +443,144 @@ function parseRestartPolicy(s: string): RestartPolicySpec {
   }
 }
 
-function PairList({
-  pairs,
-  placeholder,
-  addLabel,
-  onChange,
-}: {
-  pairs: [string, string][];
-  placeholder: [string, string];
-  addLabel: string;
-  onChange: (rows: [string, string][]) => void;
-}) {
-  function set(i: number, j: 0 | 1, v: string) {
-    const next = pairs.map((p) => [...p] as [string, string]);
-    next[i][j] = v;
-    onChange(next);
-  }
+// Split a free-form whitespace string into tokens. Round-trips with
+// `tokens.join(" ")` for the common case; we accept that paths/args
+// containing literal spaces lose that boundary — operators with that
+// shape can keep editing via a different surface (compose stack).
+function splitTokens(s: string): string[] {
+  return s.split(/\s+/).filter(Boolean);
+}
+
+function AddBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2">
-      {pairs.map((p, i) => (
-        <div key={i} className="flex gap-2">
-          <input
-            className="input mono flex-1"
-            value={p[0]}
-            placeholder={placeholder[0]}
-            onChange={(e) => set(i, 0, e.target.value)}
-          />
-          <span className="self-center text-[var(--text-tertiary)]">→</span>
-          <input
-            className="input mono flex-1"
-            value={p[1]}
-            placeholder={placeholder[1]}
-            onChange={(e) => set(i, 1, e.target.value)}
-          />
-          <Button variant="ghost" onClick={() => onChange(pairs.filter((_, j) => j !== i))}>
-            ×
-          </Button>
-        </div>
-      ))}
-      <Button variant="ghost" onClick={() => onChange([...pairs, ["", ""]])} className="self-start">
-        {addLabel}
-      </Button>
+    <button
+      type="button"
+      onClick={onClick}
+      className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors"
+    >
+      {children}
+    </button>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-[12px] italic text-[var(--text-tertiary)]">{children}</span>
+  );
+}
+
+function PairRow({
+  left,
+  right,
+  placeholderLeft,
+  placeholderRight,
+  onChange,
+  onRemove,
+}: {
+  left: string;
+  right: string;
+  placeholderLeft: string;
+  placeholderRight: string;
+  onChange: (left: string, right: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <EditCell
+        mono
+        className="flex-1"
+        value={left}
+        placeholder={placeholderLeft}
+        onChange={(e) => onChange(e.target.value, right)}
+      />
+      <span className="text-[var(--text-tertiary)] text-xs">→</span>
+      <EditCell
+        mono
+        className="flex-1"
+        value={right}
+        placeholder={placeholderRight}
+        onChange={(e) => onChange(left, e.target.value)}
+      />
+      <RemoveBtn onClick={onRemove} />
     </div>
   );
 }
 
-function VolumeList({
-  mounts,
-  onChange,
-}: {
-  mounts: VolumeMount[];
-  onChange: (m: VolumeMount[]) => void;
-}) {
-  function update(i: number, patch: Partial<VolumeMount>) {
-    onChange(mounts.map((x, j) => (j === i ? { ...x, ...patch } : x)));
-  }
-  return (
-    <div className="flex flex-col gap-2">
-      {mounts.map((m, i) => (
-        <div key={i} className="flex flex-col gap-1.5 border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-2">
-          <div className="flex gap-2">
-            <input
-              className="input mono flex-1"
-              value={m.source}
-              placeholder="volume-name or /host/path"
-              onChange={(e) => update(i, { source: e.target.value })}
-            />
-            <span className="self-center text-[var(--text-tertiary)]">→</span>
-            <input
-              className="input mono flex-1"
-              value={m.target}
-              placeholder="/container/path"
-              onChange={(e) => update(i, { target: e.target.value })}
-            />
-            <Button variant="ghost" onClick={() => onChange(mounts.filter((_, j) => j !== i))}>
-              ×
-            </Button>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer pl-1">
-            <input
-              type="checkbox"
-              checked={!!m.read_only}
-              onChange={(e) => update(i, { read_only: e.target.checked })}
-            />
-            <span className="text-[11px] text-[var(--text-tertiary)]">read only</span>
-          </label>
-        </div>
-      ))}
-      <Button
-        variant="ghost"
-        onClick={() => onChange([...mounts, { source: "", target: "" }])}
-        className="self-start"
-      >
-        + volume
-      </Button>
-    </div>
-  );
-}
-
-function StringList({
-  values,
-  placeholder,
-  addLabel,
-  onChange,
-}: {
-  values: string[];
-  placeholder: string;
-  addLabel: string;
-  onChange: (vs: string[]) => void;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      {values.map((v, i) => (
-        <div key={i} className="flex gap-2">
-          <input
-            className="input mono flex-1"
-            value={v}
-            placeholder={placeholder}
-            onChange={(e) => onChange(values.map((x, j) => (j === i ? e.target.value : x)))}
-          />
-          <Button variant="ghost" onClick={() => onChange(values.filter((_, j) => j !== i))}>
-            ×
-          </Button>
-        </div>
-      ))}
-      <Button variant="ghost" onClick={() => onChange([...values, ""])} className="self-start">
-        {addLabel}
-      </Button>
-    </div>
-  );
-}
-
-function RestartPicker({
+function SoloRow({
   value,
+  placeholder,
   onChange,
+  onRemove,
 }: {
-  value: RestartPolicySpec;
-  onChange: (v: RestartPolicySpec) => void;
+  value: string;
+  placeholder: string;
+  onChange: (v: string) => void;
+  onRemove: () => void;
 }) {
-  const opts: { kind: RestartPolicySpec["kind"]; label: string }[] = [
-    { kind: "no", label: "No" },
-    { kind: "on_failure", label: "On failure" },
-    { kind: "always", label: "Always" },
-    { kind: "unless_stopped", label: "Unless stopped" },
-  ];
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {opts.map((o) => {
-        const active = value.kind === o.kind;
-        return (
-          <button
-            key={o.kind}
-            type="button"
-            onClick={() => onChange({ kind: o.kind } as RestartPolicySpec)}
-            className={`btn ${active ? "btn-primary" : "btn-ghost"}`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="flex items-baseline gap-2">
+      <EditCell
+        mono
+        className="flex-1"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+      />
+      <RemoveBtn onClick={onRemove} />
     </div>
+  );
+}
+
+function VolumeEntry({
+  mount,
+  onChange,
+  onRemove,
+}: {
+  mount: VolumeMount;
+  onChange: (patch: Partial<VolumeMount>) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="flex items-baseline gap-2">
+        <EditCell
+          mono
+          className="flex-1"
+          value={mount.source}
+          placeholder="volume-name or /host/path"
+          onChange={(e) => onChange({ source: e.target.value })}
+        />
+        <span className="text-[var(--text-tertiary)] text-xs">→</span>
+        <EditCell
+          mono
+          className="flex-1"
+          value={mount.target}
+          placeholder="/container/path"
+          onChange={(e) => onChange({ target: e.target.value })}
+        />
+        <RemoveBtn onClick={onRemove} />
+      </div>
+      <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[var(--text-tertiary)]">
+        <input
+          type="checkbox"
+          checked={!!mount.read_only}
+          onChange={(e) => onChange({ read_only: e.target.checked })}
+        />
+        read only
+      </label>
+    </div>
+  );
+}
+
+function RemoveBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="remove"
+      className="text-[var(--text-tertiary)] hover:text-[var(--error)] transition-colors text-sm leading-none px-1 shrink-0"
+    >
+      ×
+    </button>
   );
 }
