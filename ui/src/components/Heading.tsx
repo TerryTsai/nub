@@ -38,7 +38,7 @@ export function Heading({ category, title, right, editable }: Props) {
             placeholder={editable.placeholder}
             value={editable.value}
             onChange={(e) => editable.onChange(e.target.value)}
-            className="bg-transparent border-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none text-base font-semibold flex-1 min-w-0 transition-colors placeholder:text-[var(--text-tertiary)] placeholder:font-normal placeholder:italic"
+            className="bg-transparent border-0 border-b border-dashed border-[var(--border-subtle)] hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none text-[16px] font-semibold flex-1 min-w-0 transition-colors placeholder:text-[var(--text-tertiary)] placeholder:font-normal placeholder:italic"
           />
         ) : (
           <h1 className="text-base font-semibold truncate">{title}</h1>

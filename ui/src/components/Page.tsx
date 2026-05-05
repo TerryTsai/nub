@@ -56,7 +56,7 @@ export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: React
         </nav>
       </div>
       {subnav && (
-        <div className="px-5 h-10 flex items-center gap-2 border-t border-[var(--border-subtle)]">
+        <div className="px-5 h-10 flex items-center gap-2 border-t border-[var(--border-subtle)] overflow-x-auto no-scrollbar [&>*]:shrink-0">
           {subnav}
         </div>
       )}
