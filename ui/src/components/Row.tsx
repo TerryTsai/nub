@@ -27,7 +27,9 @@ export function Row({
 }) {
   return (
     <div className="flex gap-3 items-baseline select-text">
-      <span className="text-xs text-[var(--text-tertiary)] shrink-0 w-24">{label}</span>
+      <div className="w-24 shrink-0 overflow-x-auto no-scrollbar">
+        <span className="text-xs text-[var(--text-tertiary)] whitespace-nowrap">{label}</span>
+      </div>
       {right ? (
         <div className="flex-1 min-w-0">{right}</div>
       ) : mono ? (
