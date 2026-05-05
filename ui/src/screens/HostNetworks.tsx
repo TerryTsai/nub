@@ -8,6 +8,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
 
 export function HostNetworks() {
   const { hid } = useParams<{ hid: string }>();
@@ -29,9 +30,7 @@ export function HostNetworks() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/networks/new`} label="network" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {networks === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading networks…</p>
-      )}
+      {networks === null && !error && <SkeletonRows count={5} />}
       {networks?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No networks.</p>
       )}

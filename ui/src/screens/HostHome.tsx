@@ -9,6 +9,7 @@ import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
 
 type ContainerFilter = "all" | "running" | "stopped";
 
@@ -69,9 +70,7 @@ export function HostHome() {
   return (
     <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/c/new`} label="container" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {containers === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-      )}
+      {containers === null && !error && <SkeletonRows count={5} />}
       {containers !== null && containers.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
       )}

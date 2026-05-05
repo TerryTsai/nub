@@ -14,6 +14,8 @@ import { ListRow } from "@/components/ListRow";
 import { Row } from "@/components/Row";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
+import { Skeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 import { useToast } from "@/components/Toaster";
 
 type Pending = "redeploy" | "pull" | "save" | "delete" | null;
@@ -63,7 +65,9 @@ export function StackDetailScreen() {
       toast.push(success, "success");
       reload();
     } catch (e) {
-      setActionError((e as Error).message);
+      const msg = (e as Error).message;
+      setActionError(`${kind}: ${msg}`);
+      toast.pushOpError(kind, e);
     } finally {
       setPending(null);
     }
@@ -98,7 +102,9 @@ export function StackDetailScreen() {
       toast.push(`Deleted ${name}`, "success");
       nav(`/h/${hid}/stacks`, { replace: true });
     } catch (e) {
-      setActionError((e as Error).message);
+      const msg = (e as Error).message;
+      setActionError(`delete: ${msg}`);
+      toast.pushOpError("delete", e);
       setPending(null);
     }
   }
@@ -113,13 +119,13 @@ export function StackDetailScreen() {
         onClick={onSave}
         disabled={pending !== null || !dirty}
       >
-        {pending === "save" ? "…" : "Save"}
+        {pending === "save" ? <Spinner /> : "Save"}
       </Button>
       <Button size="sm" variant="ghost" onClick={onRedeploy} disabled={pending !== null}>
-        {pending === "redeploy" ? "…" : "Redeploy"}
+        {pending === "redeploy" ? <Spinner /> : "Redeploy"}
       </Button>
       <Button size="sm" variant="ghost" onClick={onPull} disabled={pending !== null}>
-        {pending === "pull" ? "…" : "Pull"}
+        {pending === "pull" ? <Spinner /> : "Pull"}
       </Button>
       <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
       <Button
@@ -138,7 +144,16 @@ export function StackDetailScreen() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
-      {!detail && !error && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
+      {!detail && !error && (
+        <Section>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-4/6" />
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-2/3" />
+        </Section>
+      )}
 
       {detail && (
         <>
@@ -199,7 +214,7 @@ export function StackDetailScreen() {
               onClick={() => setConfirmDelete(true)}
               disabled={pending !== null}
             >
-              Delete
+              {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
             </Button>
           </Section>
 

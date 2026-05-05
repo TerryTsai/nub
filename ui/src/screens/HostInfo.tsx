@@ -8,6 +8,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { Skeleton } from "@/components/Skeleton";
 
 export function HostInfoScreen() {
   const { hid } = useParams<{ hid: string }>();
@@ -29,7 +30,16 @@ export function HostInfoScreen() {
       <Heading category="Host" title={saved.label} />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {!info && !error && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
+      {!info && !error && (
+        <Section>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-4/6" />
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-2/3" />
+        </Section>
+      )}
 
       {info && (
         <>

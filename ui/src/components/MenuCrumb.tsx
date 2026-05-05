@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 export interface MenuItem {
@@ -21,6 +21,15 @@ export interface MenuItem {
  * backdrop). */
 export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }) {
   const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
 
   function dismiss(e: React.MouseEvent) {
     e.stopPropagation();

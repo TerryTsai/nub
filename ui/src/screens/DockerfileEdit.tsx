@@ -10,8 +10,11 @@ import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
+import { Spinner } from "@/components/Spinner";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const NAME_HINT = "letters, digits, dot, underscore, dash; must start with letter/digit; ≤128 chars";
 const NEW_SENTINEL = "_new";
 
 export function DockerfileEdit() {
@@ -29,6 +32,7 @@ export function DockerfileEdit() {
   const [loading, setLoading] = useState(!isNew);
   const [pending, setPending] = useState<"save" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -41,7 +45,7 @@ export function DockerfileEdit() {
         setContent((r.data as DockerfileContent).content);
         setOriginal((r.data as DockerfileContent).content);
       } catch (e) {
-        if (!cancelled) setError((e as Error).message);
+        if (!cancelled) setError(`load dockerfile: ${(e as Error).message}`);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -52,8 +56,9 @@ export function DockerfileEdit() {
   async function onSave() {
     if (!host) return;
     const targetName = isNew ? draftName.trim() : name;
+    setNameError(null);
     if (!NAME_RE.test(targetName) || targetName.length > 128) {
-      setError("name must start with a letter or digit and use only A–Z, 0–9, dot, underscore, dash");
+      setNameError("name must start with a letter or digit and use only A–Z, 0–9, dot, underscore, dash");
       return;
     }
     setPending("save");
@@ -70,7 +75,7 @@ export function DockerfileEdit() {
         setOriginal(content);
       }
     } catch (e) {
-      setError((e as Error).message);
+      setError(`save dockerfile: ${(e as Error).message}`);
     } finally {
       setPending(null);
     }
@@ -85,7 +90,7 @@ export function DockerfileEdit() {
       invalidate(`${host.url}:list_dockerfiles`);
       nav(`/h/${hid}/dockerfiles`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      setError(`delete dockerfile: ${(e as Error).message}`);
       setPending(null);
     }
   }
@@ -115,11 +120,20 @@ export function DockerfileEdit() {
       ) : (
         <Heading category="Dockerfile" title={name} />
       )}
+      {isNew && (
+        nameError ? (
+          <p className="text-[11px] text-[var(--error)]">{nameError}</p>
+        ) : (
+          <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
+        )
+      )}
+
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       {loading && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
 
       {!loading && (
-        <>
+        <div className="contents" {...scrollFocusedIntoView()}>
           <Section label="content">
             <textarea
               className="input mono"
@@ -133,8 +147,6 @@ export function DockerfileEdit() {
               style={{ minHeight: "320px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
             />
           </Section>
-
-          {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
           <Section label={isNew ? "create" : "save"}>
             <div className="flex gap-2">
@@ -150,7 +162,9 @@ export function DockerfileEdit() {
                 disabled={pending !== null || !dirty}
                 className="flex-1"
               >
-                {pending === "save" ? "…" : isNew ? "Create" : "Save"}
+                {pending === "save" ? (
+                  <><Spinner /> {isNew ? "Creating…" : "Saving…"}</>
+                ) : isNew ? "Create" : "Save"}
               </Button>
             </div>
           </Section>
@@ -176,7 +190,7 @@ export function DockerfileEdit() {
             destructive
             onConfirm={onDelete}
           />
-        </>
+        </div>
       )}
     </Page>
   );

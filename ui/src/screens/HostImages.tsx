@@ -9,6 +9,7 @@ import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
 
 type ImageFilter = "all" | "tagged" | "untagged";
 const IMAGE_FILTERS: ImageFilter[] = ["all", "tagged", "untagged"];
@@ -69,9 +70,7 @@ export function HostImages() {
   return (
     <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/images/new`} label="image" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {images === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading images…</p>
-      )}
+      {images === null && !error && <SkeletonRows count={5} />}
       {images?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No images.</p>
       )}

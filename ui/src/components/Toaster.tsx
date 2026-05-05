@@ -11,9 +11,15 @@ interface ToastEntry {
 
 interface ToastApi {
   push: (message: string, tone?: ToastTone) => void;
+  /** Convenience for the catch-block pattern: reports `<op>: <error>` so
+   * the user sees which operation failed when several are in flight. */
+  pushOpError: (op: string, e: unknown) => void;
 }
 
-const ToastContext = createContext<ToastApi>({ push: () => {} });
+const ToastContext = createContext<ToastApi>({
+  push: () => {},
+  pushOpError: () => {},
+});
 
 export function useToast(): ToastApi {
   return useContext(ToastContext);
@@ -28,8 +34,16 @@ export function Toaster({ children }: { children: ReactNode }) {
     setItems((prev) => [...prev, { id: Date.now() + Math.random(), tone, message }]);
   }, []);
 
+  const pushOpError = useCallback(
+    (op: string, e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e);
+      push(`${op}: ${msg}`, "error");
+    },
+    [push],
+  );
+
   return (
-    <ToastContext.Provider value={{ push }}>
+    <ToastContext.Provider value={{ push, pushOpError }}>
       <Toast.Provider swipeDirection="down" duration={3500}>
         {children}
         {items.map((item) => (
@@ -45,8 +59,12 @@ export function Toaster({ children }: { children: ReactNode }) {
           </Toast.Root>
         ))}
         <Toast.Viewport
-          className="fixed left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 outline-none pointer-events-none [&>*]:pointer-events-auto"
-          style={{ bottom: "calc(1rem + env(safe-area-inset-bottom))" }}
+          className="fixed left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 outline-none pointer-events-none [&>*]:pointer-events-auto max-w-[min(92vw,420px)]"
+          style={{
+            bottom: "calc(1rem + env(safe-area-inset-bottom))",
+            paddingLeft: "env(safe-area-inset-left)",
+            paddingRight: "env(safe-area-inset-right)",
+          }}
         />
       </Toast.Provider>
     </ToastContext.Provider>

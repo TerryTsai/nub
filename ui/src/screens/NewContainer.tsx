@@ -21,6 +21,8 @@ import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { Spinner } from "@/components/Spinner";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 interface FormState {
   image: string;
@@ -116,7 +118,7 @@ export function NewContainer() {
           start: true,
         });
       } catch (e) {
-        if (!cancelled) setError((e as Error).message);
+        if (!cancelled) setError(`load source: ${(e as Error).message}`);
       }
     })();
     return () => { cancelled = true; };
@@ -157,7 +159,7 @@ export function NewContainer() {
       );
       nav(`/h/${hid}/c/${r.data.id}`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      setError(`create container: ${(e as Error).message}`);
       setPull(null);
     } finally {
       setPending(false);
@@ -191,7 +193,9 @@ export function NewContainer() {
         </p>
       )}
 
-      <form onSubmit={onSubmit} className="contents">
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+      <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section>
           <Row
             label="Image"
@@ -293,6 +297,7 @@ export function NewContainer() {
               right={p.host}
               placeholderLeft="80/tcp"
               placeholderRight="8080"
+              inputModeRight="numeric"
               onChange={(left, right) => {
                 const next = form.ports.slice();
                 next[i] = { container: left, host: right };
@@ -356,8 +361,6 @@ export function NewContainer() {
           </Section>
         )}
 
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-
         <Section label="create">
           <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--text-secondary)]">
             <input
@@ -376,7 +379,7 @@ export function NewContainer() {
               disabled={pending || !form.image.trim()}
               className="flex-1"
             >
-              {pending ? "…" : "Create"}
+              {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
         </Section>
@@ -436,6 +439,8 @@ function PairRow({
   right,
   placeholderLeft,
   placeholderRight,
+  inputModeLeft,
+  inputModeRight,
   onChange,
   onRemove,
 }: {
@@ -443,6 +448,8 @@ function PairRow({
   right: string;
   placeholderLeft: string;
   placeholderRight: string;
+  inputModeLeft?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  inputModeRight?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   onChange: (left: string, right: string) => void;
   onRemove: () => void;
 }) {
@@ -453,6 +460,7 @@ function PairRow({
         className="flex-1"
         value={left}
         placeholder={placeholderLeft}
+        inputMode={inputModeLeft}
         onChange={(e) => onChange(e.target.value, right)}
       />
       <span className="text-[var(--text-tertiary)] text-xs">→</span>
@@ -461,6 +469,7 @@ function PairRow({
         className="flex-1"
         value={right}
         placeholder={placeholderRight}
+        inputMode={inputModeRight}
         onChange={(e) => onChange(left, e.target.value)}
       />
       <RemoveBtn onClick={onRemove} />

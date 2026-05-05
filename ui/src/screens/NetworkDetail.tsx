@@ -14,7 +14,10 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { Skeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
+import { useToast } from "@/components/Toaster";
 
 export function NetworkDetail() {
   const { hid, nid } = useParams<{ hid: string; nid: string }>();
@@ -26,6 +29,7 @@ export function NetworkDetail() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   const queryKey = host ? `${host.url}:list_networks` : null;
   const { data: networks } = useQuery<NetworkSummary[]>(queryKey, async () => {
@@ -49,7 +53,9 @@ export function NetworkDetail() {
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/networks`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      const msg = (e as Error).message;
+      setError(`remove: ${msg}`);
+      toast.pushOpError("remove", e);
     } finally {
       setPending(false);
     }
@@ -74,7 +80,14 @@ export function NetworkDetail() {
       />
 
       {!network && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
+        <Section>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-4/6" />
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-2/3" />
+        </Section>
       )}
 
       {network && (
@@ -130,7 +143,7 @@ export function NetworkDetail() {
               disabled={pending}
               onClick={() => setConfirmOpen(true)}
             >
-              {pending ? "…" : "Remove"}
+              {pending ? <><Spinner /> Removing…</> : "Remove"}
             </Button>
             {error && <p className="text-[var(--error)] text-xs">{error}</p>}
           </Section>

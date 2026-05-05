@@ -9,8 +9,11 @@ import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
+import { Spinner } from "@/components/Spinner";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+const NAME_HINT = "letters, digits, dot, underscore, dash; must start with letter/digit; ≤128 chars";
 
 export function NewSecret() {
   const { hid } = useParams<{ hid: string }>();
@@ -23,17 +26,21 @@ export function NewSecret() {
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [valueError, setValueError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
     const trimmed = name.trim();
+    setNameError(null);
+    setValueError(null);
     if (!NAME_RE.test(trimmed) || trimmed.length > 128) {
-      setError("name must start with a letter or digit; letters/digits/dot/underscore/dash only");
+      setNameError("name must start with a letter or digit; letters/digits/dot/underscore/dash only");
       return;
     }
     if (value.length === 0) {
-      setError("value can't be empty");
+      setValueError("value can't be empty");
       return;
     }
     setPending(true);
@@ -43,7 +50,7 @@ export function NewSecret() {
       invalidate(`${host.url}:list_secrets`);
       nav(`/h/${hid}/secrets`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      setError(`create secret: ${(e as Error).message}`);
     } finally {
       setPending(false);
     }
@@ -65,8 +72,15 @@ export function NewSecret() {
           placeholder: "new secret",
         }}
       />
+      {nameError ? (
+        <p className="text-[11px] text-[var(--error)]">{nameError}</p>
+      ) : (
+        <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
+      )}
 
-      <form onSubmit={onSubmit} className="contents">
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+      <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section label="value">
           <textarea
             className="input mono"
@@ -80,6 +94,9 @@ export function NewSecret() {
             required
             style={{ minHeight: "96px" }}
           />
+          {valueError && (
+            <p className="text-[11px] text-[var(--error)]">{valueError}</p>
+          )}
         </Section>
 
         <Collapsible>
@@ -88,8 +105,6 @@ export function NewSecret() {
             the network — use <code className="mono">nub secret get NAME</code> on the host.
           </p>
         </Collapsible>
-
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
         <Section label="create">
           <div className="flex gap-2">
@@ -106,7 +121,7 @@ export function NewSecret() {
               disabled={pending || !name.trim() || !value}
               className="flex-1"
             >
-              {pending ? "…" : "Create"}
+              {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
         </Section>

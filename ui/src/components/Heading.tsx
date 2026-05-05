@@ -25,7 +25,7 @@ interface Props {
 export function Heading({ category, title, right, editable }: Props) {
   return (
     <header className="flex flex-col gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+      <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
         {category}
       </span>
       <div className="flex items-center justify-between gap-3">

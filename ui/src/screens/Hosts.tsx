@@ -41,7 +41,7 @@ export function Hosts() {
                       setPending(h);
                     }}
                     aria-label="Remove host"
-                    className="text-[11px] text-[var(--text-tertiary)] hover:text-[var(--error)] px-1 shrink-0"
+                    className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] px-3 py-2 active:opacity-70 shrink-0"
                   >
                     remove
                   </button>

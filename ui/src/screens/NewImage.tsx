@@ -16,6 +16,7 @@ import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, EMPTY_PULL, type PullState } from "@/components/PullProgress";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 type Source = "pull" | "build";
 /** "still-building" = WS dropped after we'd already received some progress.
@@ -85,7 +86,7 @@ export function NewImage() {
         setArgs(parsed);
         setArgValues(Object.fromEntries(parsed.map((a) => [a.name, a.default ?? ""])));
       } catch (e) {
-        if (!cancelled) setError((e as Error).message);
+        if (!cancelled) setError(`load dockerfile: ${(e as Error).message}`);
       }
     })();
     return () => { cancelled = true; };
@@ -111,7 +112,7 @@ export function NewImage() {
         invalidate(`${host.url}:list_images`);
         setPhase("done");
       } catch (err) {
-        setError((err as Error).message);
+        setError(`pull image: ${(err as Error).message}`);
         setPhase("idle");
       }
     } else {
@@ -153,7 +154,7 @@ export function NewImage() {
             }
           });
         } else {
-          setError((err as Error).message);
+          setError(`build image: ${(err as Error).message}`);
           setPhase("idle");
         }
       }
@@ -225,7 +226,9 @@ export function NewImage() {
         }}
       />
 
-      <form onSubmit={onSubmit} className="contents">
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+      <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section>
           <Row
             label="Source"
@@ -287,8 +290,6 @@ export function NewImage() {
             )}
           </Section>
         )}
-
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
         <Section label={source === "pull" ? "pull" : "build"}>
           {phase === "done" ? (

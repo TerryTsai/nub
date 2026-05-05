@@ -8,6 +8,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
 
 export function HostStacks() {
   const { hid } = useParams<{ hid: string }>();
@@ -29,9 +30,7 @@ export function HostStacks() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/stacks/new`} label="stack" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {stacks === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading stacks…</p>
-      )}
+      {stacks === null && !error && <SkeletonRows count={5} />}
       {stacks?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No stacks.</p>
       )}

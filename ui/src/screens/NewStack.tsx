@@ -8,8 +8,11 @@ import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
+import { Spinner } from "@/components/Spinner";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 const NAME_RE = /^[a-z0-9_-]+$/;
+const NAME_HINT = "lowercase letters, digits, underscore, dash; 1–63 chars";
 
 const PLACEHOLDER = `services:
   app:
@@ -29,6 +32,8 @@ export function NewStack() {
   const [yaml, setYaml] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [yamlError, setYamlError] = useState<string | null>(null);
 
   const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "stacks");
 
@@ -39,12 +44,14 @@ export function NewStack() {
   async function onCreate() {
     if (!host) return;
     const trimmed = name.trim();
+    setNameError(null);
+    setYamlError(null);
     if (!NAME_RE.test(trimmed) || trimmed.length > 63) {
-      setError("name must be lowercase alphanumeric, `-`, or `_`, 1–63 chars");
+      setNameError("name must be lowercase alphanumeric, `-`, or `_`, 1–63 chars");
       return;
     }
     if (yaml.trim() === "") {
-      setError("paste a compose YAML before creating");
+      setYamlError("paste a compose YAML before creating");
       return;
     }
     setPending(true);
@@ -55,7 +62,7 @@ export function NewStack() {
       invalidate(`${host.url}:list_containers`);
       nav(`/h/${hid}/stacks/${encodeURIComponent(trimmed)}`, { replace: true });
     } catch (e) {
-      setError((e as Error).message);
+      setError(`create stack: ${(e as Error).message}`);
     } finally {
       setPending(false);
     }
@@ -71,33 +78,43 @@ export function NewStack() {
           placeholder: "new stack",
         }}
       />
-
-      <Section label="compose">
-        <textarea
-          className="input mono"
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          rows={18}
-          placeholder={PLACEHOLDER}
-          value={yaml}
-          onChange={(e) => setYaml(e.target.value)}
-          style={{ minHeight: "320px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
-        />
-      </Section>
+      {nameError ? (
+        <p className="text-[11px] text-[var(--error)]">{nameError}</p>
+      ) : (
+        <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
+      )}
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      <Section label="create">
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
-            Cancel
-          </Button>
-          <Button onClick={onCreate} disabled={pending || !name.trim() || !yaml.trim()} className="flex-1">
-            {pending ? "Creating…" : "Create"}
-          </Button>
-        </div>
-      </Section>
+      <div className="contents" {...scrollFocusedIntoView()}>
+        <Section label="compose">
+          <textarea
+            className="input mono"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            rows={18}
+            placeholder={PLACEHOLDER}
+            value={yaml}
+            onChange={(e) => setYaml(e.target.value)}
+            style={{ minHeight: "320px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
+          />
+          {yamlError && (
+            <p className="text-[11px] text-[var(--error)]">{yamlError}</p>
+          )}
+        </Section>
+
+        <Section label="create">
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
+              Cancel
+            </Button>
+            <Button onClick={onCreate} disabled={pending || !name.trim() || !yaml.trim()} className="flex-1">
+              {pending ? (<><Spinner /> Creating…</>) : "Create"}
+            </Button>
+          </div>
+        </Section>
+      </div>
     </Page>
   );
 }

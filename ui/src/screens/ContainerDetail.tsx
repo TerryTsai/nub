@@ -15,6 +15,8 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { Skeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 
 export function ContainerDetail() {
@@ -47,8 +49,8 @@ export function ContainerDetail() {
       else reload();
     } catch (e) {
       const msg = (e as Error).message;
-      setActionError(msg);
-      toast.push(msg, "error");
+      setActionError(`${name}: ${msg}`);
+      toast.pushOpError(name, e);
     } finally {
       setPending(null);
     }
@@ -77,7 +79,7 @@ export function ContainerDetail() {
         disabled={pending !== null || detail.running}
         onClick={() => act("start", { kind: "start" })}
       >
-        {pending === "start" ? "…" : "Start"}
+        {pending === "start" ? <Spinner /> : "Start"}
       </Button>
       <Button
         size="sm"
@@ -85,7 +87,7 @@ export function ContainerDetail() {
         disabled={pending !== null || !detail.running}
         onClick={() => act("stop", { kind: "stop" })}
       >
-        {pending === "stop" ? "…" : "Stop"}
+        {pending === "stop" ? <Spinner /> : "Stop"}
       </Button>
       <Button
         size="sm"
@@ -93,7 +95,7 @@ export function ContainerDetail() {
         disabled={pending !== null || !detail.running}
         onClick={() => act("restart", { kind: "restart" })}
       >
-        {pending === "restart" ? "…" : "Restart"}
+        {pending === "restart" ? <Spinner /> : "Restart"}
       </Button>
       <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
       <Link to={`/h/${hid}/c/${cid}/logs`}>
@@ -127,6 +129,17 @@ export function ContainerDetail() {
       />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+      {!detail && !error && (
+        <Section>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-full" />
+          <Skeleton className="h-3 w-5/6" />
+          <Skeleton className="h-3 w-4/6" />
+          <Skeleton className="h-3 w-3/4" />
+          <Skeleton className="h-3 w-2/3" />
+        </Section>
+      )}
 
       {detail && (
         <>
@@ -265,7 +278,7 @@ function RemoveButton({
         disabled={pending !== null}
         onClick={() => setOpen(true)}
       >
-        {pending === "remove" ? "…" : "Remove"}
+        {pending === "remove" ? <><Spinner /> Removing…</> : "Remove"}
       </Button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>

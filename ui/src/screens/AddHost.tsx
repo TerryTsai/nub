@@ -8,6 +8,8 @@ import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
+import { Spinner } from "@/components/Spinner";
+import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 // Pure read of `#t=<token>` from the URL. Host URL is taken from
 // `window.location.origin` since the user is loading the UI from the nub
@@ -59,7 +61,8 @@ export function AddHost() {
       const saved = add({ label: finalLabel, url: host.url, token: host.token });
       nav(`/h/${saved.hid}`, { replace: true });
     } catch (e) {
-      setError(e instanceof ApiError ? `HTTP ${e.status}` : (e as Error).message);
+      const msg = e instanceof ApiError ? `HTTP ${e.status}` : (e as Error).message;
+      setError(`add host: ${msg}`);
     } finally {
       setPending(false);
     }
@@ -76,7 +79,11 @@ export function AddHost() {
         }}
       />
 
-      <form onSubmit={onSubmit} className="contents">
+      {error && (
+        <p className="text-[var(--error)] text-xs">{error}</p>
+      )}
+
+      <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section>
           <Row
             label="URL"
@@ -85,6 +92,7 @@ export function AddHost() {
                 mono
                 type="url"
                 inputMode="url"
+                enterKeyHint="next"
                 autoComplete="off"
                 placeholder="http://10.0.0.5:8080"
                 value={url}
@@ -99,7 +107,8 @@ export function AddHost() {
               <EditCell
                 mono
                 type="password"
-                autoComplete="off"
+                enterKeyHint="done"
+                autoComplete="current-password"
                 placeholder="bearer token"
                 value={token}
                 onChange={(e) => setToken(e.target.value)}
@@ -109,15 +118,13 @@ export function AddHost() {
           />
         </Section>
 
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-
         <Section label="connect">
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(-1)} className="flex-1">
               Cancel
             </Button>
             <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="flex-1">
-              {pending ? "Connecting…" : "Connect & save"}
+              {pending ? (<><Spinner /> Connecting…</>) : "Connect & save"}
             </Button>
           </div>
         </Section>

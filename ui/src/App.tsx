@@ -24,6 +24,7 @@ import { NewStack } from "./screens/NewStack";
 import { HostSecrets } from "./screens/HostSecrets";
 import { HostStacks } from "./screens/HostStacks";
 import { NewSecret } from "./screens/NewSecret";
+import { SecretDetail } from "./screens/SecretDetail";
 import { StackDetailScreen } from "./screens/StackDetail";
 import { StackLogs } from "./screens/StackLogs";
 import { VolumeDetail } from "./screens/VolumeDetail";
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/h/:hid/stacks/:sname/logs" element={<StackLogs />} />
           <Route path="/h/:hid/secrets" element={<HostSecrets />} />
           <Route path="/h/:hid/secrets/new" element={<NewSecret />} />
+          <Route path="/h/:hid/secrets/:name" element={<SecretDetail />} />
           <Route path="/h/:hid/c/new" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid/clone" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />

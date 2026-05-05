@@ -26,18 +26,37 @@ export function ListRow({ title, subtitle, status, mono, onPress, right }: Props
       <div className="flex-1 min-w-0">
         <div className={`leading-snug truncate ${mono ? "mono text-xs" : "text-sm"}`}>{title}</div>
         {subtitle && (
-          <div className="text-xs text-[var(--text-tertiary)] mt-0.5 truncate">{subtitle}</div>
+          <div className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-2">{subtitle}</div>
         )}
       </div>
       {status && <StatusBadge status={status} />}
       {right}
     </>
   );
-  return onPress ? (
-    <button type="button" onClick={onPress} className={cls}>
-      {inner}
-    </button>
-  ) : (
-    <div className={cls}>{inner}</div>
-  );
+  if (onPress && right) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onPress}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onPress();
+          }
+        }}
+        className={cls}
+      >
+        {inner}
+      </div>
+    );
+  }
+  if (onPress) {
+    return (
+      <button type="button" onClick={onPress} className={cls}>
+        {inner}
+      </button>
+    );
+  }
+  return <div className={cls}>{inner}</div>;
 }

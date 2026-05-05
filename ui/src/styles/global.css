@@ -53,6 +53,16 @@ input, textarea, select, button {
   outline: none;
 }
 
+/* Keyboard focus ring — applies to anything reachable via Tab/arrow keys.
+ * `:focus-visible` (not `:focus`) so taps and clicks don't show the ring;
+ * only true keyboard focus does. Lives on a single global rule so every
+ * interactive element gets a consistent ring without per-component opt-in. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
 .mono {
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
@@ -114,10 +124,11 @@ input, textarea, select, button {
 }
 
 /* Slim variant — used in the sub-nav row, where a regular pill would
- * dominate the 40px header strip. */
+ * dominate the 48px header strip. Sized to clear the ~30px touch-target
+ * floor; the row gives it ~36px of vertical breathing room. */
 .btn-sm {
-  font-size: 11px;
-  padding: 3px 10px;
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
 .sr-only {

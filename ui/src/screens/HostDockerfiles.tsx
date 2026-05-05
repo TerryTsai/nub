@@ -7,6 +7,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
 
 export function HostDockerfiles() {
   const { hid } = useParams<{ hid: string }>();
@@ -28,13 +29,9 @@ export function HostDockerfiles() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/dockerfiles/_new`} label="dockerfile" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {files === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading dockerfiles…</p>
-      )}
+      {files === null && !error && <SkeletonRows count={5} />}
       {files?.length === 0 && (
-        <p className="text-xs text-[var(--text-tertiary)]">
-          No dockerfiles yet. Tap dockerfile to add one.
-        </p>
+        <p className="text-xs text-[var(--text-tertiary)]">No dockerfiles.</p>
       )}
       {files && files.length > 0 && (
         <div className="flex flex-col -mx-1">
