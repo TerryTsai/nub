@@ -4,7 +4,6 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -64,22 +63,14 @@ export function NewStack() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Stack" title="new stack" />
-
-      <Section label="name">
-        <Field label="Stack name" hint="lowercase letters, digits, dash, underscore">
-          <input
-            className="input mono"
-            type="text"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="myapp"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-        </Field>
-      </Section>
+      <Heading
+        category="Stack"
+        editable={{
+          value: name,
+          onChange: setName,
+          placeholder: "new stack",
+        }}
+      />
 
       <Section label="compose">
         <textarea
@@ -97,12 +88,12 @@ export function NewStack() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      <Section label="actions">
+      <Section label="create">
         <div className="flex gap-2">
           <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={onCreate} disabled={pending} className="flex-1">
+          <Button onClick={onCreate} disabled={pending || !name.trim() || !yaml.trim()} className="flex-1">
             {pending ? "Creating…" : "Create"}
           </Button>
         </div>

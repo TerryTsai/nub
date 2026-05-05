@@ -5,7 +5,6 @@ import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
-import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -58,37 +57,29 @@ export function NewSecret() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Secret" title="new secret" />
+      <Heading
+        category="Secret"
+        editable={{
+          value: name,
+          onChange: setName,
+          placeholder: "new secret",
+        }}
+      />
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="secret">
-          <Field label="Name">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="db_password"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </Field>
-          <Field label="Value">
-            <textarea
-              className="input mono"
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              rows={4}
-              placeholder="value…"
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              required
-              style={{ minHeight: "96px" }}
-            />
-          </Field>
+        <Section label="value">
+          <textarea
+            className="input mono"
+            spellCheck={false}
+            autoCapitalize="off"
+            autoCorrect="off"
+            rows={4}
+            placeholder="value…"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            required
+            style={{ minHeight: "96px" }}
+          />
         </Section>
 
         <Collapsible>
@@ -100,7 +91,7 @@ export function NewSecret() {
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="actions">
+        <Section label="create">
           <div className="flex gap-2">
             <Button
               variant="ghost"

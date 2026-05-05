@@ -14,6 +14,7 @@ import type {
 import { Button } from "@/components/Button";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
+import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
@@ -174,21 +175,14 @@ export function NewContainer() {
 
   return (
     <Page crumbs={crumbs}>
-      <header className="flex flex-col gap-1">
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-          CONTAINER
-        </span>
-        <input
-          className="bg-transparent border-0 border-b border-dashed border-transparent hover:border-[var(--border-strong)] focus:border-[var(--accent)] focus:border-solid focus:outline-none text-base font-semibold w-full transition-colors placeholder:text-[var(--text-tertiary)] placeholder:font-normal placeholder:italic"
-          type="text"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="new container"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-        />
-      </header>
+      <Heading
+        category="Container"
+        editable={{
+          value: form.name,
+          onChange: (v) => setForm({ ...form, name: v }),
+          placeholder: "new container",
+        }}
+      />
 
       {cloning && sourceName && (
         <p className="text-xs text-[var(--text-secondary)]">

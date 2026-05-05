@@ -119,7 +119,7 @@ export function VolumeDetail() {
             </Collapsible>
           )}
 
-          <Section label="ops">
+          <Section label="danger">
             <Button
               variant="destructive"
               disabled={pending}

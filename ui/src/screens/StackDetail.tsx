@@ -104,11 +104,39 @@ export function StackDetailScreen() {
 
   const dirty = yaml !== original;
 
+  const subnav = detail ? (
+    <>
+      <Button
+        size="sm"
+        variant="primary"
+        onClick={onSave}
+        disabled={pending !== null || !dirty}
+      >
+        {pending === "save" ? "…" : "Save"}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onRedeploy} disabled={pending !== null}>
+        {pending === "redeploy" ? "…" : "Redeploy"}
+      </Button>
+      <Button size="sm" variant="ghost" onClick={onPull} disabled={pending !== null}>
+        {pending === "pull" ? "…" : "Pull"}
+      </Button>
+      <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)}
+      >
+        Logs
+      </Button>
+    </>
+  ) : undefined;
+
   return (
-    <Page crumbs={crumbs}>
+    <Page crumbs={crumbs} subnav={subnav}>
       <Heading category="Stack" title={name} />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
       {!detail && !error && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
 
       {detail && (
@@ -159,37 +187,14 @@ export function StackDetailScreen() {
             </Collapsible>
           )}
 
-          {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
-
-          <Section label="ops">
-            <Button onClick={onSave} disabled={pending !== null || !dirty} className="w-full">
-              {pending === "save" ? "…" : "Save & redeploy"}
+          <Section label="danger">
+            <Button
+              variant="destructive"
+              onClick={() => setConfirmDelete(true)}
+              disabled={pending !== null}
+            >
+              Delete
             </Button>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button variant="ghost" onClick={onRedeploy} disabled={pending !== null}>
-                {pending === "redeploy" ? "…" : "Redeploy"}
-              </Button>
-              <Button variant="ghost" onClick={onPull} disabled={pending !== null}>
-                {pending === "pull" ? "…" : "Pull & redeploy"}
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)}
-              >
-                Logs
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmDelete(true)}
-                disabled={pending !== null}
-              >
-                Delete
-              </Button>
-            </div>
           </Section>
 
           <ConfirmDialog

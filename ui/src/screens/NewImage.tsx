@@ -8,11 +8,12 @@ import { parseArgs, type DockerfileArg } from "@/state/dockerfileArgs";
 import { BuildLog } from "@/components/BuildLog";
 import { Button } from "@/components/Button";
 import { Combobox } from "@/components/Combobox";
-import { Field } from "@/components/Field";
+import { EditCell } from "@/components/EditCell";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, EMPTY_PULL, type PullState } from "@/components/PullProgress";
+import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 
 type Source = "pull" | "build";
@@ -27,6 +28,11 @@ interface BuildState {
 
 const EMPTY_BUILD: BuildState = { stream: "", imageId: null };
 
+const SOURCE_OPTIONS = [
+  { value: "pull", label: "pull" },
+  { value: "build", label: "build" },
+];
+
 export function NewImage() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
@@ -38,12 +44,11 @@ export function NewImage() {
   const source: Source = params.get("source") === "build" ? "build" : "pull";
   const setSource = (s: Source) => setParams({ source: s }, { replace: true });
 
-  // Pull state
-  const [reference, setReference] = useState("");
+  // Single field for both modes: the image:tag we either pull or build into.
+  const [imageRef, setImageRef] = useState("");
 
-  // Build state
+  // Build-only state
   const [dockerfileName, setDockerfileName] = useState("");
-  const [tag, setTag] = useState("");
   const [args, setArgs] = useState<DockerfileArg[]>([]);
   const [argValues, setArgValues] = useState<Record<string, string>>({});
 
@@ -88,11 +93,11 @@ export function NewImage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
+    const ref = imageRef.trim();
+    if (!ref) return;
     setError(null);
     abortRef.current = new AbortController();
     if (source === "pull") {
-      const ref = reference.trim();
-      if (!ref) return;
       setPhase("running");
       setPull({ layers: {}, lastStatus: "starting pull…" });
       try {
@@ -110,15 +115,14 @@ export function NewImage() {
       }
     } else {
       const df = dockerfileName.trim();
-      const tg = tag.trim();
-      if (!df || !tg) return;
+      if (!df) return;
       setPhase("running");
       setBuild(EMPTY_BUILD);
       let receivedAny = false;
       try {
         await streamOp(
           host,
-          { op: "build_image", dockerfile: df, tag: tg, build_args: argValues },
+          { op: "build_image", dockerfile: df, tag: ref, build_args: argValues },
           (chunk) => {
             if (chunk.type !== "build_progress") return;
             receivedAny = true;
@@ -138,7 +142,7 @@ export function NewImage() {
         if (receivedAny && !abortRef.current?.signal.aborted) {
           setError(null);
           setPhase("still-building");
-          watchForTag(host, tg).then((found) => {
+          watchForTag(host, ref).then((found) => {
             if (found) {
               invalidate(`${host.url}:list_images`);
               setPhase("done");
@@ -183,8 +187,7 @@ export function NewImage() {
     setPull(EMPTY_PULL);
     setBuild(EMPTY_BUILD);
     setError(null);
-    setReference("");
-    setTag("");
+    setImageRef("");
     // Keep dockerfileName/args so the user can iterate quickly.
   }
 
@@ -198,10 +201,11 @@ export function NewImage() {
   ];
 
   const dfOptions = (dockerfiles ?? []).map((d) => ({ value: d.name }));
+  const running = phase === "running" || phase === "still-building";
   const submitDisabled =
-    phase === "running" ||
-    phase === "still-building" ||
-    (source === "pull" ? !reference.trim() : !dockerfileName.trim() || !tag.trim());
+    running ||
+    !imageRef.trim() ||
+    (source === "build" && !dockerfileName.trim());
 
   const submitLabel = phase === "running"
     ? source === "pull" ? "Pulling…" : "Building…"
@@ -211,80 +215,62 @@ export function NewImage() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Image" title="new image" />
-
-      <Section label="source">
-        <SourceTabs
-          value={source}
-          onChange={setSource}
-          disabled={phase === "running" || phase === "still-building"}
-        />
-      </Section>
+      <Heading
+        category="Image"
+        editable={{
+          value: imageRef,
+          onChange: setImageRef,
+          placeholder: "image:tag",
+        }}
+      />
 
       <form onSubmit={onSubmit} className="contents">
-        {source === "pull" ? (
-          <Section label="pull">
-            <Field label="Image" hint="e.g. nginx:alpine, postgres:16, ghcr.io/owner/repo:tag">
-              <input
-                className="input mono"
-                type="text"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="image:tag"
-                value={reference}
-                onChange={(e) => setReference(e.target.value)}
-                disabled={phase === "running" || phase === "still-building"}
-                required
-              />
-            </Field>
-          </Section>
-        ) : (
-          <Section label="build">
-            <Field label="Dockerfile" hint="from this host's dockerfiles directory">
+        <Section>
+          <Row
+            label="Source"
+            right={
               <Combobox
-                value={dockerfileName}
-                onChange={setDockerfileName}
-                placeholder={dfOptions.length === 0 ? "no dockerfiles yet" : "pick a dockerfile…"}
-                options={dfOptions}
-                mono
+                cell
+                value={source}
+                onChange={(v) => setSource(v as Source)}
+                options={SOURCE_OPTIONS}
               />
-            </Field>
-            <Field label="Tag" hint="e.g. my-app:dev (image:tag the build will be tagged with)">
-              <input
-                className="input mono"
-                type="text"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                placeholder="image:tag"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                disabled={phase === "running" || phase === "still-building"}
-                required
+            }
+          />
+          {source === "build" && (
+            <Row
+              label="Dockerfile"
+              right={
+                <Combobox
+                  cell
+                  mono
+                  value={dockerfileName}
+                  onChange={setDockerfileName}
+                  placeholder={dfOptions.length === 0 ? "no dockerfiles yet" : "pick…"}
+                  options={dfOptions}
+                />
+              }
+            />
+          )}
+        </Section>
+
+        {source === "build" && args.length > 0 && (
+          <Section label="build args">
+            {args.map((a) => (
+              <Row
+                key={a.name}
+                label={a.name}
+                right={
+                  <EditCell
+                    mono
+                    placeholder={a.default ?? ""}
+                    value={argValues[a.name] ?? ""}
+                    onChange={(e) => setArgValues({ ...argValues, [a.name]: e.target.value })}
+                    disabled={running}
+                  />
+                }
               />
-            </Field>
-            {args.length > 0 && (
-              <div className="flex flex-col gap-2 pt-1">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
-                  Build args
-                </span>
-                {args.map((a) => (
-                  <Field key={a.name} label={a.name} hint={a.default ? `default: ${a.default}` : "no default"}>
-                    <input
-                      className="input mono"
-                      type="text"
-                      autoCapitalize="off"
-                      autoCorrect="off"
-                      spellCheck={false}
-                      value={argValues[a.name] ?? ""}
-                      onChange={(e) => setArgValues({ ...argValues, [a.name]: e.target.value })}
-                      disabled={phase === "running"}
-                    />
-                  </Field>
-                ))}
-              </div>
-            )}
+            ))}
           </Section>
         )}
 
@@ -294,7 +280,7 @@ export function NewImage() {
             {phase === "still-building" && (
               <p className="text-xs text-[var(--text-secondary)] pt-2">
                 connection dropped, but the build is still running on the host —
-                waiting for <span className="mono">{tag}</span> to appear in the image list…
+                waiting for <span className="mono">{imageRef}</span> to appear in the image list…
               </p>
             )}
           </Section>
@@ -302,7 +288,7 @@ export function NewImage() {
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="actions">
+        <Section label={source === "pull" ? "pull" : "build"}>
           {phase === "done" ? (
             <div className="flex gap-2">
               <Button variant="ghost" onClick={reset} className="flex-1">
@@ -330,35 +316,5 @@ export function NewImage() {
         </Section>
       </form>
     </Page>
-  );
-}
-
-function SourceTabs({
-  value,
-  onChange,
-  disabled,
-}: {
-  value: Source;
-  onChange: (s: Source) => void;
-  disabled: boolean;
-}) {
-  const opts: { key: Source; label: string }[] = [
-    { key: "pull", label: "Pull" },
-    { key: "build", label: "Build" },
-  ];
-  return (
-    <div className="grid grid-cols-2 gap-2">
-      {opts.map((o) => (
-        <button
-          key={o.key}
-          type="button"
-          onClick={() => onChange(o.key)}
-          disabled={disabled}
-          className={`btn ${value === o.key ? "btn-primary" : "btn-ghost"}`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
   );
 }

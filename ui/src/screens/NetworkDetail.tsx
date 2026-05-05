@@ -112,7 +112,7 @@ export function NetworkDetail() {
             </Collapsible>
           )}
 
-          <Section label="ops">
+          <Section label="danger">
             <Button
               variant="destructive"
               disabled={pending}

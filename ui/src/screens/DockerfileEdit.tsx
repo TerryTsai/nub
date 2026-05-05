@@ -6,7 +6,6 @@ import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -95,38 +94,32 @@ export function DockerfileEdit() {
 
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
-  const title = isNew ? "new dockerfile" : name;
+  const crumbLabel = isNew ? "new dockerfile" : name;
   const crumbs: Crumb[] = [
     ...sectionCrumbs,
-    { kind: "link", label: title },
+    { kind: "link", label: crumbLabel },
   ];
   const dirty = isNew ? draftName.trim() !== "" || content !== "" : content !== original;
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Dockerfile" title={title} />
+      {isNew ? (
+        <Heading
+          category="Dockerfile"
+          editable={{
+            value: draftName,
+            onChange: setDraftName,
+            placeholder: "new.Dockerfile",
+          }}
+        />
+      ) : (
+        <Heading category="Dockerfile" title={name} />
+      )}
 
       {loading && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
 
       {!loading && (
         <>
-          {isNew && (
-            <Section label="name">
-              <Field label="Filename">
-                <input
-                  className="input mono"
-                  type="text"
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  placeholder="nginx.Dockerfile"
-                  value={draftName}
-                  onChange={(e) => setDraftName(e.target.value)}
-                />
-              </Field>
-            </Section>
-          )}
-
           <Section label="content">
             <textarea
               className="input mono"
@@ -143,7 +136,7 @@ export function DockerfileEdit() {
 
           {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-          <Section label="actions">
+          <Section label={isNew ? "create" : "save"}>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -160,17 +153,19 @@ export function DockerfileEdit() {
                 {pending === "save" ? "…" : isNew ? "Create" : "Save"}
               </Button>
             </div>
-            {!isNew && (
+          </Section>
+
+          {!isNew && (
+            <Section label="danger">
               <Button
                 variant="destructive"
                 onClick={() => setConfirmDelete(true)}
                 disabled={pending !== null}
-                className="mt-2"
               >
                 Delete
               </Button>
-            )}
-          </Section>
+            </Section>
+          )}
 
           <ConfirmDialog
             open={confirmDelete}

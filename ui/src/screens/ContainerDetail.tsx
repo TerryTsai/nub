@@ -68,13 +68,64 @@ export function ContainerDetail() {
     { kind: "link", label: displayName },
   ];
 
+  const subnav = detail ? (
+    <>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={pending !== null || detail.running}
+        onClick={() => act("start", { kind: "start" })}
+      >
+        {pending === "start" ? "…" : "Start"}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={pending !== null || !detail.running}
+        onClick={() => act("stop", { kind: "stop" })}
+      >
+        {pending === "stop" ? "…" : "Stop"}
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={pending !== null || !detail.running}
+        onClick={() => act("restart", { kind: "restart" })}
+      >
+        {pending === "restart" ? "…" : "Restart"}
+      </Button>
+      <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
+      <Link to={`/h/${hid}/c/${cid}/logs`}>
+        <Button size="sm" variant="ghost">Logs</Button>
+      </Link>
+      <Link to={`/h/${hid}/c/${cid}/stats`}>
+        <Button size="sm" variant="ghost">Stats</Button>
+      </Link>
+      <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!detail.running}>
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={!detail.running}
+          title={!detail.running ? "container is not running" : undefined}
+        >
+          Exec
+        </Button>
+      </Link>
+      <Button size="sm" variant="ghost" onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}>
+        Clone
+      </Button>
+    </>
+  ) : undefined;
+
   return (
-    <Page crumbs={crumbs}>
+    <Page crumbs={crumbs} subnav={subnav}>
       <Heading
         category="Container"
         title={displayName}
         right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code, detail.health)} />}
       />
+
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       {detail && (
         <>
@@ -107,63 +158,12 @@ export function ContainerDetail() {
             )}
           </Collapsible>
 
-          <Section label="ops">
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                variant="primary"
-                disabled={pending !== null || detail.running}
-                onClick={() => act("start", { kind: "start" })}
-              >
-                {pending === "start" ? "…" : "Start"}
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={pending !== null || !detail.running}
-                onClick={() => act("stop", { kind: "stop" })}
-              >
-                {pending === "stop" ? "…" : "Stop"}
-              </Button>
-              <Button
-                variant="ghost"
-                disabled={pending !== null || !detail.running}
-                onClick={() => act("restart", { kind: "restart" })}
-              >
-                {pending === "restart" ? "…" : "Restart"}
-              </Button>
-              <RemoveButton
-                pending={pending}
-                running={detail.running}
-                onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
-              />
-            </div>
-            <div className="grid grid-cols-4 gap-1.5">
-              <Link to={`/h/${hid}/c/${cid}/logs`}>
-                <Button variant="ghost" size="sm" className="w-full">Logs</Button>
-              </Link>
-              <Link to={`/h/${hid}/c/${cid}/stats`}>
-                <Button variant="ghost" size="sm" className="w-full">Stats</Button>
-              </Link>
-              <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!detail.running}>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full"
-                  disabled={!detail.running}
-                  title={!detail.running ? "container is not running" : undefined}
-                >
-                  Exec
-                </Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full"
-                onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
-              >
-                Clone
-              </Button>
-            </div>
-            {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+          <Section label="danger">
+            <RemoveButton
+              pending={pending}
+              running={detail.running}
+              onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
+            />
           </Section>
         </>
       )}

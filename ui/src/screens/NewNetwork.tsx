@@ -4,10 +4,10 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Field } from "@/components/Field";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
+import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 
 const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
@@ -53,36 +53,35 @@ export function NewNetwork() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Network" title="new network" />
+      <Heading
+        category="Network"
+        editable={{
+          value: name,
+          onChange: setName,
+          placeholder: "new network",
+        }}
+      />
 
       <form onSubmit={onSubmit} className="contents">
-        <Section label="network">
-          <Field label="Name">
-            <input
-              className="input mono"
-              type="text"
-              autoCapitalize="off"
-              autoCorrect="off"
-              spellCheck={false}
-              placeholder="web"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </Field>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={internal}
-              onChange={(e) => setInternal(e.target.checked)}
-            />
-            <span className="text-xs">Internal (no external traffic)</span>
-          </label>
+        <Section>
+          <Row
+            label="Internal"
+            right={
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--text-secondary)]">
+                <input
+                  type="checkbox"
+                  checked={internal}
+                  onChange={(e) => setInternal(e.target.checked)}
+                />
+                no external traffic
+              </label>
+            }
+          />
         </Section>
 
         {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-        <Section label="actions">
+        <Section label="create">
           <div className="flex gap-2">
             <Button
               variant="ghost"
