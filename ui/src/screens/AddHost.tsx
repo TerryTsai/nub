@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { Button } from "@/components/Button";
-import { Field } from "@/components/Field";
+import { EditCell } from "@/components/EditCell";
 import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
+import { Row } from "@/components/Row";
+import { Section } from "@/components/Section";
 
 // Pure read of `#t=<token>` from the URL. Host URL is taken from
 // `window.location.origin` since the user is loading the UI from the nub
@@ -65,56 +67,60 @@ export function AddHost() {
 
   return (
     <Page>
-      <Heading category="Add" title="new host" />
-      <form onSubmit={onSubmit} className="flex flex-col gap-4">
-        <Field label="URL">
-          <input
-            className="input"
-            type="url"
-            inputMode="url"
-            autoComplete="off"
-            autoCapitalize="off"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="http://10.0.0.5:8080"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
+      <Heading
+        category="Host"
+        editable={{
+          value: label,
+          onChange: setLabel,
+          placeholder: "new host",
+        }}
+      />
+
+      <form onSubmit={onSubmit} className="contents">
+        <Section>
+          <Row
+            label="URL"
+            right={
+              <EditCell
+                mono
+                type="url"
+                inputMode="url"
+                autoComplete="off"
+                placeholder="http://10.0.0.5:8080"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+              />
+            }
           />
-        </Field>
-        <Field label="Token" hint="paste the admin token printed by nub at startup">
-          <input
-            className="input mono"
-            type="password"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder="bearer token"
-            value={token}
-            onChange={(e) => setToken(e.target.value)}
-            required
+          <Row
+            label="Token"
+            right={
+              <EditCell
+                mono
+                type="password"
+                autoComplete="off"
+                placeholder="bearer token"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                required
+              />
+            }
           />
-        </Field>
-        <Field label="Label">
-          <input
-            className="input"
-            type="text"
-            autoCapitalize="off"
-            autoCorrect="off"
-            placeholder="m73a"
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-          />
-        </Field>
-        {error && <div className="text-[var(--error)] text-xs">{error}</div>}
-        <div className="flex gap-2">
-          <Button variant="ghost" onClick={() => nav(-1)} className="flex-1">
-            Cancel
-          </Button>
-          <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="flex-1">
-            {pending ? "Connecting…" : "Connect & save"}
-          </Button>
-        </div>
+        </Section>
+
+        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+
+        <Section label="connect">
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={() => nav(-1)} className="flex-1">
+              Cancel
+            </Button>
+            <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="flex-1">
+              {pending ? "Connecting…" : "Connect & save"}
+            </Button>
+          </div>
+        </Section>
       </form>
     </Page>
   );

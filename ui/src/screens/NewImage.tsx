@@ -7,6 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { parseArgs, type DockerfileArg } from "@/state/dockerfileArgs";
 import { BuildLog } from "@/components/BuildLog";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
 import { Heading } from "@/components/Heading";
@@ -256,7 +257,7 @@ export function NewImage() {
         </Section>
 
         {source === "build" && args.length > 0 && (
-          <Section label="build args">
+          <Collapsible label="build args" count={args.length} defaultOpen>
             {args.map((a) => (
               <Row
                 key={a.name}
@@ -272,7 +273,7 @@ export function NewImage() {
                 }
               />
             ))}
-          </Section>
+          </Collapsible>
         )}
 
         {phase !== "idle" && (

@@ -12,6 +12,7 @@ import type {
   VolumeMount,
 } from "@/api/types";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
 import { Heading } from "@/components/Heading";
@@ -284,17 +285,7 @@ export function NewContainer() {
           />
         </Section>
 
-        <Section
-          label="ports"
-          right={
-            <AddBtn
-              label="add port"
-              onClick={() =>
-                setForm({ ...form, ports: [...form.ports, { container: "", host: "" }] })
-              }
-            />
-          }
-        >
+        <Collapsible label="ports" count={form.ports.length} defaultOpen>
           {form.ports.length === 0 ? (
             <Empty>no ports published</Empty>
           ) : (
@@ -314,19 +305,15 @@ export function NewContainer() {
               />
             ))
           )}
-        </Section>
+          <AddBtn
+            label="add port"
+            onClick={() =>
+              setForm({ ...form, ports: [...form.ports, { container: "", host: "" }] })
+            }
+          />
+        </Collapsible>
 
-        <Section
-          label="volumes"
-          right={
-            <AddBtn
-              label="add volume"
-              onClick={() =>
-                setForm({ ...form, volumes: [...form.volumes, { source: "", target: "" }] })
-              }
-            />
-          }
-        >
+        <Collapsible label="volumes" count={form.volumes.length} defaultOpen>
           {form.volumes.length === 0 ? (
             <Empty>no volumes mounted</Empty>
           ) : (
@@ -346,17 +333,15 @@ export function NewContainer() {
               />
             ))
           )}
-        </Section>
+          <AddBtn
+            label="add volume"
+            onClick={() =>
+              setForm({ ...form, volumes: [...form.volumes, { source: "", target: "" }] })
+            }
+          />
+        </Collapsible>
 
-        <Section
-          label="environment"
-          right={
-            <AddBtn
-              label="add variable"
-              onClick={() => setForm({ ...form, env: [...form.env, ""] })}
-            />
-          }
-        >
+        <Collapsible label="env" count={form.env.length} defaultOpen>
           {form.env.length === 0 ? (
             <Empty>no environment set</Empty>
           ) : (
@@ -374,7 +359,11 @@ export function NewContainer() {
               />
             ))
           )}
-        </Section>
+          <AddBtn
+            label="add variable"
+            onClick={() => setForm({ ...form, env: [...form.env, ""] })}
+          />
+        </Collapsible>
 
         {pull && (
           <Section label="pull progress">
@@ -440,14 +429,19 @@ function splitTokens(s: string): string[] {
 }
 
 function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
+  // `label` is the verbose aria/intent ("add port"); we render the noun
+  // ("+ port") since the button now sits inside the collapsible body
+  // separated from its section header — the noun is contextually useful
+  // here, unlike when it sat right next to "ports" in the header.
+  const noun = label.replace(/^add\s+/, "");
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="text-sm leading-none text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors px-2"
+      className="text-xs text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors self-start py-1"
     >
-      +
+      + {noun}
     </button>
   );
 }
