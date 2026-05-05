@@ -8,7 +8,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { SkeletonRows } from "@/components/Skeleton";
+import { LoadingBar } from "@/components/LoadingBar";
 import { relativeDate } from "@/lib/relativeDate";
 
 export function HostNetworks() {
@@ -31,7 +31,7 @@ export function HostNetworks() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/networks/new`} label="network" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {networks === null && !error && <SkeletonRows count={5} />}
+      {networks === null && !error && <LoadingBar />}
       {networks?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No networks.</p>
       )}

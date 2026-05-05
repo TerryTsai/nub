@@ -7,7 +7,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { SkeletonRows } from "@/components/Skeleton";
+import { LoadingBar } from "@/components/LoadingBar";
 import { relativeDate } from "@/lib/relativeDate";
 
 export function HostSecrets() {
@@ -30,7 +30,7 @@ export function HostSecrets() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/secrets/new`} label="secret" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {secrets === null && !error && <SkeletonRows count={5} />}
+      {secrets === null && !error && <LoadingBar />}
       {secrets?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No secrets.</p>
       )}

@@ -110,32 +110,34 @@ export function StackDetailScreen() {
 
   const dirty = yaml !== original;
 
-  const subnav = detail ? (
+  const actionsDisabled = !detail || pending !== null;
+  const subnav = (
     <>
       <Button
         size="sm"
         variant="primary"
         onClick={onSave}
-        disabled={pending !== null || !dirty}
+        disabled={actionsDisabled || !dirty}
       >
         {pending === "save" ? <Spinner /> : "Save"}
       </Button>
-      <Button size="sm" variant="ghost" onClick={onRedeploy} disabled={pending !== null}>
+      <Button size="sm" variant="ghost" onClick={onRedeploy} disabled={actionsDisabled}>
         {pending === "redeploy" ? <Spinner /> : "Redeploy"}
       </Button>
-      <Button size="sm" variant="ghost" onClick={onPull} disabled={pending !== null}>
+      <Button size="sm" variant="ghost" onClick={onPull} disabled={actionsDisabled}>
         {pending === "pull" ? <Spinner /> : "Pull"}
       </Button>
       <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
       <Button
         size="sm"
         variant="ghost"
+        disabled={!detail}
         onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)}
       >
         Logs
       </Button>
     </>
-  ) : undefined;
+  );
 
   const droppedKeysCount = detail
     ? detail.unsupported.length + Object.keys(detail.service_unsupported).length
@@ -174,7 +176,7 @@ export function StackDetailScreen() {
         )}
       </Collapsible>
 
-      <Section label="compose">
+      <Collapsible label="compose">
         <textarea
           className="input-code"
           spellCheck={false}
@@ -186,7 +188,7 @@ export function StackDetailScreen() {
           style={{ minHeight: "260px" }}
           disabled={!detail}
         />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="dropped keys" count={droppedKeysCount}>
         {!detail || (detail.unsupported.length === 0 && Object.keys(detail.service_unsupported).length === 0) ? (

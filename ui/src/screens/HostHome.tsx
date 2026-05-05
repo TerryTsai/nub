@@ -10,7 +10,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { relativeDate } from "@/lib/relativeDate";
-import { SkeletonRows } from "@/components/Skeleton";
+import { LoadingBar } from "@/components/LoadingBar";
 
 type ContainerFilter = "all" | "running" | "stopped";
 
@@ -71,7 +71,7 @@ export function HostHome() {
   return (
     <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/c/new`} label="container" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {containers === null && !error && <SkeletonRows count={5} />}
+      {containers === null && !error && <LoadingBar />}
       {containers !== null && containers.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
       )}

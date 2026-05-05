@@ -103,8 +103,21 @@ export function DockerfileEdit() {
   ];
   const dirty = isNew ? draftName.trim() !== "" || content !== "" : content !== original;
 
+  // Edit mode: persistent Save in subnav (matches StackDetail's edit-on-detail
+  // pattern). New mode: Cancel/Create at the bottom (form pattern).
+  const subnav = !isNew ? (
+    <Button
+      size="sm"
+      variant="primary"
+      onClick={(e) => onSubmit(e as unknown as React.FormEvent)}
+      disabled={pending !== null || !dirty}
+    >
+      {pending === "save" ? <Spinner /> : "Save"}
+    </Button>
+  ) : undefined;
+
   return (
-    <Page crumbs={crumbs}>
+    <Page crumbs={crumbs} subnav={subnav}>
       {isNew ? (
         <Heading
           category="Dockerfile"
@@ -143,26 +156,26 @@ export function DockerfileEdit() {
             />
           </Section>
 
-          <Section label={isNew ? "create" : "save"}>
-            <div className="flex gap-2">
-              <Button
-                variant="ghost"
-                onClick={() => nav(`/h/${hid}/dockerfiles`)}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                disabled={pending !== null || !dirty}
-                className="flex-1"
-              >
-                {pending === "save" ? (
-                  <><Spinner /> {isNew ? "Creating…" : "Saving…"}</>
-                ) : isNew ? "Create" : "Save"}
-              </Button>
-            </div>
-          </Section>
+          {isNew && (
+            <Section label="create">
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => nav(`/h/${hid}/dockerfiles`)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={pending !== null || !dirty}
+                  className="flex-1"
+                >
+                  {pending === "save" ? (<><Spinner /> Creating…</>) : "Create"}
+                </Button>
+              </div>
+            </Section>
+          )}
 
           {!isNew && (
             <Section label="danger">
@@ -171,7 +184,7 @@ export function DockerfileEdit() {
                 onClick={() => setConfirmDelete(true)}
                 disabled={pending !== null}
               >
-                Delete
+                {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
               </Button>
             </Section>
           )}

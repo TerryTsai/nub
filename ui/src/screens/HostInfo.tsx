@@ -31,15 +31,19 @@ export function HostInfoScreen() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
+      {/* meta: identity */}
       <Section>
         <Row label="URL" value={saved.url} mono />
         <Row label="nub" value={info?.nub} mono />
+      </Section>
+
+      <Collapsible label="system">
         <Row label="Engine" value={info ? `${info.engine} ${info.version}` : undefined} mono />
         <Row label="OS" value={info ? `${info.os}/${info.arch}` : undefined} mono />
         <Row label="Kernel" value={info?.kernel} mono />
         <Row label="CPUs" value={info ? String(info.cpus) : undefined} />
         <Row label="Memory" value={info ? formatBytes(info.mem_total) : undefined} />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="counts">
         <Row

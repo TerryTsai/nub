@@ -7,7 +7,7 @@ import { volumeStatus } from "@/state/status";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { SkeletonRows } from "@/components/Skeleton";
+import { LoadingBar } from "@/components/LoadingBar";
 import { relativeDate } from "@/lib/relativeDate";
 
 export function HostVolumes() {
@@ -30,7 +30,7 @@ export function HostVolumes() {
   return (
     <Page crumbs={crumbs}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {volumes === null && !error && <SkeletonRows count={5} />}
+      {volumes === null && !error && <LoadingBar />}
       {volumes?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No volumes.</p>
       )}

@@ -77,20 +77,27 @@ export function NetworkDetail() {
       <Heading
         category="Network"
         title={title}
-        right={network && <StatusBadge status={networkStatus(network.in_use)} />}
+        right={<StatusBadge status={network ? networkStatus(network.in_use) : null} />}
       />
 
+      {/* meta: identity + timestamps */}
       <Section>
         <Row label="ID" value={network?.id} mono />
         <Row label="Name" value={network?.name} mono />
+        <Row label="Created" value={network?.created} mono />
+      </Section>
+
+      <Collapsible label="spec">
         <Row label="Driver" value={network?.driver} />
         <Row label="Scope" value={network?.scope} />
         <Row label="Internal" value={network ? (network.internal ? "yes" : "no") : undefined} />
         <Row label="Subnet" value={ipam0?.subnet} mono />
         <Row label="Gateway" value={ipam0?.gateway} mono />
-        <Row label="Created" value={network?.created} mono />
+      </Collapsible>
+
+      <Collapsible label="runtime">
         <Row label="Attached" value={attachedLabel(detail)} />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="attached" count={detail?.containers.length}>
         {!detail || detail.containers.length === 0 ? (

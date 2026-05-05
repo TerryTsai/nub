@@ -76,27 +76,30 @@ export function ImageDetail() {
       <Heading
         category="Image"
         title={title}
-        right={image && <StatusBadge status={imageStatus(image.containers)} />}
+        right={<StatusBadge status={image ? imageStatus(image.containers) : null} />}
       />
 
+      {/* meta: identity + timestamps */}
       <Section>
-        {/* identity */}
         <Row label="ID" value={image?.id} mono />
         <Row label="Tag" value={image?.repo_tag} mono />
-        {/* artifact properties */}
+        <Row label="Created" value={image ? formatTimestamp(image.created) : undefined} mono />
+      </Section>
+
+      <Collapsible label="spec">
         <Row label="Platform" value={platformLabel(detail)} />
         <Row label="Layers" value={detail ? String(detail.layers) : undefined} />
         <Row label="Size" value={image ? formatBytes(image.size) : undefined} />
-        {/* process spec */}
         <Row label="Entrypoint" value={detail?.entrypoint.join(" ")} mono />
         <Row label="Cmd" value={detail?.cmd.join(" ")} mono />
         <Row label="Working dir" value={detail?.working_dir} mono />
         <Row label="User" value={detail?.user} mono />
         <Row label="Exposed" value={detail?.exposed_ports.join(", ")} mono />
-        {/* lifecycle + usage */}
-        <Row label="Created" value={image ? formatTimestamp(image.created) : undefined} mono />
+      </Collapsible>
+
+      <Collapsible label="runtime">
         <Row label="In use by" value={image ? `${image.containers} container${image.containers === 1 ? "" : "s"}` : undefined} />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="digests" count={detail?.repo_digests.length}>
         {!detail || detail.repo_digests.length === 0 ? (

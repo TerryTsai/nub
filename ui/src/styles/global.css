@@ -195,6 +195,17 @@ select:focus-visible,
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
+/* Indeterminate loading bar — a 1/3-width accent stripe slides across an
+ * otherwise empty 2px strip. Used at the top of list pages while data
+ * loads, in lieu of placeholder rows that would jump when content lands. */
+@keyframes loading-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+.loading-bar > span {
+  animation: loading-slide 1.2s linear infinite;
+}
+
 /* Right-edge fade on horizontally-scrollable rows. Signals "more content
  * that way" without dedicating pixels to a chevron or scrollbar. The fade
  * is a no-op when content fits — empty trailing space gets faded, but no

@@ -7,7 +7,7 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
-import { SkeletonRows } from "@/components/Skeleton";
+import { LoadingBar } from "@/components/LoadingBar";
 import { relativeDate } from "@/lib/relativeDate";
 
 export function HostDockerfiles() {
@@ -30,7 +30,7 @@ export function HostDockerfiles() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/dockerfiles/_new`} label="dockerfile" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {files === null && !error && <SkeletonRows count={5} />}
+      {files === null && !error && <LoadingBar />}
       {files?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No dockerfiles.</p>
       )}

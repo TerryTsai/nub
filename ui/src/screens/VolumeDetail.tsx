@@ -76,22 +76,25 @@ export function VolumeDetail() {
       <Heading
         category="Volume"
         title={title}
-        right={volume && <StatusBadge status={volumeStatus(volume.in_use)} />}
+        right={<StatusBadge status={volume ? volumeStatus(volume.in_use) : null} />}
       />
 
+      {/* meta: identity + timestamps */}
       <Section>
-        {/* identity */}
         <Row label="Name" value={volume?.name} mono />
-        {/* spec */}
-        <Row label="Driver" value={volume?.driver} />
-        <Row label="Scope" value={volume?.scope} />
-        {/* on-disk facts */}
-        <Row label="Mountpoint" value={volume?.mountpoint} mono />
-        <Row label="Size" value={sizeLabel(detail)} />
-        {/* lifecycle + usage */}
         <Row label="Created" value={volume?.created_at} mono />
-        <Row label="In use by" value={refCountLabel(detail)} />
       </Section>
+
+      <Collapsible label="spec">
+        <Row label="Driver" value={volume?.driver} />
+        <Row label="Mountpoint" value={volume?.mountpoint} mono />
+        <Row label="Scope" value={volume?.scope} />
+        <Row label="Size" value={sizeLabel(detail)} />
+      </Collapsible>
+
+      <Collapsible label="runtime">
+        <Row label="In use by" value={refCountLabel(detail)} />
+      </Collapsible>
 
       <Collapsible label="options" count={detail ? Object.keys(detail.options).length : undefined}>
         {!detail || Object.keys(detail.options).length === 0 ? (

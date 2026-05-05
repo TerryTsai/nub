@@ -70,12 +70,14 @@ export function ContainerDetail() {
     { kind: "link", label: displayName },
   ];
 
-  const subnav = detail ? (
+  const running = detail?.running ?? false;
+  const actionsDisabled = !detail || pending !== null;
+  const subnav = (
     <>
       <Button
         size="sm"
         variant="ghost"
-        disabled={pending !== null || detail.running}
+        disabled={actionsDisabled || running}
         onClick={() => act("start", { kind: "start" })}
       >
         {pending === "start" ? <Spinner /> : "Start"}
@@ -83,7 +85,7 @@ export function ContainerDetail() {
       <Button
         size="sm"
         variant="ghost"
-        disabled={pending !== null || !detail.running}
+        disabled={actionsDisabled || !running}
         onClick={() => act("stop", { kind: "stop" })}
       >
         {pending === "stop" ? <Spinner /> : "Stop"}
@@ -91,7 +93,7 @@ export function ContainerDetail() {
       <Button
         size="sm"
         variant="ghost"
-        disabled={pending !== null || !detail.running}
+        disabled={actionsDisabled || !running}
         onClick={() => act("restart", { kind: "restart" })}
       >
         {pending === "restart" ? <Spinner /> : "Restart"}
@@ -103,53 +105,62 @@ export function ContainerDetail() {
       <Link to={`/h/${hid}/c/${cid}/stats`}>
         <Button size="sm" variant="ghost">Stats</Button>
       </Link>
-      <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!detail.running}>
+      <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!running}>
         <Button
           size="sm"
           variant="ghost"
-          disabled={!detail.running}
-          title={!detail.running ? "container is not running" : undefined}
+          disabled={!running}
+          title={!running ? "container is not running" : undefined}
         >
           Exec
         </Button>
       </Link>
-      <Button size="sm" variant="ghost" onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}>
+      <Button
+        size="sm"
+        variant="ghost"
+        disabled={!detail}
+        onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
+      >
         Clone
       </Button>
     </>
-  ) : undefined;
+  );
 
   return (
     <Page crumbs={crumbs} subnav={subnav}>
       <Heading
         category="Container"
         title={displayName}
-        right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code, detail.health)} />}
+        right={<StatusBadge status={detail ? containerStatus(detail.state, detail.exit_code, detail.health) : null} />}
       />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
+      {/* meta: identity + timestamps */}
       <Section>
-        {/* identity + spec config */}
         <Row label="ID" value={detail?.id} mono />
         <Row label="Image" value={detail?.image} mono />
-        <Row label="Network" value={detail?.network_mode} mono />
-        <Row label="Restart" value={detail?.restart_policy} />
+        <Row label="Created" value={detail?.created} mono />
+      </Section>
+
+      <Collapsible label="spec">
         <Row label="Entrypoint" value={detail?.entrypoint.join(" ")} mono />
         <Row label="Cmd" value={detail?.cmd.join(" ")} mono />
         <Row label="Working dir" value={detail?.working_dir} mono />
         <Row label="User" value={detail?.user} mono />
+        <Row label="Network" value={detail?.network_mode} mono />
+        <Row label="Restart" value={detail?.restart_policy} />
         <Row label="Privileged" value={detail ? (detail.privileged ? "yes" : "no") : undefined} />
         <Row label="Memory" value={memoryLabel(detail)} />
-        {/* runtime status */}
+      </Collapsible>
+
+      <Collapsible label="runtime">
         <Row label="Health" value={detail?.health} />
         <Row label="Exit code" value={exitCodeLabel(detail)} />
         <Row label="Restarts" value={detail ? String(detail.restart_count) : undefined} />
-        {/* timestamps */}
-        <Row label="Created" value={detail?.created} mono />
         <Row label="Started" value={detail?.started_at} mono />
         <Row label="Finished" value={detail?.finished_at} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="ports" count={detail?.ports.length}>
         {!detail || detail.ports.length === 0 ? (
