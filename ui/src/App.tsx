@@ -12,6 +12,7 @@ import { ContainerStats } from "./screens/ContainerStats";
 import { DockerfileEdit } from "./screens/DockerfileEdit";
 import { HostDockerfiles } from "./screens/HostDockerfiles";
 import { HostImages } from "./screens/HostImages";
+import { HostInfoScreen } from "./screens/HostInfo";
 import { HostNetworks } from "./screens/HostNetworks";
 import { HostVolumes } from "./screens/HostVolumes";
 import { ImageDetail } from "./screens/ImageDetail";
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/" element={<Hosts />} />
           <Route path="/add" element={<AddHost />} />
           <Route path="/h/:hid" element={<HostHome />} />
+          <Route path="/h/:hid/info" element={<HostInfoScreen />} />
           <Route path="/h/:hid/images" element={<HostImages />} />
           <Route path="/h/:hid/images/new" element={<NewImage />} />
           <Route path="/h/:hid/images/:iid" element={<ImageDetail />} />
