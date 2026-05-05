@@ -1,11 +1,9 @@
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useQuery } from "@/state/cache";
 import type { ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
-import { Button } from "@/components/Button";
 import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -33,7 +31,6 @@ export function HostHome() {
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
 
-  const session = useSession(host);
   const [params, setParams] = useSearchParams();
   const filter = asFilter(params.get("filter"));
   const setFilter = (v: ContainerFilter) => {
@@ -41,7 +38,7 @@ export function HostHome() {
     else setParams({ filter: v }, { replace: true });
   };
 
-  const queryKey = host && session.session ? `${host.url}:list_containers` : null;
+  const queryKey = host ? `${host.url}:list_containers` : null;
   const { data: containers, error } = useQuery<ContainerSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_containers", all: true }), "containers");
     return r.data;
@@ -57,9 +54,7 @@ export function HostHome() {
     );
   }
 
-  const canCreate = session.session?.can("containers:create") ?? false;
-
-  const subnav = session.session && containers !== null ? (
+  const subnav = containers !== null ? (
     <Filters
       value={filter}
       onChange={setFilter}
@@ -72,39 +67,19 @@ export function HostHome() {
   ) : undefined;
 
   return (
-    <Page
-      crumbs={crumbs}
-      subnav={subnav}
-      fab={session.session && canCreate ? <FAB to={`/h/${hid}/c/new`} label="container" /> : undefined}
-    >
-      {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
-
-      {session.error && (
-        <>
-          <p className="text-[var(--error)] text-sm">Couldn't connect: {session.error}</p>
-          <p className="text-xs text-[var(--text-tertiary)]">
-            The token may have rotated (admin tokens regenerate on every nub restart).
-          </p>
-          <Link to="/add" className="self-start"><Button variant="ghost">Re-add host</Button></Link>
-        </>
+    <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/c/new`} label="container" />}>
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      {containers === null && !error && (
+        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
       )}
-
-      {session.session && (
-        <>
-          {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-          {containers === null && !error && (
-            <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-          )}
-          {containers !== null && containers.length === 0 && (
-            <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
-          )}
-          {containers !== null && containers.length > 0 && (
-            <ContainerList
-              containers={containers.filter((c) => matchesFilter(c.state, filter))}
-              onPick={(id) => nav(`/h/${hid}/c/${id}`)}
-            />
-          )}
-        </>
+      {containers !== null && containers.length === 0 && (
+        <p className="text-xs text-[var(--text-tertiary)]">No containers.</p>
+      )}
+      {containers !== null && containers.length > 0 && (
+        <ContainerList
+          containers={containers.filter((c) => matchesFilter(c.state, filter))}
+          onPick={(id) => nav(`/h/${hid}/c/${id}`)}
+        />
       )}
     </Page>
   );

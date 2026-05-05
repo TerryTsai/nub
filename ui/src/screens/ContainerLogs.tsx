@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
 import { useResilientStream } from "@/state/resilientStream";
 import { Button } from "@/components/Button";
@@ -22,13 +21,12 @@ export function ContainerLogs() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [lines, setLines] = useState<Line[]>([]);
   const [follow, setFollow] = useState(true);
 
   const containerName = useContainerName(host, cid);
-  const op = host && cid && session.session && follow
+  const op = host && cid && follow
     ? ({ op: "stream_logs" as const, id: cid, follow: true, tail: TAIL_LINES })
     : null;
   const { state: connState, error } = useResilientStream(host, op, (chunk) => {

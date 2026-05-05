@@ -1,8 +1,7 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { SecretSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { Collapsible } from "@/components/Collapsible";
 import { FAB } from "@/components/FAB";
@@ -13,22 +12,18 @@ import { useToast } from "@/components/Toaster";
 
 export function HostSecrets() {
   const { hid } = useParams<{ hid: string }>();
-  const nav = useNavigate();
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
   const toast = useToast();
 
-  const queryKey = host && session.session ? `${host.url}:list_secrets` : null;
+  const queryKey = host ? `${host.url}:list_secrets` : null;
   const { data: secrets, error } = useQuery<SecretSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_secrets" }), "secrets");
     return r.data;
   });
 
   const crumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "secrets");
-  const canCreate = session.session?.can("secrets:put") ?? false;
-  const canDelete = session.session?.can("secrets:delete") ?? false;
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
@@ -45,14 +40,9 @@ export function HostSecrets() {
   }
 
   return (
-    <Page
-      crumbs={crumbs}
-      fab={session.session && canCreate ? <FAB to={`/h/${hid}/secrets/new`} label="secret" /> : undefined}
-    >
-      {session.loading && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
-      {session.error && <p className="text-[var(--error)] text-xs">Couldn't connect: {session.error}</p>}
+    <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/secrets/new`} label="secret" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {session.session && secrets === null && !error && (
+      {secrets === null && !error && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading secrets…</p>
       )}
       {secrets?.length === 0 && (
@@ -68,7 +58,7 @@ export function HostSecrets() {
               <ListRow
                 title={s.name}
                 subtitle={`${s.size}B · ${s.modified_at || "unknown date"}`}
-                onPress={canDelete ? () => onDelete(s.name) : () => nav(`/h/${hid}/secrets/new`)}
+                onPress={() => onDelete(s.name)}
               />
             </div>
           ))}

@@ -3,7 +3,6 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
@@ -23,13 +22,12 @@ export function ContainerDetail() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [pending, setPending] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const toast = useToast();
 
-  const queryKey = host && session.session && cid ? `${host.url}:inspect:${cid}` : null;
+  const queryKey = host && cid ? `${host.url}:inspect:${cid}` : null;
   const { data: detail, error: queryError, reload } = useQuery<ContainerDetailT>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "get_container", id: cid! }), "container_detail");
     return r.data;
@@ -69,9 +67,6 @@ export function ContainerDetail() {
     ...sectionCrumbs,
     { kind: "link", label: displayName },
   ];
-  const can = (op: string) => session.session?.can(op) ?? false;
-  const denyReason = (op: string) =>
-    session.session && !can(op) ? `your token doesn't allow ${op}` : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -80,9 +75,6 @@ export function ContainerDetail() {
         title={displayName}
         right={detail && <StatusBadge status={containerStatus(detail.state, detail.exit_code, detail.health)} />}
       />
-
-      {session.loading && <p className="text-[var(--text-secondary)] text-sm">Connecting…</p>}
-      {session.error && <p className="text-[var(--error)] text-sm">{session.error}</p>}
 
       {detail && (
         <>
@@ -119,7 +111,6 @@ export function ContainerDetail() {
             <div className="grid grid-cols-2 gap-1.5">
               <Button
                 variant="primary"
-                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || detail.running}
                 onClick={() => act("start", { kind: "start" })}
               >
@@ -127,7 +118,6 @@ export function ContainerDetail() {
               </Button>
               <Button
                 variant="ghost"
-                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || !detail.running}
                 onClick={() => act("stop", { kind: "stop" })}
               >
@@ -135,14 +125,12 @@ export function ContainerDetail() {
               </Button>
               <Button
                 variant="ghost"
-                disallowReason={denyReason("containers:action")}
                 disabled={pending !== null || !detail.running}
                 onClick={() => act("restart", { kind: "restart" })}
               >
                 {pending === "restart" ? "…" : "Restart"}
               </Button>
               <RemoveButton
-                disallow={denyReason("containers:action")}
                 pending={pending}
                 running={detail.running}
                 onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
@@ -150,21 +138,18 @@ export function ContainerDetail() {
             </div>
             <div className="grid grid-cols-4 gap-1.5">
               <Link to={`/h/${hid}/c/${cid}/logs`}>
-                <Button variant="ghost" size="sm" className="w-full" disallowReason={denyReason("containers:logs")}>
-                  Logs
-                </Button>
+                <Button variant="ghost" size="sm" className="w-full">Logs</Button>
               </Link>
               <Link to={`/h/${hid}/c/${cid}/stats`}>
-                <Button variant="ghost" size="sm" className="w-full" disallowReason={denyReason("containers:stats")}>
-                  Stats
-                </Button>
+                <Button variant="ghost" size="sm" className="w-full">Stats</Button>
               </Link>
-              <Link to={`/h/${hid}/c/${cid}/exec`}>
+              <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!detail.running}>
                 <Button
                   variant="ghost"
                   size="sm"
                   className="w-full"
-                  disallowReason={!detail.running ? "container is not running" : denyReason("containers:exec")}
+                  disabled={!detail.running}
+                  title={!detail.running ? "container is not running" : undefined}
                 >
                   Exec
                 </Button>
@@ -173,7 +158,6 @@ export function ContainerDetail() {
                 variant="ghost"
                 size="sm"
                 className="w-full"
-                disallowReason={denyReason("containers:create")}
                 onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
               >
                 Clone
@@ -199,12 +183,10 @@ function pastTense(name: string): string {
 }
 
 function RemoveButton({
-  disallow,
   pending,
   running,
   onConfirm,
 }: {
-  disallow: string | undefined;
   pending: string | null;
   running: boolean;
   onConfirm: (force: boolean) => void;
@@ -214,7 +196,6 @@ function RemoveButton({
     <>
       <Button
         variant="destructive"
-        disallowReason={disallow}
         disabled={pending !== null}
         onClick={() => setOpen(true)}
       >

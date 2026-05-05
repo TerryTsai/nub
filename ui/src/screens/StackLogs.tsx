@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useResilientStream } from "@/state/resilientStream";
 import { Button } from "@/components/Button";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -21,13 +20,12 @@ export function StackLogs() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
   const name = sname ? decodeURIComponent(sname) : "";
 
   const [lines, setLines] = useState<Line[]>([]);
   const [follow, setFollow] = useState(true);
 
-  const op = host && name && session.session && follow
+  const op = host && name && follow
     ? ({ op: "stream_stack_logs" as const, name, follow: true, tail: TAIL_LINES })
     : null;
   const { state: connState, error } = useResilientStream(host, op, (chunk) => {

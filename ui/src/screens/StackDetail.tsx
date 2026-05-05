@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { StackDetail } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useQuery, invalidate } from "@/state/cache";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
@@ -24,11 +23,10 @@ export function StackDetailScreen() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
   const toast = useToast();
   const name = sname ? decodeURIComponent(sname) : "";
 
-  const queryKey = host && session.session && name ? `${host.url}:get_stack:${name}` : null;
+  const queryKey = host && name ? `${host.url}:get_stack:${name}` : null;
   const { data: detail, error, reload } = useQuery<StackDetail>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "get_stack", name }), "stack_detail");
     return r.data;
@@ -105,14 +103,6 @@ export function StackDetailScreen() {
   }
 
   const dirty = yaml !== original;
-  const canRedeploy = session.session?.can("stacks:redeploy") ?? false;
-  const canPull = session.session?.can("stacks:pull") ?? false;
-  const canUpdate = session.session?.can("stacks:update") ?? false;
-  const canDelete = session.session?.can("stacks:delete") ?? false;
-  const denyRedeploy = !canRedeploy ? "your token doesn't allow stacks:redeploy" : undefined;
-  const denyPull = !canPull ? "your token doesn't allow stacks:pull" : undefined;
-  const denyUpdate = !canUpdate ? "your token doesn't allow stacks:update" : undefined;
-  const denyDelete = !canDelete ? "your token doesn't allow stacks:delete" : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -172,14 +162,14 @@ export function StackDetailScreen() {
           {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
 
           <Section label="ops">
-            <Button onClick={onSave} disabled={pending !== null || !dirty} disallowReason={denyUpdate} className="w-full">
+            <Button onClick={onSave} disabled={pending !== null || !dirty} className="w-full">
               {pending === "save" ? "…" : "Save & redeploy"}
             </Button>
             <div className="grid grid-cols-2 gap-1.5">
-              <Button variant="ghost" onClick={onRedeploy} disabled={pending !== null} disallowReason={denyRedeploy}>
+              <Button variant="ghost" onClick={onRedeploy} disabled={pending !== null}>
                 {pending === "redeploy" ? "…" : "Redeploy"}
               </Button>
-              <Button variant="ghost" onClick={onPull} disabled={pending !== null} disallowReason={denyPull}>
+              <Button variant="ghost" onClick={onPull} disabled={pending !== null}>
                 {pending === "pull" ? "…" : "Pull & redeploy"}
               </Button>
             </div>
@@ -196,7 +186,6 @@ export function StackDetailScreen() {
                 size="sm"
                 onClick={() => setConfirmDelete(true)}
                 disabled={pending !== null}
-                disallowReason={denyDelete}
               >
                 Delete
               </Button>

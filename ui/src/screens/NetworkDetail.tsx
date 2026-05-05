@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { NetworkDetail as NetworkDetailT, NetworkSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
@@ -22,20 +21,19 @@ export function NetworkDetail() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const queryKey = host && session.session ? `${host.url}:list_networks` : null;
+  const queryKey = host ? `${host.url}:list_networks` : null;
   const { data: networks } = useQuery<NetworkSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_networks" }), "networks");
     return r.data;
   });
   const network = networks?.find((n) => n.id === nid);
 
-  const inspectKey = host && session.session && nid ? `${host.url}:get_network:${nid}` : null;
+  const inspectKey = host && nid ? `${host.url}:get_network:${nid}` : null;
   const { data: detail } = useQuery<NetworkDetailT>(inspectKey, async () => {
     const r = unwrap(await call(host!, { op: "get_network", id: nid! }), "network_detail");
     return r.data;
@@ -65,10 +63,6 @@ export function NetworkDetail() {
     ...sectionCrumbs,
     { kind: "link", label: title },
   ];
-  const denyReason =
-    session.session && !session.session.can("networks:delete")
-      ? "your token doesn't allow networks:delete"
-      : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -78,7 +72,7 @@ export function NetworkDetail() {
         right={network && <StatusBadge status={networkStatus(network.in_use)} />}
       />
 
-      {!network && session.session && (
+      {!network && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
       )}
 
@@ -121,7 +115,6 @@ export function NetworkDetail() {
           <Section label="ops">
             <Button
               variant="destructive"
-              disallowReason={denyReason}
               disabled={pending}
               onClick={() => setConfirmOpen(true)}
             >

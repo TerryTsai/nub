@@ -2,7 +2,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { FAB } from "@/components/FAB";
@@ -34,7 +33,6 @@ export function HostImages() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [params, setParams] = useSearchParams();
   const filter = asImageFilter(params.get("filter"));
@@ -43,7 +41,7 @@ export function HostImages() {
     else setParams({ filter: v }, { replace: true });
   };
 
-  const queryKey = host && session.session ? `${host.url}:list_images` : null;
+  const queryKey = host ? `${host.url}:list_images` : null;
   const { data: images, error } = useQuery<ImageSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_images" }), "images");
     return r.data;
@@ -67,20 +65,11 @@ export function HostImages() {
   ) : undefined;
 
   const visible = images?.filter((i) => matchesImageFilter(i, filter)) ?? null;
-  const canCreate =
-    (session.session?.can("images:pull") ?? false) ||
-    (session.session?.can("images:build") ?? false);
 
   return (
-    <Page
-      crumbs={crumbs}
-      subnav={subnav}
-      fab={session.session && canCreate ? <FAB to={`/h/${hid}/images/new`} label="image" /> : undefined}
-    >
-      {session.loading && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
-      {session.error && <p className="text-[var(--error)] text-xs">Couldn't connect: {session.error}</p>}
+    <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/images/new`} label="image" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {session.session && images === null && !error && (
+      {images === null && !error && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading images…</p>
       )}
       {images?.length === 0 && (

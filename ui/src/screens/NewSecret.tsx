@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
@@ -20,17 +19,11 @@ export function NewSecret() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [name, setName] = useState("");
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const denyReason =
-    session.session && !session.session.can("secrets:put")
-      ? "your token doesn't allow secrets:put"
-      : undefined;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -66,8 +59,6 @@ export function NewSecret() {
   return (
     <Page crumbs={crumbs}>
       <Heading category="Secret" title="new secret" />
-
-      {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
         <Section label="secret">
@@ -122,7 +113,6 @@ export function NewSecret() {
             <Button
               type="submit"
               disabled={pending || !name.trim() || !value}
-              disallowReason={denyReason}
               className="flex-1"
             >
               {pending ? "…" : "Create"}

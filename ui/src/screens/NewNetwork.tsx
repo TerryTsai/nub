@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
@@ -19,17 +18,11 @@ export function NewNetwork() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [name, setName] = useState("");
   const [internal, setInternal] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const denyReason =
-    session.session && !session.session.can("networks:create")
-      ? "your token doesn't allow networks:create"
-      : undefined;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,8 +54,6 @@ export function NewNetwork() {
   return (
     <Page crumbs={crumbs}>
       <Heading category="Network" title="new network" />
-
-      {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
         <Section label="network">
@@ -104,7 +95,6 @@ export function NewNetwork() {
             <Button
               type="submit"
               disabled={pending || !name.trim()}
-              disallowReason={denyReason}
               className="flex-1"
             >
               {pending ? "…" : "Create"}

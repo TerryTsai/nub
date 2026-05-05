@@ -8,8 +8,8 @@ export interface Host {
 }
 
 export class ApiError extends Error {
-  constructor(public status: number, public body: string) {
-    super(`HTTP ${status}: ${body}`);
+  constructor(public status: number, public body: string, message?: string) {
+    super(message ?? `HTTP ${status}: ${body}`);
   }
 }
 
@@ -24,9 +24,19 @@ export async function call(host: Host, op: Op): Promise<OpResult> {
     body: JSON.stringify(op),
   });
   if (!res.ok) {
-    throw new ApiError(res.status, await res.text());
+    const body = await res.text();
+    throw new ApiError(res.status, body, friendlyMessage(res.status, op, body));
   }
   return (await res.json()) as OpResult;
+}
+
+// Server returns bare 403/401 with no body for auth failures. Synthesize a
+// message that names the op the caller tried — that's what they need to see
+// in a toast, since the server's body is empty.
+function friendlyMessage(status: number, op: Op, body: string): string | undefined {
+  if (status === 403) return `your token doesn't allow ${op.op}`;
+  if (status === 401) return "your token is invalid or expired";
+  return body ? `HTTP ${status}: ${body}` : undefined;
 }
 
 /**

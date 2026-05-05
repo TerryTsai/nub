@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { VolumeDetail as VolumeDetailT, VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
@@ -22,20 +21,19 @@ export function VolumeDetail() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const queryKey = host && session.session ? `${host.url}:list_volumes` : null;
+  const queryKey = host ? `${host.url}:list_volumes` : null;
   const { data: volumes } = useQuery<VolumeSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_volumes" }), "volumes");
     return r.data;
   });
   const volume = volumes?.find((v) => v.name === vname);
 
-  const inspectKey = host && session.session && vname ? `${host.url}:get_volume:${vname}` : null;
+  const inspectKey = host && vname ? `${host.url}:get_volume:${vname}` : null;
   const { data: detail } = useQuery<VolumeDetailT>(inspectKey, async () => {
     const r = unwrap(await call(host!, { op: "get_volume", name: vname! }), "volume_detail");
     return r.data;
@@ -66,10 +64,6 @@ export function VolumeDetail() {
     ...sectionCrumbs,
     { kind: "link", label: shortTitle },
   ];
-  const denyReason =
-    session.session && !session.session.can("volumes:delete")
-      ? "your token doesn't allow volumes:delete"
-      : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -79,7 +73,7 @@ export function VolumeDetail() {
         right={volume && <StatusBadge status={volumeStatus(volume.in_use)} />}
       />
 
-      {!volume && session.session && (
+      {!volume && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
       )}
 
@@ -128,7 +122,6 @@ export function VolumeDetail() {
           <Section label="ops">
             <Button
               variant="destructive"
-              disallowReason={denyReason}
               disabled={pending}
               onClick={() => setConfirmOpen(true)}
             >

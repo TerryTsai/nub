@@ -2,7 +2,6 @@ import { useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
 import { useResilientStream } from "@/state/resilientStream";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -34,7 +33,6 @@ export function ContainerStats() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [snap, setSnap] = useState<Snapshot | null>(null);
   const [rates, setRates] = useState<Rates>({ rx_per_s: 0, tx_per_s: 0 });
@@ -42,7 +40,7 @@ export function ContainerStats() {
   const lastRef = useRef<{ rx: number; tx: number; t: number } | null>(null);
 
   const containerName = useContainerName(host, cid);
-  const op = host && cid && session.session ? ({ op: "stream_stats" as const, id: cid }) : null;
+  const op = host && cid ? ({ op: "stream_stats" as const, id: cid }) : null;
   const { state: connState, error } = useResilientStream(host, op, (chunk) => {
     if (chunk.type !== "stats") return;
     const now = performance.now();

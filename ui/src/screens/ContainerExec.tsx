@@ -5,7 +5,6 @@ import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 import { bidiStream, type BidiStream, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useContainerName } from "@/state/containerName";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -20,13 +19,12 @@ export function ContainerExec() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [error, setError] = useState<string | null>(null);
   const termRef = useRef<HTMLDivElement>(null);
 
   const containerName = useContainerName(host, cid);
-  useExecTerminal(termRef, host, cid, cmd, !!session.session, setError);
+  useExecTerminal(termRef, host, cid, cmd, setError);
 
   const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
@@ -59,11 +57,10 @@ function useExecTerminal(
   host: Host | undefined,
   cid: string | undefined,
   cmd: string,
-  ready: boolean,
   setError: (e: string | null) => void,
 ) {
   useEffect(() => {
-    if (!host || !cid || !ready || !ref.current) return;
+    if (!host || !cid || !ref.current) return;
     const term = newTerminal();
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -80,7 +77,7 @@ function useExecTerminal(
       stream.close();
       term.dispose();
     };
-  }, [host?.url, host?.token, cid, cmd, ready, ref, setError]);
+  }, [host?.url, host?.token, cid, cmd, ref, setError]);
 }
 
 // ---- Helpers ------------------------------------------------------------

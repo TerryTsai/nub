@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { Field } from "@/components/Field";
@@ -26,7 +25,6 @@ export function NewStack() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [name, setName] = useState("");
   const [yaml, setYaml] = useState("");
@@ -38,8 +36,6 @@ export function NewStack() {
   if (!saved) return <Page><p>Unknown host.</p></Page>;
 
   const crumbs: Crumb[] = [...sectionCrumbs, { kind: "link", label: "new stack" }];
-  const canCreate = session.session?.can("stacks:create") ?? false;
-  const denyCreate = !canCreate ? "your token doesn't allow stacks:create" : undefined;
 
   async function onCreate() {
     if (!host) return;
@@ -106,7 +102,7 @@ export function NewStack() {
           <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
             Cancel
           </Button>
-          <Button onClick={onCreate} disabled={pending} disallowReason={denyCreate} className="flex-1">
+          <Button onClick={onCreate} disabled={pending} className="flex-1">
             {pending ? "Creating…" : "Create"}
           </Button>
         </div>

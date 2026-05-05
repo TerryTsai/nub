@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { DockerfileContent } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -22,7 +21,6 @@ export function DockerfileEdit() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
   const isNew = rawName === NEW_SENTINEL;
   const name = isNew ? "" : decodeURIComponent(rawName ?? "");
 
@@ -35,7 +33,7 @@ export function DockerfileEdit() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
-    if (isNew || !host || !session.session) return;
+    if (isNew || !host) return;
     let cancelled = false;
     (async () => {
       try {
@@ -50,7 +48,7 @@ export function DockerfileEdit() {
       }
     })();
     return () => { cancelled = true; };
-  }, [host?.url, host?.token, !!session.session, name, isNew]);
+  }, [host?.url, host?.token, name, isNew]);
 
   async function onSave() {
     if (!host) return;
@@ -103,10 +101,6 @@ export function DockerfileEdit() {
     { kind: "link", label: title },
   ];
   const dirty = isNew ? draftName.trim() !== "" || content !== "" : content !== original;
-  const canWrite = session.session?.can("dockerfiles:put") ?? false;
-  const canDelete = session.session?.can("dockerfiles:delete") ?? false;
-  const denySave = !canWrite ? "your token doesn't allow dockerfiles:put" : undefined;
-  const denyDel = !canDelete ? "your token doesn't allow dockerfiles:delete" : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -161,7 +155,6 @@ export function DockerfileEdit() {
               <Button
                 onClick={onSave}
                 disabled={pending !== null || !dirty}
-                disallowReason={denySave}
                 className="flex-1"
               >
                 {pending === "save" ? "…" : isNew ? "Create" : "Save"}
@@ -172,7 +165,6 @@ export function DockerfileEdit() {
                 variant="destructive"
                 onClick={() => setConfirmDelete(true)}
                 disabled={pending !== null}
-                disallowReason={denyDel}
                 className="mt-2"
               >
                 Delete

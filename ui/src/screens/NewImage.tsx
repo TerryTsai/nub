@@ -3,7 +3,6 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import type { DockerfileContent, DockerfileSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { parseArgs, type DockerfileArg } from "@/state/dockerfileArgs";
 import { BuildLog } from "@/components/BuildLog";
@@ -35,7 +34,6 @@ export function NewImage() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const source: Source = params.get("source") === "build" ? "build" : "pull";
   const setSource = (s: Source) => setParams({ source: s }, { replace: true });
@@ -56,7 +54,7 @@ export function NewImage() {
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const dfKey = host && session.session ? `${host.url}:list_dockerfiles` : null;
+  const dfKey = host ? `${host.url}:list_dockerfiles` : null;
   const { data: dockerfiles } = useQuery<DockerfileSummary[]>(dfKey, async () => {
     const r = unwrap(await call(host!, { op: "list_dockerfiles" }), "dockerfiles");
     return r.data;
@@ -86,16 +84,6 @@ export function NewImage() {
     })();
     return () => { cancelled = true; };
   }, [host?.url, host?.token, dockerfileName]);
-
-  const denyPull =
-    session.session && !session.session.can("images:pull")
-      ? "your token doesn't allow images:pull"
-      : undefined;
-  const denyBuild =
-    session.session && !session.session.can("images:build")
-      ? "your token doesn't allow images:build"
-      : undefined;
-  const denyReason = source === "pull" ? denyPull : denyBuild;
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -225,8 +213,6 @@ export function NewImage() {
     <Page crumbs={crumbs}>
       <Heading category="Image" title="new image" />
 
-      {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
-
       <Section label="source">
         <SourceTabs
           value={source}
@@ -336,12 +322,7 @@ export function NewImage() {
               >
                 {phase === "running" ? "Cancel" : phase === "still-building" ? "Leave" : "Back"}
               </Button>
-              <Button
-                type="submit"
-                disabled={submitDisabled}
-                disallowReason={denyReason}
-                className="flex-1"
-              >
+              <Button type="submit" disabled={submitDisabled} className="flex-1">
                 {submitLabel}
               </Button>
             </div>

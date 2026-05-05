@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { useQuery } from "@/state/cache";
 import type {
   ContainerDetail as ContainerDetailT,
@@ -65,7 +64,6 @@ export function NewContainer() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [pending, setPending] = useState(false);
@@ -73,14 +71,14 @@ export function NewContainer() {
   const [pull, setPull] = useState<PullState | null>(null);
   const [sourceName, setSourceName] = useState<string>("");
 
-  const imagesKey = host && session.session ? `${host.url}:list_images` : null;
+  const imagesKey = host ? `${host.url}:list_images` : null;
   const { data: images } = useQuery<ImageSummary[]>(imagesKey, async () => {
     const r = unwrap(await call(host!, { op: "list_images" }), "images");
     return r.data;
   });
   const localTags = imageTags(images);
 
-  const networksKey = host && session.session ? `${host.url}:list_networks` : null;
+  const networksKey = host ? `${host.url}:list_networks` : null;
   const { data: networks } = useQuery<NetworkSummary[]>(networksKey, async () => {
     const r = unwrap(await call(host!, { op: "list_networks" }), "networks");
     return r.data;
@@ -88,7 +86,7 @@ export function NewContainer() {
 
   // Cloning: fetch the source container's inspect and pre-fill the form.
   useEffect(() => {
-    if (!cloning || !host || !session.session || !cid) return;
+    if (!cloning || !host || !cid) return;
     let cancelled = false;
     (async () => {
       try {
@@ -120,12 +118,7 @@ export function NewContainer() {
       }
     })();
     return () => { cancelled = true; };
-  }, [cloning, host?.url, host?.token, !!session.session, cid]);
-
-  const denyReason =
-    session.session && !session.session.can("containers:create")
-      ? "your token doesn't allow containers:create"
-      : undefined;
+  }, [cloning, host?.url, host?.token, cid]);
 
   async function onSubmit(e: React.FormEvent) {
     if (!host) return;
@@ -202,8 +195,6 @@ export function NewContainer() {
           cloned from <span className="mono text-[var(--id-color)]">{sourceName}</span>
         </p>
       )}
-
-      {denyReason && <p className="text-[var(--warn)] text-xs">{denyReason}</p>}
 
       <form onSubmit={onSubmit} className="contents">
         <Section>
@@ -414,7 +405,6 @@ export function NewContainer() {
             <Button
               type="submit"
               disabled={pending || !form.image.trim()}
-              disallowReason={denyReason}
               className="flex-1"
             >
               {pending ? "…" : "Create"}

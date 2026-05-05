@@ -3,7 +3,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { call, unwrap, type Host } from "@/api/client";
 import type { ImageDetail as ImageDetailT, ImageSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
-import { useSession } from "@/state/session";
 import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
@@ -22,20 +21,19 @@ export function ImageDetail() {
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
-  const session = useSession(host);
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const queryKey = host && session.session ? `${host.url}:list_images` : null;
+  const queryKey = host ? `${host.url}:list_images` : null;
   const { data: images } = useQuery<ImageSummary[]>(queryKey, async () => {
     const r = unwrap(await call(host!, { op: "list_images" }), "images");
     return r.data;
   });
   const image = images?.find((i) => i.id === iid);
 
-  const inspectKey = host && session.session && iid ? `${host.url}:get_image:${iid}` : null;
+  const inspectKey = host && iid ? `${host.url}:get_image:${iid}` : null;
   const { data: detail } = useQuery<ImageDetailT>(inspectKey, async () => {
     const r = unwrap(await call(host!, { op: "get_image", id: iid! }), "image_detail");
     return r.data;
@@ -65,10 +63,6 @@ export function ImageDetail() {
     ...sectionCrumbs,
     { kind: "link", label: title },
   ];
-  const denyReason =
-    session.session && !session.session.can("images:delete")
-      ? "your token doesn't allow images:delete"
-      : undefined;
 
   return (
     <Page crumbs={crumbs}>
@@ -78,7 +72,7 @@ export function ImageDetail() {
         right={image && <StatusBadge status={imageStatus(image.containers)} />}
       />
 
-      {!image && session.session && (
+      {!image && (
         <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
       )}
 
@@ -119,7 +113,6 @@ export function ImageDetail() {
           <Section label="ops">
             <Button
               variant="destructive"
-              disallowReason={denyReason}
               disabled={pending}
               onClick={() => setConfirmOpen(true)}
             >
