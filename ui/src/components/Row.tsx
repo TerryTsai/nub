@@ -27,7 +27,7 @@ export function Row({
 }) {
   return (
     <div className="flex gap-3 items-baseline select-text">
-      <div className="w-24 shrink-0 overflow-x-auto no-scrollbar">
+      <div className="w-24 shrink-0 overflow-x-auto no-scrollbar scroll-fade-r">
         <span className="text-xs text-[var(--text-tertiary)] whitespace-nowrap">{label}</span>
       </div>
       {right ? (

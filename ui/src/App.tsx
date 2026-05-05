@@ -7,7 +7,6 @@ import { Hosts } from "./screens/Hosts";
 import { AddHost } from "./screens/AddHost";
 import { HostHome } from "./screens/HostHome";
 import { ContainerDetail } from "./screens/ContainerDetail";
-import { ContainerLogs } from "./screens/ContainerLogs";
 import { ContainerStats } from "./screens/ContainerStats";
 import { DockerfileEdit } from "./screens/DockerfileEdit";
 import { HostDockerfiles } from "./screens/HostDockerfiles";
@@ -26,13 +25,19 @@ import { HostStacks } from "./screens/HostStacks";
 import { NewSecret } from "./screens/NewSecret";
 import { SecretDetail } from "./screens/SecretDetail";
 import { StackDetailScreen } from "./screens/StackDetail";
-import { StackLogs } from "./screens/StackLogs";
 import { VolumeDetail } from "./screens/VolumeDetail";
 
-// Exec carries xterm.js (~340KB). Lazy-load so it doesn't bloat the
-// initial bundle for users who never open a terminal.
+// xterm.js (~340KB) backs Exec, ContainerLogs, and StackLogs. Lazy-load
+// all three so users who never open a terminal-style screen pay nothing;
+// the screens share one chunk so the cost is one-time across them.
 const ContainerExec = lazy(() =>
   import("./screens/ContainerExec").then((m) => ({ default: m.ContainerExec })),
+);
+const ContainerLogs = lazy(() =>
+  import("./screens/ContainerLogs").then((m) => ({ default: m.ContainerLogs })),
+);
+const StackLogs = lazy(() =>
+  import("./screens/StackLogs").then((m) => ({ default: m.StackLogs })),
 );
 
 export default function App() {
@@ -59,14 +64,28 @@ export default function App() {
           <Route path="/h/:hid/stacks" element={<HostStacks />} />
           <Route path="/h/:hid/stacks/new" element={<NewStack />} />
           <Route path="/h/:hid/stacks/:sname" element={<StackDetailScreen />} />
-          <Route path="/h/:hid/stacks/:sname/logs" element={<StackLogs />} />
+          <Route
+            path="/h/:hid/stacks/:sname/logs"
+            element={
+              <Suspense fallback={<p className="px-5 pt-5 text-xs text-[var(--text-tertiary)]">Loading terminal…</p>}>
+                <StackLogs />
+              </Suspense>
+            }
+          />
           <Route path="/h/:hid/secrets" element={<HostSecrets />} />
           <Route path="/h/:hid/secrets/new" element={<NewSecret />} />
           <Route path="/h/:hid/secrets/:name" element={<SecretDetail />} />
           <Route path="/h/:hid/c/new" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid/clone" element={<NewContainer />} />
           <Route path="/h/:hid/c/:cid" element={<ContainerDetail />} />
-          <Route path="/h/:hid/c/:cid/logs" element={<ContainerLogs />} />
+          <Route
+            path="/h/:hid/c/:cid/logs"
+            element={
+              <Suspense fallback={<p className="px-5 pt-5 text-xs text-[var(--text-tertiary)]">Loading terminal…</p>}>
+                <ContainerLogs />
+              </Suspense>
+            }
+          />
           <Route path="/h/:hid/c/:cid/stats" element={<ContainerStats />} />
           <Route
             path="/h/:hid/c/:cid/exec"

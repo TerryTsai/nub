@@ -544,7 +544,7 @@ function VolumeEntry({
         />
         <RemoveBtn onClick={onRemove} />
       </div>
-      <label className="flex items-center gap-2 cursor-pointer text-[11px] text-[var(--text-tertiary)]">
+      <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--text-tertiary)]">
         <input
           type="checkbox"
           checked={!!mount.read_only}

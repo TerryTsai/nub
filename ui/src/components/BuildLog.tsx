@@ -14,7 +14,7 @@ export function BuildLog({ stream, imageId }: { stream: string; imageId: string 
     <div className="flex flex-col gap-2">
       <pre
         ref={ref}
-        className="mono text-[11px] leading-5 max-h-64 overflow-auto bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-2 whitespace-pre-wrap break-all text-[var(--text-secondary)]"
+        className="mono text-xs leading-5 max-h-64 overflow-auto bg-[var(--bg-elevated)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] p-2 whitespace-pre-wrap break-all text-[var(--text-secondary)]"
       >
         {stream || "starting build…"}
       </pre>

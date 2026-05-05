@@ -42,7 +42,7 @@ export function CopyLine({
     : "text-[var(--id-color)]";
 
   return (
-    <div className="min-w-0 overflow-x-auto no-scrollbar">
+    <div className="min-w-0 overflow-x-auto no-scrollbar scroll-fade-r">
       <button
         type="button"
         onClick={copy}

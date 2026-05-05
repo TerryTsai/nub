@@ -7,6 +7,7 @@ import { useResilientStream } from "@/state/resilientStream";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Sparkline } from "@/components/Sparkline";
+import { StatusLine, StreamStatus } from "@/components/StatusLine";
 
 const HISTORY = 60;
 
@@ -77,17 +78,14 @@ export function ContainerStats() {
     { kind: "link", label: "stats" },
   ];
 
-  const subnav = (
-    <span className="text-[11px] text-[var(--text-tertiary)] truncate">
-      {connState === "reconnecting" ? "reconnecting…" : containerName}
-    </span>
-  );
-
   return (
-    <Page crumbs={crumbs} subnav={subnav} fill>
+    <Page crumbs={crumbs} fill>
+      {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
+      <StreamStatus state={connState} />
+      {!snap && !error && connState !== "reconnecting" && (
+        <StatusLine tone="idle">Connecting…</StatusLine>
+      )}
       <div className="flex-1 min-h-0 overflow-auto px-5 py-4">
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-        {!snap && !error && <p className="text-xs text-[var(--text-tertiary)]">Connecting…</p>}
         {snap && <StatsView snap={snap} rates={rates} history={history} />}
       </div>
     </Page>
@@ -126,7 +124,7 @@ function StatsView({ snap, rates, history }: { snap: Snapshot; rates: Rates; his
 function BigNumber({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-xs text-[var(--text-tertiary)] uppercase tracking-wide">{label}</span>
+      <span className="text-[11px] font-semibold text-[var(--text-tertiary)] uppercase tracking-wider">{label}</span>
       <span className="text-2xl font-semibold mono">{value}</span>
     </div>
   );

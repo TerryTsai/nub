@@ -89,7 +89,7 @@ export function NewStack() {
       <div className="contents" {...scrollFocusedIntoView()}>
         <Section label="compose">
           <textarea
-            className="input mono"
+            className="input-code"
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"
@@ -97,7 +97,7 @@ export function NewStack() {
             placeholder={PLACEHOLDER}
             value={yaml}
             onChange={(e) => setYaml(e.target.value)}
-            style={{ minHeight: "320px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
+            style={{ minHeight: "320px" }}
           />
           {yamlError && (
             <p className="text-[11px] text-[var(--error)]">{yamlError}</p>

@@ -9,6 +9,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 export function HostStacks() {
   const { hid } = useParams<{ hid: string }>();
@@ -40,7 +41,7 @@ export function HostStacks() {
             <div key={s.name} className="px-1">
               <ListRow
                 title={s.name}
-                subtitle={`${s.container_count} container${s.container_count === 1 ? "" : "s"}`}
+                subtitle={relativeDate(s.modified_at)}
                 status={stackStatus(s.status)}
                 onPress={() => nav(`/h/${hid}/stacks/${encodeURIComponent(s.name)}`)}
               />

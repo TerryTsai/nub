@@ -76,10 +76,7 @@ export function AppHeader({ crumbs, subnav }: { crumbs?: Crumb[]; subnav?: React
         </nav>
       </div>
       {subnav && (
-        <div
-          className="px-5 h-10 flex items-center gap-2 border-t border-[var(--border-subtle)] overflow-x-auto no-scrollbar [&>*]:shrink-0"
-          style={{ maskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)", WebkitMaskImage: "linear-gradient(to right, black calc(100% - 24px), transparent)" }}
-        >
+        <div className="px-5 h-10 flex items-center gap-2 border-t border-[var(--border-subtle)] overflow-x-auto no-scrollbar scroll-fade-r [&>*]:shrink-0">
           {subnav}
         </div>
       )}

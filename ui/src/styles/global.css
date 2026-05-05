@@ -67,21 +67,48 @@ input, textarea, select, button {
   font-family: "JetBrains Mono", ui-monospace, monospace;
 }
 
-/* Form inputs. Font-size MUST be ≥16px on iOS or Safari auto-zooms the
- * viewport on focus. Same rule applies to xterm's hidden helper textarea —
- * targeted below. */
+/* Form inputs. Underline-only treatment — a full box on focus reads as
+ * heavy chrome at this density. Font-size MUST be ≥16px on iOS or Safari
+ * auto-zooms the viewport on focus; same rule applies to xterm's hidden
+ * helper textarea, targeted below. */
 .input {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 10px 12px;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border-subtle);
+  border-radius: 0;
+  padding: 8px 0;
   color: var(--text-primary);
   width: 100%;
   font-size: 16px;
   transition: border-color 0.15s var(--ease-out);
 }
-.input:focus { border-color: var(--accent); }
-.input::placeholder { color: var(--text-tertiary); }
+.input:focus { border-bottom-color: var(--accent); }
+.input:focus-visible { outline: none; }
+.input::placeholder { color: var(--text-tertiary); font-style: italic; }
+
+/* Multi-line code regions: YAML, Dockerfiles, secret values. Same iOS-zoom
+ * 16px floor as `.input`, but framed and amber-toned to match the
+ * mono+amber rule for editable identifier-like content. Single point of
+ * change if the amber turns out to be too loud at scale — swap the color
+ * line for a desaturated value. */
+.input-code {
+  background: rgb(255 255 255 / 0.025);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 12px;
+  color: var(--id-color);
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 16px;
+  line-height: 1.5;
+  width: 100%;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  transition: border-color 0.15s var(--ease-out);
+}
+.input-code:focus { border-color: var(--accent); }
+.input-code:focus-visible { outline: none; }
+.input-code::placeholder { color: var(--text-tertiary); font-style: italic; }
 
 /* xterm.js renders to canvas; its hidden helper textarea inherits a font-
  * size that triggers iOS zoom on focus. Force ≥16px to prevent zoom. */
@@ -160,3 +187,12 @@ input, textarea, select, button {
 
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Right-edge fade on horizontally-scrollable rows. Signals "more content
+ * that way" without dedicating pixels to a chevron or scrollbar. The fade
+ * is a no-op when content fits — empty trailing space gets faded, but no
+ * rendered glyphs sit there to dim. Pair with overflow-x-auto. */
+.scroll-fade-r {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+          mask-image: linear-gradient(to right, black calc(100% - 16px), transparent);
+}

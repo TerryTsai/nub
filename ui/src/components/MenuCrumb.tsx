@@ -62,7 +62,7 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
                 key={i}
                 to={it.to}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-zinc-900/60"
+                className="flex items-center gap-2 px-3 py-2.5 text-sm hover:bg-zinc-900/60 active:bg-zinc-900/80"
               >
                 {it.add && <span className="text-[var(--accent)]">+</span>}
                 {!it.add && <Check current={!!it.current} />}
@@ -70,7 +70,7 @@ export function MenuCrumb({ label, items }: { label: string; items: MenuItem[] }
                   {it.label}
                 </span>
                 {it.meta && (
-                  <span className="ml-auto text-[10px] text-[var(--text-tertiary)]">{it.meta}</span>
+                  <span className="ml-auto text-[11px] text-[var(--text-tertiary)]">{it.meta}</span>
                 )}
               </Link>
             ))}

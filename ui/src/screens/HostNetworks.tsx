@@ -9,6 +9,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 export function HostNetworks() {
   const { hid } = useParams<{ hid: string }>();
@@ -40,7 +41,7 @@ export function HostNetworks() {
             <div key={n.id} className="px-1">
               <ListRow
                 title={n.name}
-                subtitle={`${n.driver}${n.scope ? ` · ${n.scope}` : ""}${n.internal ? " · internal" : ""}`}
+                subtitle={relativeDate(n.created)}
                 status={networkStatus(n.in_use)}
                 onPress={() => nav(`/h/${hid}/networks/${n.id}`)}
               />

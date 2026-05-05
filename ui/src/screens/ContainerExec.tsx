@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import "@xterm/xterm/css/xterm.css";
 import { bidiStream, type BidiStream, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useContainerName } from "@/state/containerName";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
+import { TerminalView, type TerminalHandle } from "@/components/TerminalView";
 
 const DEFAULT_CMD = "/bin/sh";
 
@@ -21,10 +19,28 @@ export function ContainerExec() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
 
   const [error, setError] = useState<string | null>(null);
-  const termRef = useRef<HTMLDivElement>(null);
+  const termRef = useRef<TerminalHandle>(null);
+  const streamRef = useRef<BidiStream | null>(null);
 
   const containerName = useContainerName(host, cid);
-  useExecTerminal(termRef, host, cid, cmd, setError);
+
+  useEffect(() => {
+    if (!host || !cid) return;
+    setError(null);
+    const stream = bidiStream(
+      host,
+      { op: "exec", id: cid, cmd: parseCmd(cmd), tty: true },
+      (chunk) => {
+        if (chunk.type === "log") termRef.current?.write(chunk.data);
+      },
+    );
+    streamRef.current = stream;
+    stream.done.catch((e: Error) => setError(e.message));
+    return () => {
+      stream.close();
+      streamRef.current = null;
+    };
+  }, [host?.url, host?.token, cid, cmd]);
 
   const sectionCrumbs = useHostSectionCrumbs(hid ?? "", saved?.label ?? "?", "containers");
 
@@ -36,85 +52,16 @@ export function ContainerExec() {
     { kind: "link", label: "exec" },
   ];
 
-  const subnav = (
-    <span className="text-[11px] text-[var(--text-tertiary)] truncate">
-      <span className="mono">{cmd}</span> · {containerName}
-    </span>
-  );
-
   return (
-    <Page crumbs={crumbs} subnav={subnav} fill>
+    <Page crumbs={crumbs} fill>
       {error && <p className="px-5 pt-2 text-[var(--error)] text-xs">{error}</p>}
-      <div ref={termRef} className="flex-1 min-h-0 bg-black px-1" />
+      <TerminalView
+        ref={termRef}
+        cursorBlink
+        onInput={(data) => streamRef.current?.send({ type: "stdin", data })}
+      />
     </Page>
   );
-}
-
-// ---- Hooks --------------------------------------------------------------
-
-function useExecTerminal(
-  ref: React.RefObject<HTMLDivElement | null>,
-  host: Host | undefined,
-  cid: string | undefined,
-  cmd: string,
-  setError: (e: string | null) => void,
-) {
-  useEffect(() => {
-    if (!host || !cid || !ref.current) return;
-    const term = newTerminal();
-    const fit = new FitAddon();
-    term.loadAddon(fit);
-    term.open(ref.current);
-    fit.fit();
-    term.focus();
-
-    const stream = openExec(host, cid, cmd, term, setError);
-    const onResize = () => fit.fit();
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("resize", onResize);
-      stream.close();
-      term.dispose();
-    };
-  }, [host?.url, host?.token, cid, cmd, ref, setError]);
-}
-
-// ---- Helpers ------------------------------------------------------------
-
-function newTerminal(): Terminal {
-  return new Terminal({
-    fontFamily: '"JetBrains Mono", ui-monospace, monospace',
-    fontSize: 13,
-    cursorBlink: true,
-    convertEol: true,
-    theme: {
-      background: "#000000",
-      foreground: "#e4e4e7",
-      cursor: "#fbbf24",
-      selectionBackground: "#3f3f46",
-    },
-  });
-}
-
-function openExec(
-  host: Host,
-  cid: string,
-  cmd: string,
-  term: Terminal,
-  setError: (e: string | null) => void,
-): BidiStream {
-  setError(null);
-  const stream = bidiStream(
-    host,
-    { op: "exec", id: cid, cmd: parseCmd(cmd), tty: true },
-    (chunk) => {
-      if (chunk.type === "log") term.write(chunk.data);
-    },
-  );
-  term.onData((data) => stream.send({ type: "stdin", data }));
-  stream.done.catch((e: Error) => setError(e.message));
-  return stream;
 }
 
 /** Split a command line on spaces. Naive — no shell quoting. For now the

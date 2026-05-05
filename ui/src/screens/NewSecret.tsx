@@ -83,7 +83,7 @@ export function NewSecret() {
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section label="value">
           <textarea
-            className="input mono"
+            className="input-code"
             spellCheck={false}
             autoCapitalize="off"
             autoCorrect="off"

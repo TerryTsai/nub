@@ -8,6 +8,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 export function HostDockerfiles() {
   const { hid } = useParams<{ hid: string }>();
@@ -40,7 +41,7 @@ export function HostDockerfiles() {
               <ListRow
                 title={f.name}
                 mono
-                subtitle={`${formatBytes(f.size)}${f.modified_at ? ` · ${f.modified_at}` : ""}`}
+                subtitle={relativeDate(f.modified_at)}
                 onPress={() => nav(`/h/${hid}/dockerfiles/${encodeURIComponent(f.name)}`)}
               />
             </div>
@@ -51,13 +52,3 @@ export function HostDockerfiles() {
   );
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  const units = ["KB", "MB"];
-  let v = n / 1024;
-  for (const u of units) {
-    if (v < 1024) return `${v.toFixed(v < 10 ? 1 : 0)} ${u}`;
-    v /= 1024;
-  }
-  return `${v.toFixed(0)} GB`;
-}

@@ -136,7 +136,7 @@ export function DockerfileEdit() {
         <div className="contents" {...scrollFocusedIntoView()}>
           <Section label="content">
             <textarea
-              className="input mono"
+              className="input-code"
               spellCheck={false}
               autoCapitalize="off"
               autoCorrect="off"
@@ -144,7 +144,7 @@ export function DockerfileEdit() {
               placeholder={"FROM alpine:3.19\nRUN apk add --no-cache curl\n"}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              style={{ minHeight: "320px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
+              style={{ minHeight: "320px" }}
             />
           </Section>
 

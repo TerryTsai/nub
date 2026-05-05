@@ -17,7 +17,7 @@ export function Filters<T extends string>({
   onChange: (v: T) => void;
 }) {
   return (
-    <div className="flex gap-1 overflow-x-auto no-scrollbar -mx-5 px-5">
+    <div className="flex gap-1 overflow-x-auto no-scrollbar scroll-fade-r -mx-5 px-5">
       {options.map((o) => {
         const active = o.value === value;
         const cls = active

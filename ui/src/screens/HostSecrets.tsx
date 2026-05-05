@@ -7,6 +7,8 @@ import { FAB } from "@/components/FAB";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 export function HostSecrets() {
   const { hid } = useParams<{ hid: string }>();
@@ -28,9 +30,7 @@ export function HostSecrets() {
   return (
     <Page crumbs={crumbs} fab={<FAB to={`/h/${hid}/secrets/new`} label="secret" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {secrets === null && !error && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading secrets…</p>
-      )}
+      {secrets === null && !error && <SkeletonRows count={5} />}
       {secrets?.length === 0 && (
         <p className="text-xs text-[var(--text-tertiary)]">No secrets.</p>
       )}
@@ -40,7 +40,7 @@ export function HostSecrets() {
             <div key={s.name} className="px-1">
               <ListRow
                 title={s.name}
-                subtitle={`${s.size}B · ${s.modified_at || "unknown date"}`}
+                subtitle={relativeDate(s.modified_at)}
                 onPress={() => nav(`/h/${hid}/secrets/${encodeURIComponent(s.name)}`)}
               />
             </div>

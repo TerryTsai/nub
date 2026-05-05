@@ -183,14 +183,14 @@ export function StackDetailScreen() {
 
           <Section label="compose">
             <textarea
-              className="input mono"
+              className="input-code"
               spellCheck={false}
               autoCapitalize="off"
               autoCorrect="off"
               rows={14}
               value={yaml}
               onChange={(e) => setYaml(e.target.value)}
-              style={{ minHeight: "260px", whiteSpace: "pre", overflowWrap: "normal", overflowX: "auto" }}
+              style={{ minHeight: "260px" }}
             />
           </Section>
 

@@ -8,6 +8,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 export function HostVolumes() {
   const { hid } = useParams<{ hid: string }>();
@@ -40,7 +41,7 @@ export function HostVolumes() {
               <ListRow
                 title={v.name}
                 mono
-                subtitle={`${v.driver}${v.scope ? ` · ${v.scope}` : ""} · ${v.mountpoint}`}
+                subtitle={relativeDate(v.created_at)}
                 status={volumeStatus(v.in_use)}
                 onPress={() => nav(`/h/${hid}/volumes/${encodeURIComponent(v.name)}`)}
               />

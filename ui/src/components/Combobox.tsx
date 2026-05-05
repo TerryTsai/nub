@@ -13,12 +13,14 @@ export interface ComboOption {
  * unstylable on iOS) and horizontal chip rows (which scale poorly past a
  * handful of options).
  *
- * Closed: looks like an `.input` with a trailing chevron. Open: dialog
- * with an optional filter/free-text field and a scrollable option list.
+ * Closed: looks like an `.input` with a trailing chevron. Open: a dialog
+ * with the same chrome regardless of mode — filter input on top, option
+ * list below.
  *
  * Set `freeText` to allow values not in `options`. The filter input
- * doubles as the typed value, and a "Use «query»" footer row commits
- * the typed text on tap. */
+ * doubles as the typed value; when the typed text doesn't match an
+ * existing option, a leading "+ <typed>" row appears so the user can
+ * commit it. */
 export function Combobox({
   value,
   onChange,
@@ -94,7 +96,7 @@ export function Combobox({
         <span
           className={
             cell
-              ? "text-[var(--text-tertiary)] text-[10px] shrink-0"
+              ? "text-[var(--text-tertiary)] text-[11px] shrink-0"
               : "text-[var(--text-tertiary)] text-sm pl-2 shrink-0"
           }
         >
@@ -106,30 +108,31 @@ export function Combobox({
           <Dialog.Overlay className="fixed inset-0 bg-black/60 z-40" />
           <Dialog.Content className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(92vw,420px)] max-h-[80vh] flex flex-col bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-lg)] z-50 overflow-hidden">
             <Dialog.Title className="sr-only">Pick a value</Dialog.Title>
-            {(freeText || options.length > 5) && (
-              <div className="p-3 border-b border-[var(--border-subtle)]">
-                <input
-                  className={`input ${mono ? "mono" : ""}`}
-                  type="text"
-                  autoFocus
-                  autoCapitalize="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  placeholder={freeText ? freeTextHint || "type or pick" : "filter"}
-                  value={filter}
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-              </div>
-            )}
+            <div className="p-3 border-b border-[var(--border-subtle)]">
+              <input
+                className={`input ${mono ? "mono" : ""}`}
+                type="text"
+                autoFocus
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder={freeText ? freeTextHint || "filter or type" : "filter"}
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+              />
+            </div>
             <div className="overflow-y-auto">
               {showCustomRow && (
                 <button
                   type="button"
                   onClick={() => pick(filter.trim())}
-                  className="w-full text-left px-3 py-3 flex items-baseline gap-2 border-b border-[var(--border-subtle)] active:bg-[var(--bg-elevated)]"
+                  className="w-full text-left px-3 py-3 flex flex-col gap-0.5 border-b border-[var(--border-subtle)] active:bg-[var(--bg-elevated)]"
                 >
-                  <span className="text-[11px] uppercase tracking-wide text-[var(--text-tertiary)]">use</span>
-                  <span className={`text-sm truncate ${mono ? "mono" : ""}`}>{filter.trim()}</span>
+                  <span className="text-sm flex items-center gap-2 truncate">
+                    <span className="text-[var(--accent)] shrink-0">+</span>
+                    <span className={`truncate ${mono ? "mono" : ""}`}>{filter.trim()}</span>
+                  </span>
+                  <span className="text-[11px] text-[var(--text-tertiary)] pl-5">use as typed</span>
                 </button>
               )}
               {filtered.length === 0 && !showCustomRow && (

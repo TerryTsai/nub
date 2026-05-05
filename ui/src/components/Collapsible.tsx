@@ -28,7 +28,7 @@ export function Collapsible({ label = "info", count, defaultOpen = false, childr
       className={`pt-2 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
     >
       <summary
-        className="flex items-center gap-2 cursor-pointer list-none select-none text-[10px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
+        className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
       >
         <span>{label}</span>
         {count !== undefined && count > 0 && (

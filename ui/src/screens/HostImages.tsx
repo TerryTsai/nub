@@ -10,6 +10,7 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
 import { SkeletonRows } from "@/components/Skeleton";
+import { relativeDate } from "@/lib/relativeDate";
 
 type ImageFilter = "all" | "tagged" | "untagged";
 const IMAGE_FILTERS: ImageFilter[] = ["all", "tagged", "untagged"];
@@ -83,7 +84,7 @@ export function HostImages() {
             <div key={img.id} className="px-1">
               <ListRow
                 title={img.repo_tag}
-                subtitle={`${img.id} · ${formatBytes(img.size)}`}
+                subtitle={relativeDate(img.created)}
                 status={imageStatus(img.containers)}
                 onPress={() => nav(`/h/${hid}/images/${img.id}`)}
               />
@@ -95,13 +96,3 @@ export function HostImages() {
   );
 }
 
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let v = n / 1024;
-  for (const u of units) {
-    if (v < 1024) return `${v.toFixed(v < 10 ? 1 : 0)} ${u}`;
-    v /= 1024;
-  }
-  return `${v.toFixed(0)} PB`;
-}

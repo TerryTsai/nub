@@ -9,6 +9,7 @@ import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Page } from "@/components/Page";
+import { relativeDate } from "@/lib/relativeDate";
 import { SkeletonRows } from "@/components/Skeleton";
 
 type ContainerFilter = "all" | "running" | "stopped";
@@ -100,22 +101,16 @@ function ContainerList({
   }
   return (
     <div className="flex flex-col -mx-1">
-      {containers.map((c) => {
-        const stack = c.labels?.["nub.stack"];
-        const subtitle = stack
-          ? `stack:${stack} · ${c.image} · ${c.status}`
-          : `${c.image} · ${c.status}`;
-        return (
-          <div key={c.id} className="px-1">
-            <ListRow
-              title={c.name || "(unnamed)"}
-              subtitle={subtitle}
-              status={containerStatus(c.state, c.exit_code, c.health)}
-              onPress={() => onPick(c.id)}
-            />
-          </div>
-        );
-      })}
+      {containers.map((c) => (
+        <div key={c.id} className="px-1">
+          <ListRow
+            title={c.name || "(unnamed)"}
+            subtitle={relativeDate(c.created)}
+            status={containerStatus(c.state, c.exit_code, c.health)}
+            onPress={() => onPick(c.id)}
+          />
+        </div>
+      ))}
     </div>
   );
 }
