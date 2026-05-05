@@ -120,7 +120,7 @@ export function AddHost() {
 
         <Section label="connect">
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => nav(-1)} className="flex-1">
+            <Button variant="ghost" onClick={() => nav("/")} className="flex-1">
               Cancel
             </Button>
             <Button type="submit" disabled={pending} autoFocus={!!bootstrap} className="flex-1">

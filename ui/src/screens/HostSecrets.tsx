@@ -35,15 +35,15 @@ export function HostSecrets() {
         <p className="text-xs text-[var(--text-tertiary)]">No secrets.</p>
       )}
       {secrets && secrets.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {secrets.map((s) => (
-            <div key={s.name} className="px-1">
-              <ListRow
-                title={s.name}
-                subtitle={relativeDate(s.modified_at)}
-                onPress={() => nav(`/h/${hid}/secrets/${encodeURIComponent(s.name)}`)}
-              />
-            </div>
+            <ListRow
+              key={s.name}
+              title={s.name}
+              mono
+              subtitle={relativeDate(s.modified_at)}
+              onPress={() => nav(`/h/${hid}/secrets/${encodeURIComponent(s.name)}`)}
+            />
           ))}
         </div>
       )}

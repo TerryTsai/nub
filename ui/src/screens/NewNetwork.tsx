@@ -12,9 +12,6 @@ import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const NAME_HINT = "letters, digits, dot, underscore, dash; must start with letter/digit";
-
 export function NewNetwork() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
@@ -26,21 +23,14 @@ export function NewNetwork() {
   const [internal, setInternal] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
-    const trimmed = name.trim();
-    setNameError(null);
-    if (!NAME_RE.test(trimmed)) {
-      setNameError("name must start with a letter or digit; letters/digits/dot/underscore/dash only");
-      return;
-    }
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "create_network", name: trimmed, internal }), "ok");
+      unwrap(await call(host, { op: "create_network", name: name.trim(), internal }), "ok");
       invalidate(`${host.url}:list_networks`);
       nav(`/h/${hid}/networks`, { replace: true });
     } catch (e) {
@@ -66,11 +56,6 @@ export function NewNetwork() {
           placeholder: "new network",
         }}
       />
-      {nameError ? (
-        <p className="text-[11px] text-[var(--error)]">{nameError}</p>
-      ) : (
-        <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
-      )}
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
@@ -95,7 +80,6 @@ export function NewNetwork() {
           <div className="flex gap-2">
             <Button
               variant="ghost"
-              type="button"
               onClick={() => nav(`/h/${hid}/networks`)}
               className="flex-1"
             >

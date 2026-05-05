@@ -100,16 +100,16 @@ function ContainerList({
     return <p className="text-xs text-[var(--text-tertiary)]">No matches.</p>;
   }
   return (
-    <div className="flex flex-col -mx-1">
+    <div className="flex flex-col">
       {containers.map((c) => (
-        <div key={c.id} className="px-1">
-          <ListRow
-            title={c.name || "(unnamed)"}
-            subtitle={relativeDate(c.created)}
-            status={containerStatus(c.state, c.exit_code, c.health)}
-            onPress={() => onPick(c.id)}
-          />
-        </div>
+        <ListRow
+          key={c.id}
+          title={c.name || "(unnamed)"}
+          mono
+          subtitle={relativeDate(c.created)}
+          status={containerStatus(c.state, c.exit_code, c.health)}
+          onPress={() => onPick(c.id)}
+        />
       ))}
     </div>
   );

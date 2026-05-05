@@ -9,12 +9,11 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
+import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const NAME_HINT = "letters, digits, dot, underscore, dash; must start with letter/digit; ≤128 chars";
 const NEW_SENTINEL = "_new";
 
 export function DockerfileEdit() {
@@ -29,10 +28,10 @@ export function DockerfileEdit() {
   const [draftName, setDraftName] = useState(name);
   const [content, setContent] = useState("");
   const [original, setOriginal] = useState("");
+  const [meta, setMeta] = useState<{ size: number; modified_at: string } | null>(null);
   const [loading, setLoading] = useState(!isNew);
   const [pending, setPending] = useState<"save" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -42,8 +41,10 @@ export function DockerfileEdit() {
       try {
         const r = unwrap(await call(host, { op: "get_dockerfile", name }), "dockerfile");
         if (cancelled) return;
-        setContent((r.data as DockerfileContent).content);
-        setOriginal((r.data as DockerfileContent).content);
+        const d = r.data as DockerfileContent;
+        setContent(d.content);
+        setOriginal(d.content);
+        setMeta({ size: d.size, modified_at: d.modified_at });
       } catch (e) {
         if (!cancelled) setError(`load dockerfile: ${(e as Error).message}`);
       } finally {
@@ -53,14 +54,10 @@ export function DockerfileEdit() {
     return () => { cancelled = true; };
   }, [host?.url, host?.token, name, isNew]);
 
-  async function onSave() {
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
     if (!host) return;
     const targetName = isNew ? draftName.trim() : name;
-    setNameError(null);
-    if (!NAME_RE.test(targetName) || targetName.length > 128) {
-      setNameError("name must start with a letter or digit and use only A–Z, 0–9, dot, underscore, dash");
-      return;
-    }
     setPending("save");
     setError(null);
     try {
@@ -120,20 +117,18 @@ export function DockerfileEdit() {
       ) : (
         <Heading category="Dockerfile" title={name} />
       )}
-      {isNew && (
-        nameError ? (
-          <p className="text-[11px] text-[var(--error)]">{nameError}</p>
-        ) : (
-          <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
-        )
-      )}
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {loading && <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>}
+      {!isNew && (
+        <Section>
+          <Row label="Size" value={meta ? `${meta.size}B` : undefined} />
+          <Row label="Modified" value={meta?.modified_at} mono />
+        </Section>
+      )}
 
       {!loading && (
-        <div className="contents" {...scrollFocusedIntoView()}>
+        <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
           <Section label="content">
             <textarea
               className="input-code"
@@ -158,7 +153,7 @@ export function DockerfileEdit() {
                 Cancel
               </Button>
               <Button
-                onClick={onSave}
+                type="submit"
                 disabled={pending !== null || !dirty}
                 className="flex-1"
               >
@@ -190,7 +185,7 @@ export function DockerfileEdit() {
             destructive
             onConfirm={onDelete}
           />
-        </div>
+        </form>
       )}
     </Page>
   );

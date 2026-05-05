@@ -3,12 +3,12 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useQuery } from "@/state/cache";
 import type { HostInfo as HostInfoT } from "@/api/types";
+import { Collapsible } from "@/components/Collapsible";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
-import { Skeleton } from "@/components/Skeleton";
 
 export function HostInfoScreen() {
   const { hid } = useParams<{ hid: string }>();
@@ -30,38 +30,24 @@ export function HostInfoScreen() {
       <Heading category="Host" title={saved.label} />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      {!info && !error && (
-        <Section>
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-4/6" />
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-2/3" />
-        </Section>
-      )}
 
-      {info && (
-        <>
-          <Section>
-            <Row label="URL" value={saved.url} mono />
-            <Row label="nub" value={info.nub} mono />
-            <Row label="Engine" value={`${info.engine} ${info.version}`} mono />
-            <Row label="OS" value={`${info.os}/${info.arch}`} mono />
-            <Row label="Kernel" value={info.kernel} mono />
-            <Row label="CPUs" value={String(info.cpus)} />
-            <Row label="Memory" value={formatBytes(info.mem_total)} />
-          </Section>
+      <Section>
+        <Row label="URL" value={saved.url} mono />
+        <Row label="nub" value={info?.nub} mono />
+        <Row label="Engine" value={info ? `${info.engine} ${info.version}` : undefined} mono />
+        <Row label="OS" value={info ? `${info.os}/${info.arch}` : undefined} mono />
+        <Row label="Kernel" value={info?.kernel} mono />
+        <Row label="CPUs" value={info ? String(info.cpus) : undefined} />
+        <Row label="Memory" value={info ? formatBytes(info.mem_total) : undefined} />
+      </Section>
 
-          <Section label="counts">
-            <Row
-              label="Containers"
-              value={`${info.containers_running} running · ${info.containers_total} total`}
-            />
-            <Row label="Images" value={String(info.images)} />
-          </Section>
-        </>
-      )}
+      <Collapsible label="counts">
+        <Row
+          label="Containers"
+          value={info ? `${info.containers_running} running · ${info.containers_total} total` : undefined}
+        />
+        <Row label="Images" value={info ? String(info.images) : undefined} />
+      </Collapsible>
     </Page>
   );
 }

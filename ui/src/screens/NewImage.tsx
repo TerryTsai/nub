@@ -305,7 +305,6 @@ export function NewImage() {
             <div className="flex gap-2">
               <Button
                 variant="ghost"
-                type="button"
                 onClick={() => (phase === "running" ? onCancel() : nav(`/h/${hid}/images`))}
                 className="flex-1"
               >

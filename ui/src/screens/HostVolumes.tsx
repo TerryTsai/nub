@@ -35,17 +35,16 @@ export function HostVolumes() {
         <p className="text-xs text-[var(--text-tertiary)]">No volumes.</p>
       )}
       {volumes && volumes.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {volumes.map((v) => (
-            <div key={v.name} className="px-1">
-              <ListRow
-                title={v.name}
-                mono
-                subtitle={relativeDate(v.created_at)}
-                status={volumeStatus(v.in_use)}
-                onPress={() => nav(`/h/${hid}/volumes/${encodeURIComponent(v.name)}`)}
-              />
-            </div>
+            <ListRow
+              key={v.name}
+              title={v.name}
+              mono
+              subtitle={relativeDate(v.created_at)}
+              status={volumeStatus(v.in_use)}
+              onPress={() => nav(`/h/${hid}/volumes/${encodeURIComponent(v.name)}`)}
+            />
           ))}
         </div>
       )}

@@ -35,16 +35,15 @@ export function HostDockerfiles() {
         <p className="text-xs text-[var(--text-tertiary)]">No dockerfiles.</p>
       )}
       {files && files.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {files.map((f) => (
-            <div key={f.name} className="px-1">
-              <ListRow
-                title={f.name}
-                mono
-                subtitle={relativeDate(f.modified_at)}
-                onPress={() => nav(`/h/${hid}/dockerfiles/${encodeURIComponent(f.name)}`)}
-              />
-            </div>
+            <ListRow
+              key={f.name}
+              title={f.name}
+              mono
+              subtitle={relativeDate(f.modified_at)}
+              onPress={() => nav(`/h/${hid}/dockerfiles/${encodeURIComponent(f.name)}`)}
+            />
           ))}
         </div>
       )}

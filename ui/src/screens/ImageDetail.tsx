@@ -15,7 +15,6 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
-import { Skeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toaster";
@@ -80,93 +79,88 @@ export function ImageDetail() {
         right={image && <StatusBadge status={imageStatus(image.containers)} />}
       />
 
-      {!image && (
-        <Section>
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-4/6" />
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-2/3" />
-        </Section>
-      )}
+      <Section>
+        {/* identity */}
+        <Row label="ID" value={image?.id} mono />
+        <Row label="Tag" value={image?.repo_tag} mono />
+        {/* artifact properties */}
+        <Row label="Platform" value={platformLabel(detail)} />
+        <Row label="Layers" value={detail ? String(detail.layers) : undefined} />
+        <Row label="Size" value={image ? formatBytes(image.size) : undefined} />
+        {/* process spec */}
+        <Row label="Entrypoint" value={detail?.entrypoint.join(" ")} mono />
+        <Row label="Cmd" value={detail?.cmd.join(" ")} mono />
+        <Row label="Working dir" value={detail?.working_dir} mono />
+        <Row label="User" value={detail?.user} mono />
+        <Row label="Exposed" value={detail?.exposed_ports.join(", ")} mono />
+        {/* lifecycle + usage */}
+        <Row label="Created" value={image ? formatTimestamp(image.created) : undefined} mono />
+        <Row label="In use by" value={image ? `${image.containers} container${image.containers === 1 ? "" : "s"}` : undefined} />
+      </Section>
+
+      <Collapsible label="digests" count={detail?.repo_digests.length}>
+        {!detail || detail.repo_digests.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)
+        )}
+      </Collapsible>
+
+      <Collapsible label="env" count={detail?.env.length}>
+        {!detail || detail.env.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          detail.env.map((e, i) => {
+            const eq = e.indexOf("=");
+            const k = eq >= 0 ? e.slice(0, eq) : e;
+            const v = eq >= 0 ? e.slice(eq + 1) : "";
+            return <KvLine key={i} k={k} v={v} copyAs={e} />;
+          })
+        )}
+      </Collapsible>
+
+      <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
+        {!detail || Object.keys(detail.labels).length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          Object.entries(detail.labels).map(([k, v]) => (
+            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+          ))
+        )}
+      </Collapsible>
+
+      <Section label="danger">
+        <Button
+          variant="destructive"
+          disabled={!image || pending}
+          onClick={() => setConfirmOpen(true)}
+        >
+          {pending ? <><Spinner /> Removing…</> : "Remove"}
+        </Button>
+        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      </Section>
 
       {image && (
-        <>
-          <Section>
-            {/* identity */}
-            <Row label="ID" value={image.id} mono />
-            <Row label="Tag" value={image.repo_tag} mono />
-            {/* artifact properties */}
-            {detail?.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
-            {detail && <Row label="Layers" value={String(detail.layers)} />}
-            <Row label="Size" value={formatBytes(image.size)} />
-            {/* process spec */}
-            {detail && detail.entrypoint.length > 0 && (
-              <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />
-            )}
-            {detail && detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
-            {detail?.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-            {detail?.user && <Row label="User" value={detail.user} mono />}
-            {detail && detail.exposed_ports.length > 0 && (
-              <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
-            )}
-            {/* lifecycle + usage */}
-            <Row label="Created" value={formatTimestamp(image.created)} mono />
-            <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
-          </Section>
-
-          {detail && detail.repo_digests.length > 0 && (
-            <Collapsible label="digests" count={detail.repo_digests.length}>
-              {detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)}
-            </Collapsible>
-          )}
-
-          {detail && detail.env.length > 0 && (
-            <Collapsible label="env" count={detail.env.length}>
-              {detail.env.map((e, i) => {
-                const eq = e.indexOf("=");
-                const k = eq >= 0 ? e.slice(0, eq) : e;
-                const v = eq >= 0 ? e.slice(eq + 1) : "";
-                return <KvLine key={i} k={k} v={v} copyAs={e} />;
-              })}
-            </Collapsible>
-          )}
-
-          {detail && Object.keys(detail.labels).length > 0 && (
-            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
-              {Object.entries(detail.labels).map(([k, v]) => (
-                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-              ))}
-            </Collapsible>
-          )}
-
-          <Section label="danger">
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {pending ? <><Spinner /> Removing…</> : "Remove"}
-            </Button>
-            {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-          </Section>
-
-          <ConfirmDialog
-            open={confirmOpen}
-            onOpenChange={setConfirmOpen}
-            title={`Remove ${title}?`}
-            description={image.containers > 0
-              ? `In use by ${image.containers} container${image.containers === 1 ? "" : "s"}. Remove with force?`
-              : "This will delete the image."}
-            confirmLabel={image.containers > 0 ? "Force remove" : "Remove"}
-            destructive
-            onConfirm={() => onRemove(image.containers > 0)}
-          />
-        </>
+        <ConfirmDialog
+          open={confirmOpen}
+          onOpenChange={setConfirmOpen}
+          title={`Remove ${title}?`}
+          description={image.containers > 0
+            ? `In use by ${image.containers} container${image.containers === 1 ? "" : "s"}. Remove with force?`
+            : "This will delete the image."}
+          confirmLabel={image.containers > 0 ? "Force remove" : "Remove"}
+          destructive
+          onConfirm={() => onRemove(image.containers > 0)}
+        />
       )}
     </Page>
   );
+}
+
+function platformLabel(detail: ImageDetailT | null): string | undefined {
+  if (!detail) return undefined;
+  if (!detail.architecture) return undefined;
+  return `${detail.os}/${detail.architecture}`;
 }
 
 function formatBytes(n: number): string {

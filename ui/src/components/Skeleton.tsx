@@ -16,14 +16,15 @@ export function Skeleton({ className = "" }: { className?: string }) {
 
 export function SkeletonRows({ count = 4 }: { count?: number }) {
   return (
-    <div className="flex flex-col -mx-1" aria-busy="true" aria-live="polite">
+    <div className="flex flex-col" aria-busy="true" aria-live="polite">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="px-1">
-          <div className="border-b border-[var(--border-subtle)] py-3.5 flex items-center gap-3">
-            <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-              <Skeleton className="h-3 w-1/2" />
-              <Skeleton className="h-2.5 w-3/4 opacity-60" />
-            </div>
+        <div
+          key={i}
+          className="border-b border-[var(--border-subtle)] last:border-b-0 py-3.5 flex items-center gap-3"
+        >
+          <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+            <Skeleton className="h-3 w-1/2" />
+            <Skeleton className="h-2.5 w-3/4 opacity-60" />
           </div>
         </div>
       ))}

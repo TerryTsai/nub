@@ -26,28 +26,27 @@ export function Hosts() {
           </Link>
         </>
       ) : (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {hosts.map((h) => (
-            <div key={h.hid} className="px-1">
-              <ListRow
-                title={h.label}
-                subtitle={h.url}
-                onPress={() => nav(`/h/${h.hid}`)}
-                right={
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPending(h);
-                    }}
-                    aria-label="Remove host"
-                    className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] px-3 py-2 active:opacity-70 shrink-0"
-                  >
-                    remove
-                  </button>
-                }
-              />
-            </div>
+            <ListRow
+              key={h.hid}
+              title={h.label}
+              subtitle={h.url}
+              onPress={() => nav(`/h/${h.hid}`)}
+              right={
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPending(h);
+                  }}
+                  aria-label="Remove host"
+                  className="text-xs text-[var(--text-tertiary)] hover:text-[var(--error)] px-3 py-2 active:opacity-70 shrink-0"
+                >
+                  remove
+                </button>
+              }
+            />
           ))}
         </div>
       )}

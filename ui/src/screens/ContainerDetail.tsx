@@ -15,7 +15,6 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
-import { Skeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 
@@ -130,105 +129,114 @@ export function ContainerDetail() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {!detail && !error && (
-        <Section>
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-4/6" />
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-2/3" />
-        </Section>
-      )}
+      <Section>
+        {/* identity + spec config */}
+        <Row label="ID" value={detail?.id} mono />
+        <Row label="Image" value={detail?.image} mono />
+        <Row label="Network" value={detail?.network_mode} mono />
+        <Row label="Restart" value={detail?.restart_policy} />
+        <Row label="Entrypoint" value={detail?.entrypoint.join(" ")} mono />
+        <Row label="Cmd" value={detail?.cmd.join(" ")} mono />
+        <Row label="Working dir" value={detail?.working_dir} mono />
+        <Row label="User" value={detail?.user} mono />
+        <Row label="Privileged" value={detail ? (detail.privileged ? "yes" : "no") : undefined} />
+        <Row label="Memory" value={memoryLabel(detail)} />
+        {/* runtime status */}
+        <Row label="Health" value={detail?.health} />
+        <Row label="Exit code" value={exitCodeLabel(detail)} />
+        <Row label="Restarts" value={detail ? String(detail.restart_count) : undefined} />
+        {/* timestamps */}
+        <Row label="Created" value={detail?.created} mono />
+        <Row label="Started" value={detail?.started_at} mono />
+        <Row label="Finished" value={detail?.finished_at} mono />
+      </Section>
 
-      {detail && (
-        <>
-          <Section>
-            {/* identity + spec config */}
-            <Row label="ID" value={detail.id} mono />
-            <Row label="Image" value={detail.image} mono />
-            {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
-            {detail.restart_policy && <Row label="Restart" value={detail.restart_policy} />}
-            {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-            {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
-            {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-            {detail.user && <Row label="User" value={detail.user} mono />}
-            {detail.privileged && <Row label="Privileged" value="yes" />}
-            {detail.memory_limit > 0 && <Row label="Memory" value={formatBytes(detail.memory_limit)} />}
-            {/* runtime status */}
-            {detail.health && <Row label="Health" value={detail.health} />}
-            {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
-            {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
-            {/* timestamps */}
-            <Row label="Created" value={detail.created} mono />
-            {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
-            {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
-          </Section>
-
-          {detail.ports.length > 0 && (
-            <Collapsible label="ports" count={detail.ports.length}>
-              {detail.ports.map((p, i) => (
-                <KvLine
-                  key={i}
-                  k={p.container_port}
-                  v={formatHostBinding(p)}
-                  copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
-                />
-              ))}
-            </Collapsible>
-          )}
-
-          {detail.mounts.length > 0 && (
-            <Collapsible label="volumes" count={detail.mounts.length}>
-              {detail.mounts.map((m, i) => (
-                <KvLine
-                  key={i}
-                  k={m.destination}
-                  v={`${m.source}${m.rw ? "" : " (ro)"}${m.kind === "tmpfs" ? " (tmpfs)" : ""}`}
-                  copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
-                />
-              ))}
-            </Collapsible>
-          )}
-
-          {Object.keys(detail.networks).length > 0 && (
-            <Collapsible label="networks" count={Object.keys(detail.networks).length}>
-              {Object.entries(detail.networks).map(([name, ep]) => (
-                <KvLine key={name} k={name} v={ep.ip_address || "—"} />
-              ))}
-            </Collapsible>
-          )}
-
-          {detail.env.length > 0 && (
-            <Collapsible label="env" count={detail.env.length}>
-              {detail.env.map((e, i) => {
-                const eq = e.indexOf("=");
-                const k = eq >= 0 ? e.slice(0, eq) : e;
-                const v = eq >= 0 ? e.slice(eq + 1) : "";
-                return <KvLine key={i} k={k} v={v} copyAs={e} />;
-              })}
-            </Collapsible>
-          )}
-
-          {Object.keys(detail.labels).length > 0 && (
-            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
-              {Object.entries(detail.labels).map(([k, v]) => (
-                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-              ))}
-            </Collapsible>
-          )}
-
-          <Section label="danger">
-            <RemoveButton
-              pending={pending}
-              running={detail.running}
-              onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
+      <Collapsible label="ports" count={detail?.ports.length}>
+        {!detail || detail.ports.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          detail.ports.map((p, i) => (
+            <KvLine
+              key={i}
+              k={p.container_port}
+              v={formatHostBinding(p)}
+              copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
             />
-          </Section>
-        </>
-      )}
+          ))
+        )}
+      </Collapsible>
+
+      <Collapsible label="volumes" count={detail?.mounts.length}>
+        {!detail || detail.mounts.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          detail.mounts.map((m, i) => (
+            <KvLine
+              key={i}
+              k={m.destination}
+              v={`${m.source}${m.rw ? "" : " (ro)"}${m.kind === "tmpfs" ? " (tmpfs)" : ""}`}
+              copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
+            />
+          ))
+        )}
+      </Collapsible>
+
+      <Collapsible label="networks" count={detail ? Object.keys(detail.networks).length : undefined}>
+        {!detail || Object.keys(detail.networks).length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          Object.entries(detail.networks).map(([name, ep]) => (
+            <KvLine key={name} k={name} v={ep.ip_address || "—"} />
+          ))
+        )}
+      </Collapsible>
+
+      <Collapsible label="env" count={detail?.env.length}>
+        {!detail || detail.env.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          detail.env.map((e, i) => {
+            const eq = e.indexOf("=");
+            const k = eq >= 0 ? e.slice(0, eq) : e;
+            const v = eq >= 0 ? e.slice(eq + 1) : "";
+            return <KvLine key={i} k={k} v={v} copyAs={e} />;
+          })
+        )}
+      </Collapsible>
+
+      <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
+        {!detail || Object.keys(detail.labels).length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          Object.entries(detail.labels).map(([k, v]) => (
+            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+          ))
+        )}
+      </Collapsible>
+
+      <Section label="danger">
+        <RemoveButton
+          pending={pending}
+          running={detail?.running ?? false}
+          disabled={!detail}
+          onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
+        />
+      </Section>
     </Page>
   );
+}
+
+function memoryLabel(detail: ContainerDetailT | null): string | undefined {
+  if (!detail) return undefined;
+  return detail.memory_limit > 0 ? formatBytes(detail.memory_limit) : "no limit";
+}
+
+function exitCodeLabel(detail: ContainerDetailT | null): string | undefined {
+  if (!detail) return undefined;
+  // Running containers don't have a meaningful exit code yet — render as
+  // the empty placeholder rather than a misleading "0".
+  if (detail.running) return "";
+  return String(detail.exit_code);
 }
 
 function pastTense(name: string): string {
@@ -264,10 +272,12 @@ function formatHostBinding(p: PortMapping): string {
 function RemoveButton({
   pending,
   running,
+  disabled,
   onConfirm,
 }: {
   pending: string | null;
   running: boolean;
+  disabled?: boolean;
   onConfirm: (force: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -275,7 +285,7 @@ function RemoveButton({
     <>
       <Button
         variant="destructive"
-        disabled={pending !== null}
+        disabled={disabled || pending !== null}
         onClick={() => setOpen(true)}
       >
         {pending === "remove" ? <><Spinner /> Removing…</> : "Remove"}

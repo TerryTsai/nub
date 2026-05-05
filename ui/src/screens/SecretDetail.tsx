@@ -5,7 +5,6 @@ import type { SecretSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -64,45 +63,30 @@ export function SecretDetail() {
     <Page crumbs={crumbs}>
       <Heading category="Secret" title={name} />
 
-      {!secret && (
-        <p className="text-xs text-[var(--text-tertiary)]">Loading…</p>
-      )}
+      <Section>
+        <Row label="Size" value={secret ? `${secret.size}B` : undefined} />
+        <Row label="Modified" value={secret?.modified_at} mono />
+      </Section>
 
-      {secret && (
-        <>
-          <Section>
-            <Row label="Size" value={`${secret.size}B`} />
-            <Row label="Modified" value={secret.modified_at || "unknown"} mono />
-          </Section>
+      <Section label="danger">
+        <Button
+          variant="destructive"
+          disabled={!secret || pending}
+          onClick={() => setConfirmOpen(true)}
+        >
+          {pending ? (<><Spinner /> Removing…</>) : "Remove"}
+        </Button>
+      </Section>
 
-          <Collapsible>
-            <p className="text-xs text-[var(--text-tertiary)]">
-              Encrypted at rest with the host's age key. Values are never read back over the network — use{" "}
-              <code className="mono">nub secret get NAME</code> on the host.
-            </p>
-          </Collapsible>
-
-          <Section label="danger">
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {pending ? (<><Spinner /> Removing…</>) : "Remove"}
-            </Button>
-          </Section>
-
-          <ConfirmDialog
-            open={confirmOpen}
-            onOpenChange={setConfirmOpen}
-            title="Remove secret?"
-            description="This can't be undone."
-            confirmLabel="Remove"
-            destructive
-            onConfirm={onRemove}
-          />
-        </>
-      )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Remove secret?"
+        description="This can't be undone."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={onRemove}
+      />
     </Page>
   );
 }

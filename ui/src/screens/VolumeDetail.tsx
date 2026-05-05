@@ -14,7 +14,6 @@ import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
-import { Skeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toaster";
@@ -80,78 +79,74 @@ export function VolumeDetail() {
         right={volume && <StatusBadge status={volumeStatus(volume.in_use)} />}
       />
 
-      {!volume && (
-        <Section>
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-4/6" />
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-2/3" />
-        </Section>
-      )}
+      <Section>
+        {/* identity */}
+        <Row label="Name" value={volume?.name} mono />
+        {/* spec */}
+        <Row label="Driver" value={volume?.driver} />
+        <Row label="Scope" value={volume?.scope} />
+        {/* on-disk facts */}
+        <Row label="Mountpoint" value={volume?.mountpoint} mono />
+        <Row label="Size" value={sizeLabel(detail)} />
+        {/* lifecycle + usage */}
+        <Row label="Created" value={volume?.created_at} mono />
+        <Row label="In use by" value={refCountLabel(detail)} />
+      </Section>
 
-      {volume && (
-        <>
-          <Section>
-            {/* identity */}
-            <Row label="Name" value={volume.name} mono />
-            {/* spec */}
-            <Row label="Driver" value={volume.driver} />
-            {volume.scope && <Row label="Scope" value={volume.scope} />}
-            {/* on-disk facts */}
-            <Row label="Mountpoint" value={volume.mountpoint} mono />
-            {detail && detail.size >= 0 && <Row label="Size" value={formatBytes(detail.size)} />}
-            {/* lifecycle + usage */}
-            <Row label="Created" value={volume.created_at} mono />
-            {detail && detail.ref_count >= 0 && (
-              <Row
-                label="In use by"
-                value={`${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`}
-              />
-            )}
-          </Section>
+      <Collapsible label="options" count={detail ? Object.keys(detail.options).length : undefined}>
+        {!detail || Object.keys(detail.options).length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          Object.entries(detail.options).map(([k, v]) => (
+            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+          ))
+        )}
+      </Collapsible>
 
-          {detail && Object.keys(detail.options).length > 0 && (
-            <Collapsible label="options" count={Object.keys(detail.options).length}>
-              {Object.entries(detail.options).map(([k, v]) => (
-                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-              ))}
-            </Collapsible>
-          )}
+      <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
+        {!detail || Object.keys(detail.labels).length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          Object.entries(detail.labels).map(([k, v]) => (
+            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+          ))
+        )}
+      </Collapsible>
 
-          {detail && Object.keys(detail.labels).length > 0 && (
-            <Collapsible label="labels" count={Object.keys(detail.labels).length}>
-              {Object.entries(detail.labels).map(([k, v]) => (
-                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-              ))}
-            </Collapsible>
-          )}
+      <Section label="danger">
+        <Button
+          variant="destructive"
+          disabled={!volume || pending}
+          onClick={() => setConfirmOpen(true)}
+        >
+          {pending ? <><Spinner /> Removing…</> : "Remove"}
+        </Button>
+        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
+      </Section>
 
-          <Section label="danger">
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => setConfirmOpen(true)}
-            >
-              {pending ? <><Spinner /> Removing…</> : "Remove"}
-            </Button>
-            {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-          </Section>
-
-          <ConfirmDialog
-            open={confirmOpen}
-            onOpenChange={setConfirmOpen}
-            title={`Remove volume ${shortTitle}?`}
-            description="Volume contents are deleted. This cannot be undone."
-            confirmLabel="Remove"
-            destructive
-            onConfirm={() => onRemove(false)}
-          />
-        </>
-      )}
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Remove volume ${shortTitle}?`}
+        description="Volume contents are deleted. This cannot be undone."
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => onRemove(false)}
+      />
     </Page>
   );
+}
+
+function sizeLabel(detail: VolumeDetailT | null): string | undefined {
+  if (!detail) return undefined;
+  if (detail.size < 0) return undefined;
+  return formatBytes(detail.size);
+}
+
+function refCountLabel(detail: VolumeDetailT | null): string | undefined {
+  if (!detail) return undefined;
+  if (detail.ref_count < 0) return undefined;
+  return `${detail.ref_count} container${detail.ref_count === 1 ? "" : "s"}`;
 }
 
 function formatBytes(n: number): string {

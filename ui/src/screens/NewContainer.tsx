@@ -36,7 +36,6 @@ interface FormState {
   workingDir: string;
   user: string;
   restart: RestartPolicySpec;
-  start: boolean;
 }
 
 const EMPTY_FORM: FormState = {
@@ -51,7 +50,6 @@ const EMPTY_FORM: FormState = {
   workingDir: "",
   user: "",
   restart: { kind: "unless_stopped" },
-  start: true,
 };
 
 const RESTART_OPTIONS: { value: RestartPolicySpec["kind"]; label: string }[] = [
@@ -70,7 +68,7 @@ export function NewContainer() {
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
 
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState<"create" | "create-start" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pull, setPull] = useState<PullState | null>(null);
   const [sourceName, setSourceName] = useState<string>("");
@@ -115,7 +113,6 @@ export function NewContainer() {
           workingDir: d.working_dir,
           user: d.user,
           restart: parseRestartPolicy(d.restart_policy),
-          start: true,
         });
       } catch (e) {
         if (!cancelled) setError(`load source: ${(e as Error).message}`);
@@ -124,10 +121,9 @@ export function NewContainer() {
     return () => { cancelled = true; };
   }, [cloning, host?.url, host?.token, cid]);
 
-  async function onSubmit(e: React.FormEvent) {
+  async function submit(start: boolean) {
     if (!host) return;
-    e.preventDefault();
-    setPending(true);
+    setPending(start ? "create-start" : "create");
     setError(null);
     const image = form.image.trim();
     try {
@@ -153,7 +149,7 @@ export function NewContainer() {
           working_dir: form.workingDir.trim() || undefined,
           user: form.user.trim() || undefined,
           restart: form.restart,
-          start: form.start,
+          start,
         }),
         "container_created",
       );
@@ -162,7 +158,7 @@ export function NewContainer() {
       setError(`create container: ${(e as Error).message}`);
       setPull(null);
     } finally {
-      setPending(false);
+      setPending(null);
     }
   }
 
@@ -195,7 +191,7 @@ export function NewContainer() {
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
+      <form onSubmit={(e) => { e.preventDefault(); submit(true); }} className="contents" {...scrollFocusedIntoView()}>
         <Section>
           <Row
             label="Image"
@@ -362,29 +358,60 @@ export function NewContainer() {
         )}
 
         <Section label="create">
-          <label className="flex items-center gap-2 cursor-pointer text-xs text-[var(--text-secondary)]">
-            <input
-              type="checkbox"
-              checked={form.start}
-              onChange={(e) => setForm({ ...form, start: e.target.checked })}
-            />
-            start after create
-          </label>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={pending || !form.image.trim()}
-              className="flex-1"
-            >
-              {pending ? (<><Spinner /> Creating…</>) : "Create"}
-            </Button>
+            <SplitSubmit
+              disabled={pending !== null || !form.image.trim()}
+              pending={pending}
+              onCreate={() => submit(false)}
+              onCreateAndStart={() => submit(true)}
+            />
           </div>
         </Section>
       </form>
     </Page>
+  );
+}
+
+/** Submit pill split into two halves: "Create" (just create, leave stopped)
+ * and "Create & start" (create and start). One rounded shape with a 1px
+ * divider down the middle so the user reads it as one control with two
+ * complementary actions. */
+function SplitSubmit({
+  disabled,
+  pending,
+  onCreate,
+  onCreateAndStart,
+}: {
+  disabled: boolean;
+  pending: "create" | "create-start" | null;
+  onCreate: () => void;
+  onCreateAndStart: () => void;
+}) {
+  const half =
+    "flex-1 flex items-center justify-center gap-1 text-[13px] font-medium text-[var(--accent)] py-2 px-3 disabled:opacity-30 disabled:cursor-not-allowed active:opacity-75 transition-opacity";
+  return (
+    <div className="flex-1 flex rounded-full overflow-hidden border border-[var(--accent-border)] bg-[var(--accent-soft)]">
+      <button
+        type="button"
+        onClick={onCreate}
+        disabled={disabled}
+        className={half}
+      >
+        {pending === "create" ? <><Spinner /> Creating…</> : "Create"}
+      </button>
+      <span className="w-px bg-[var(--accent-border)] shrink-0" aria-hidden="true" />
+      <button
+        type="submit"
+        onClick={onCreateAndStart}
+        disabled={disabled}
+        className={half}
+      >
+        {pending === "create-start" ? <><Spinner /> Starting…</> : "Create & start"}
+      </button>
+    </div>
   );
 }
 
@@ -417,19 +444,14 @@ function splitTokens(s: string): string[] {
 }
 
 function AddBtn({ onClick, label }: { onClick: () => void; label: string }) {
-  // `label` is the verbose aria/intent ("add port"); we render the noun
-  // ("+ port") since the button now sits inside the collapsible body
-  // separated from its section header — the noun is contextually useful
-  // here, unlike when it sat right next to "ports" in the header.
-  const noun = label.replace(/^add\s+/, "");
   return (
     <button
       type="button"
       onClick={onClick}
       aria-label={label}
-      className="text-xs text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors self-start py-1"
+      className="text-sm text-[var(--text-tertiary)] hover:text-[var(--accent)] transition-colors self-start px-2 py-1 leading-none"
     >
-      + {noun}
+      +
     </button>
   );
 }

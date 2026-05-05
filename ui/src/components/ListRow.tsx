@@ -20,11 +20,11 @@ interface Props {
  * entity lists — actions live on the detail page. */
 export function ListRow({ title, subtitle, status, mono, onPress, right }: Props) {
   const cls =
-    "w-full text-left border-b border-[var(--border-subtle)] py-3.5 flex items-center gap-3 active:bg-zinc-900/60 transition-colors";
+    "w-full text-left border-b border-[var(--border-subtle)] last:border-b-0 py-3.5 flex items-center gap-3 active:bg-zinc-900/60 transition-colors";
   const inner = (
     <>
       <div className="flex-1 min-w-0">
-        <div className={`leading-snug truncate ${mono ? "mono text-xs" : "text-sm"}`}>{title}</div>
+        <div className={`text-sm leading-snug truncate ${mono ? "mono" : ""}`}>{title}</div>
         {subtitle && (
           <div className="text-xs text-[var(--text-tertiary)] mt-0.5 line-clamp-2">{subtitle}</div>
         )}

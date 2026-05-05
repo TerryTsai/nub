@@ -79,16 +79,16 @@ export function HostImages() {
         <p className="text-xs text-[var(--text-tertiary)]">No matches.</p>
       )}
       {visible && visible.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {visible.map((img) => (
-            <div key={img.id} className="px-1">
-              <ListRow
-                title={img.repo_tag}
-                subtitle={relativeDate(img.created)}
-                status={imageStatus(img.containers)}
-                onPress={() => nav(`/h/${hid}/images/${img.id}`)}
-              />
-            </div>
+            <ListRow
+              key={img.id}
+              title={img.repo_tag}
+              mono
+              subtitle={relativeDate(img.created)}
+              status={imageStatus(img.containers)}
+              onPress={() => nav(`/h/${hid}/images/${img.id}`)}
+            />
           ))}
         </div>
       )}

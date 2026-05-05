@@ -3,6 +3,12 @@ import { CopyLine } from "./CopyLine";
 
 /** Key/value row used inside a Section.
  *
+ * Always rendered — the row is structural, not contingent on having a
+ * value. Empty/missing values render as a dim em-dash so the page layout
+ * stays stable while detail data loads asynchronously. Pass the value
+ * directly as `detail?.x`; undefined and empty string both render as the
+ * placeholder.
+ *
  * Color rule: pass `mono` for engine-returned data the user might
  * select-copy — refs, IDs, names, paths, timestamps, code tokens, env
  * values, network/volume identifiers. The amber treatment matches
@@ -32,9 +38,11 @@ export function Row({
       </div>
       {right ? (
         <div className="flex-1 min-w-0">{right}</div>
+      ) : !value ? (
+        <span className="flex-1 min-w-0 text-xs text-[var(--text-tertiary)]">—</span>
       ) : mono ? (
         <div className="flex-1 min-w-0">
-          <CopyLine value={value ?? ""} />
+          <CopyLine value={value} />
         </div>
       ) : (
         <span className="flex-1 min-w-0 text-xs leading-5 break-words text-[var(--text-primary)]">

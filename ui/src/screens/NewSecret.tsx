@@ -12,9 +12,6 @@ import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
-const NAME_RE = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
-const NAME_HINT = "letters, digits, dot, underscore, dash; must start with letter/digit; ≤128 chars";
-
 export function NewSecret() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
@@ -26,27 +23,14 @@ export function NewSecret() {
   const [value, setValue] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
-  const [valueError, setValueError] = useState<string | null>(null);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!host) return;
-    const trimmed = name.trim();
-    setNameError(null);
-    setValueError(null);
-    if (!NAME_RE.test(trimmed) || trimmed.length > 128) {
-      setNameError("name must start with a letter or digit; letters/digits/dot/underscore/dash only");
-      return;
-    }
-    if (value.length === 0) {
-      setValueError("value can't be empty");
-      return;
-    }
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "put_secret", name: trimmed, value }), "ok");
+      unwrap(await call(host, { op: "put_secret", name: name.trim(), value }), "ok");
       invalidate(`${host.url}:list_secrets`);
       nav(`/h/${hid}/secrets`, { replace: true });
     } catch (e) {
@@ -72,11 +56,6 @@ export function NewSecret() {
           placeholder: "new secret",
         }}
       />
-      {nameError ? (
-        <p className="text-[11px] text-[var(--error)]">{nameError}</p>
-      ) : (
-        <p className="text-[11px] text-[var(--text-tertiary)]">{NAME_HINT}</p>
-      )}
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
@@ -94,12 +73,9 @@ export function NewSecret() {
             required
             style={{ minHeight: "96px" }}
           />
-          {valueError && (
-            <p className="text-[11px] text-[var(--error)]">{valueError}</p>
-          )}
         </Section>
 
-        <Collapsible>
+        <Collapsible defaultOpen>
           <p className="text-xs text-[var(--text-tertiary)]">
             Encrypted at rest with the host's age key. Values are never read back over
             the network — use <code className="mono">nub secret get NAME</code> on the host.
@@ -110,7 +86,6 @@ export function NewSecret() {
           <div className="flex gap-2">
             <Button
               variant="ghost"
-              type="button"
               onClick={() => nav(`/h/${hid}/secrets`)}
               className="flex-1"
             >

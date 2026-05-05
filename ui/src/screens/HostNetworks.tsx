@@ -36,16 +36,16 @@ export function HostNetworks() {
         <p className="text-xs text-[var(--text-tertiary)]">No networks.</p>
       )}
       {networks && networks.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {networks.map((n) => (
-            <div key={n.id} className="px-1">
-              <ListRow
-                title={n.name}
-                subtitle={relativeDate(n.created)}
-                status={networkStatus(n.in_use)}
-                onPress={() => nav(`/h/${hid}/networks/${n.id}`)}
-              />
-            </div>
+            <ListRow
+              key={n.id}
+              title={n.name}
+              mono
+              subtitle={relativeDate(n.created)}
+              status={networkStatus(n.in_use)}
+              onPress={() => nav(`/h/${hid}/networks/${n.id}`)}
+            />
           ))}
         </div>
       )}

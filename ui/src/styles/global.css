@@ -56,11 +56,20 @@ input, textarea, select, button {
 /* Keyboard focus ring — applies to anything reachable via Tab/arrow keys.
  * `:focus-visible` (not `:focus`) so taps and clicks don't show the ring;
  * only true keyboard focus does. Lives on a single global rule so every
- * interactive element gets a consistent ring without per-component opt-in. */
+ * interactive element gets a consistent ring without per-component opt-in.
+ *
+ * Form inputs opt out — their accent-underline-on-focus is the focus
+ * indicator and a stacked outer ring reads as heavy chrome. */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: var(--radius-sm);
+}
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[contenteditable]:focus-visible {
+  outline: none;
 }
 
 .mono {
@@ -83,7 +92,6 @@ input, textarea, select, button {
   transition: border-color 0.15s var(--ease-out);
 }
 .input:focus { border-bottom-color: var(--accent); }
-.input:focus-visible { outline: none; }
 .input::placeholder { color: var(--text-tertiary); font-style: italic; }
 
 /* Multi-line code regions: YAML, Dockerfiles, secret values. Same iOS-zoom
@@ -107,7 +115,6 @@ input, textarea, select, button {
   transition: border-color 0.15s var(--ease-out);
 }
 .input-code:focus { border-color: var(--accent); }
-.input-code:focus-visible { outline: none; }
 .input-code::placeholder { color: var(--text-tertiary); font-style: italic; }
 
 /* xterm.js renders to canvas; its hidden helper textarea inherits a font-

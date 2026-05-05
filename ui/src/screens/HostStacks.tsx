@@ -36,16 +36,16 @@ export function HostStacks() {
         <p className="text-xs text-[var(--text-tertiary)]">No stacks.</p>
       )}
       {stacks && stacks.length > 0 && (
-        <div className="flex flex-col -mx-1">
+        <div className="flex flex-col">
           {stacks.map((s) => (
-            <div key={s.name} className="px-1">
-              <ListRow
-                title={s.name}
-                subtitle={relativeDate(s.modified_at)}
-                status={stackStatus(s.status)}
-                onPress={() => nav(`/h/${hid}/stacks/${encodeURIComponent(s.name)}`)}
-              />
-            </div>
+            <ListRow
+              key={s.name}
+              title={s.name}
+              mono
+              subtitle={relativeDate(s.modified_at)}
+              status={stackStatus(s.status)}
+              onPress={() => nav(`/h/${hid}/stacks/${encodeURIComponent(s.name)}`)}
+            />
           ))}
         </div>
       )}

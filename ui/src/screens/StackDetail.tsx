@@ -14,7 +14,6 @@ import { ListRow } from "@/components/ListRow";
 import { Row } from "@/components/Row";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
-import { Skeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { useToast } from "@/components/Toaster";
 
@@ -138,97 +137,94 @@ export function StackDetailScreen() {
     </>
   ) : undefined;
 
+  const droppedKeysCount = detail
+    ? detail.unsupported.length + Object.keys(detail.service_unsupported).length
+    : undefined;
+
   return (
     <Page crumbs={crumbs} subnav={subnav}>
       <Heading category="Stack" title={name} />
 
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
-      {!detail && !error && (
-        <Section>
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-3 w-full" />
-          <Skeleton className="h-3 w-5/6" />
-          <Skeleton className="h-3 w-4/6" />
-          <Skeleton className="h-3 w-3/4" />
-          <Skeleton className="h-3 w-2/3" />
-        </Section>
-      )}
 
-      {detail && (
-        <>
-          <Section>
-            {detail.network_name && <Row label="Network" value={detail.network_name} mono />}
-            {detail.modified_at && <Row label="Modified" value={detail.modified_at} mono />}
-          </Section>
+      <Section>
+        <Row label="Network" value={detail?.network_name} mono />
+        <Row label="Modified" value={detail?.modified_at} mono />
+      </Section>
 
-          <Section label={`containers (${detail.containers.length})`}>
-            {detail.containers.length === 0 ? (
-              <p className="text-xs text-[var(--text-tertiary)]">On disk, not deployed.</p>
-            ) : (
-              <div className="flex flex-col -mx-1">
-                {detail.containers.map((c) => (
-                  <div key={c.id} className="px-1">
-                    <ListRow
-                      title={c.name}
-                      subtitle={`${c.image} · ${c.status}`}
-                      status={containerStatus(c.state, c.exit_code, c.health)}
-                      onPress={() => nav(`/h/${hid}/c/${c.id}`)}
-                    />
-                  </div>
-                ))}
-              </div>
+      <Collapsible label="containers" count={detail?.containers.length}>
+        {!detail ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : detail.containers.length === 0 ? (
+          <p className="text-xs text-[var(--text-tertiary)]">On disk, not deployed.</p>
+        ) : (
+          <div className="flex flex-col">
+            {detail.containers.map((c) => (
+              <ListRow
+                key={c.id}
+                title={c.name}
+                mono
+                subtitle={`${c.image} · ${c.status}`}
+                status={containerStatus(c.state, c.exit_code, c.health)}
+                onPress={() => nav(`/h/${hid}/c/${c.id}`)}
+              />
+            ))}
+          </div>
+        )}
+      </Collapsible>
+
+      <Section label="compose">
+        <textarea
+          className="input-code"
+          spellCheck={false}
+          autoCapitalize="off"
+          autoCorrect="off"
+          rows={14}
+          value={yaml}
+          onChange={(e) => setYaml(e.target.value)}
+          style={{ minHeight: "260px" }}
+          disabled={!detail}
+        />
+      </Section>
+
+      <Collapsible label="dropped keys" count={droppedKeysCount}>
+        {!detail || (detail.unsupported.length === 0 && Object.keys(detail.service_unsupported).length === 0) ? (
+          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+        ) : (
+          <>
+            <p className="text-xs text-[var(--text-tertiary)]">
+              Compose keys we recognized but don't translate. The deployed stack ignores them.
+            </p>
+            {detail.unsupported.length > 0 && (
+              <p className="text-xs"><span className="text-[var(--text-tertiary)]">top-level:</span> {detail.unsupported.join(", ")}</p>
             )}
-          </Section>
+            {Object.entries(detail.service_unsupported).map(([svc, keys]) => (
+              <p key={svc} className="text-xs"><span className="text-[var(--text-tertiary)]">{svc}:</span> {keys.join(", ")}</p>
+            ))}
+          </>
+        )}
+      </Collapsible>
 
-          <Section label="compose">
-            <textarea
-              className="input-code"
-              spellCheck={false}
-              autoCapitalize="off"
-              autoCorrect="off"
-              rows={14}
-              value={yaml}
-              onChange={(e) => setYaml(e.target.value)}
-              style={{ minHeight: "260px" }}
-            />
-          </Section>
+      <Section label="danger">
+        <Button
+          variant="destructive"
+          onClick={() => setConfirmDelete(true)}
+          disabled={!detail || pending !== null}
+        >
+          {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
+        </Button>
+      </Section>
 
-          {(detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0) && (
-            <Collapsible label="dropped keys">
-              <p className="text-xs text-[var(--text-tertiary)]">
-                Compose keys we recognized but don't translate. The deployed stack ignores them.
-              </p>
-              {detail.unsupported.length > 0 && (
-                <p className="text-xs"><span className="text-[var(--text-tertiary)]">top-level:</span> {detail.unsupported.join(", ")}</p>
-              )}
-              {Object.entries(detail.service_unsupported).map(([svc, keys]) => (
-                <p key={svc} className="text-xs"><span className="text-[var(--text-tertiary)]">{svc}:</span> {keys.join(", ")}</p>
-              ))}
-            </Collapsible>
-          )}
-
-          <Section label="danger">
-            <Button
-              variant="destructive"
-              onClick={() => setConfirmDelete(true)}
-              disabled={pending !== null}
-            >
-              {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
-            </Button>
-          </Section>
-
-          <ConfirmDialog
-            open={confirmDelete}
-            onOpenChange={setConfirmDelete}
-            title={`Delete stack ${name}?`}
-            description="Stops and removes all containers, drops the stack network, and removes the manifest. Named volumes are preserved."
-            confirmLabel="Delete"
-            destructive
-            onConfirm={onDelete}
-          />
-        </>
-      )}
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title={`Delete stack ${name}?`}
+        description="Stops and removes all containers, drops the stack network, and removes the manifest. Named volumes are preserved."
+        confirmLabel="Delete"
+        destructive
+        onConfirm={onDelete}
+      />
     </Page>
   );
 }

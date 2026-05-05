@@ -93,15 +93,7 @@ export function Combobox({
         }
       >
         <span className="truncate">{displayLabel || placeholder || "Select…"}</span>
-        <span
-          className={
-            cell
-              ? "text-[var(--text-tertiary)] text-[11px] shrink-0"
-              : "text-[var(--text-tertiary)] text-sm pl-2 shrink-0"
-          }
-        >
-          ▾
-        </span>
+        <Chevron className={cell ? "shrink-0" : "shrink-0 ml-2"} />
       </button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
@@ -126,13 +118,12 @@ export function Combobox({
                 <button
                   type="button"
                   onClick={() => pick(filter.trim())}
-                  className="w-full text-left px-3 py-3 flex flex-col gap-0.5 border-b border-[var(--border-subtle)] active:bg-[var(--bg-elevated)]"
+                  className="w-full text-left px-3 py-3 flex items-center gap-2 border-b border-[var(--border-subtle)] active:bg-[var(--bg-elevated)]"
                 >
-                  <span className="text-sm flex items-center gap-2 truncate">
-                    <span className="text-[var(--accent)] shrink-0">+</span>
-                    <span className={`truncate ${mono ? "mono" : ""}`}>{filter.trim()}</span>
+                  <span className={`text-sm truncate flex-1 min-w-0 ${mono ? "mono" : ""}`}>
+                    {filter.trim()}
                   </span>
-                  <span className="text-[11px] text-[var(--text-tertiary)] pl-5">use as typed</span>
+                  <span className="text-[var(--accent)] shrink-0" aria-hidden="true">+</span>
                 </button>
               )}
               {filtered.length === 0 && !showCustomRow && (
@@ -165,5 +156,26 @@ export function Combobox({
         </Dialog.Portal>
       </Dialog.Root>
     </>
+  );
+}
+
+function Chevron({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 10 10"
+      aria-hidden="true"
+      className={`text-[var(--text-tertiary)] ${className}`}
+    >
+      <path
+        d="M2 4l3 3 3-3"
+        stroke="currentColor"
+        fill="none"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
