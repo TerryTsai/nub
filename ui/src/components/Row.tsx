@@ -47,15 +47,17 @@ export function Row({
       {right ? (
         <div className="flex-1 min-w-0">{right}</div>
       ) : mono ? (
-        <button
-          type="button"
-          onClick={copy}
-          className={`flex-1 min-w-0 text-left text-xs leading-5 whitespace-nowrap overflow-x-auto no-scrollbar mono cursor-pointer transition-colors ${
-            copied ? "text-[var(--success)]" : "text-[var(--id-color)]"
-          }`}
-        >
-          {copied ? "copied" : value}
-        </button>
+        <div className="flex-1 min-w-0 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={copy}
+            className={`block text-left text-xs leading-5 whitespace-nowrap mono cursor-pointer transition-colors ${
+              copied ? "text-[var(--success)]" : "text-[var(--id-color)]"
+            }`}
+          >
+            {copied ? "copied" : value}
+          </button>
+        </div>
       ) : (
         <span className="flex-1 min-w-0 text-xs leading-5 break-words text-[var(--text-primary)]">
           {value}
