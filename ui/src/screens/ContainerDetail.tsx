@@ -7,7 +7,6 @@ import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { useToast } from "@/components/Toaster";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -131,21 +130,18 @@ export function ContainerDetail() {
         <>
           <Section>
             <Row label="Image" value={detail.image} mono />
+            {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
+            {detail.restart_policy && <Row label="Restart" value={detail.restart_policy} />}
+            {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
+            {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
+            {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+            {detail.user && <Row label="User" value={detail.user} mono />}
             <Row label="Created" value={detail.created} mono />
             {detail.started_at && <Row label="Started" value={detail.started_at} mono />}
             {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
             {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
             {detail.restart_count > 0 && <Row label="Restarts" value={String(detail.restart_count)} />}
             {detail.health && <Row label="Health" value={detail.health} />}
-          </Section>
-
-          <Collapsible label="spec">
-            {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
-            {detail.restart_policy && <Row label="Restart policy" value={detail.restart_policy} />}
-            {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
-            {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-            {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-            {detail.user && <Row label="User" value={detail.user} mono />}
             {detail.env.length > 0 && (
               <Row
                 label={`Env (${detail.env.length})`}
@@ -156,7 +152,7 @@ export function ContainerDetail() {
                 }
               />
             )}
-          </Collapsible>
+          </Section>
 
           <Section label="danger">
             <RemoveButton

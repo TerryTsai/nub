@@ -6,7 +6,6 @@ import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -79,9 +78,17 @@ export function NetworkDetail() {
       {network && (
         <>
           <Section>
+            <Row label="ID" value={network.id} mono />
             <Row label="Name" value={network.name} />
             <Row label="Driver" value={network.driver} />
+            {network.scope && <Row label="Scope" value={network.scope} />}
             <Row label="Internal" value={network.internal ? "yes" : "no"} />
+            {detail?.ipam.map((c, i) => (
+              <div key={i} className="contents">
+                {c.subnet && <Row label="Subnet" value={c.subnet} mono />}
+                {c.gateway && <Row label="Gateway" value={c.gateway} mono />}
+              </div>
+            ))}
             <Row label="Created" value={network.created} mono />
             {detail && (
               <Row
@@ -97,19 +104,6 @@ export function NetworkDetail() {
                 <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
               ))}
             </Section>
-          )}
-
-          {detail && (
-            <Collapsible label="spec">
-              <Row label="ID" value={network.id} mono />
-              {network.scope && <Row label="Scope" value={network.scope} />}
-              {detail.ipam.map((c, i) => (
-                <div key={i} className="contents">
-                  {c.subnet && <Row label="Subnet" value={c.subnet} mono />}
-                  {c.gateway && <Row label="Gateway" value={c.gateway} mono />}
-                </div>
-              ))}
-            </Collapsible>
           )}
 
           <Section label="danger">

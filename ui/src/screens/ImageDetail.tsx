@@ -6,7 +6,6 @@ import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { imageStatus } from "@/state/status";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
@@ -82,33 +81,30 @@ export function ImageDetail() {
             <Row label="ID" value={image.id} mono />
             <Row label="Tag" value={image.repo_tag} mono />
             <Row label="Size" value={formatBytes(image.size)} />
+            {detail?.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
+            {detail && <Row label="Layers" value={String(detail.layers)} />}
+            {detail && detail.entrypoint.length > 0 && (
+              <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />
+            )}
+            {detail && detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
+            {detail?.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
+            {detail?.user && <Row label="User" value={detail.user} mono />}
+            {detail && detail.exposed_ports.length > 0 && (
+              <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
+            )}
             <Row label="Created" value={formatTimestamp(image.created)} />
             <Row label="In use by" value={`${image.containers} container${image.containers === 1 ? "" : "s"}`} />
+            {detail && detail.env.length > 0 && (
+              <Row
+                label={`Env (${detail.env.length})`}
+                right={
+                  <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
+                    {detail.env.join("\n")}
+                  </pre>
+                }
+              />
+            )}
           </Section>
-
-          {detail && (
-            <Collapsible label="spec">
-              {detail.architecture && <Row label="Platform" value={`${detail.os}/${detail.architecture}`} />}
-              <Row label="Layers" value={String(detail.layers)} />
-              {detail.entrypoint.length > 0 && <Row label="Entrypoint" value={detail.entrypoint.join(" ")} mono />}
-              {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
-              {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
-              {detail.user && <Row label="User" value={detail.user} mono />}
-              {detail.exposed_ports.length > 0 && (
-                <Row label="Exposed" value={detail.exposed_ports.join(", ")} mono />
-              )}
-              {detail.env.length > 0 && (
-                <Row
-                  label={`Env (${detail.env.length})`}
-                  right={
-                    <pre className="text-xs mono whitespace-pre-wrap break-all text-[var(--id-color)] leading-5">
-                      {detail.env.join("\n")}
-                    </pre>
-                  }
-                />
-              )}
-            </Collapsible>
-          )}
 
           <Section label="danger">
             <Button
