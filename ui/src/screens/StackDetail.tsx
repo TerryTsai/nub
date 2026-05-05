@@ -11,6 +11,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
+import { Row } from "@/components/Row";
 import { Page, type Crumb } from "@/components/Page";
 import { Section } from "@/components/Section";
 import { useToast } from "@/components/Toaster";
@@ -141,7 +142,12 @@ export function StackDetailScreen() {
 
       {detail && (
         <>
-          <Section label="containers">
+          <Section>
+            {detail.network_name && <Row label="Network" value={detail.network_name} mono />}
+            {detail.modified_at && <Row label="Modified" value={detail.modified_at} mono />}
+          </Section>
+
+          <Section label={`containers (${detail.containers.length})`}>
             {detail.containers.length === 0 ? (
               <p className="text-xs text-[var(--text-tertiary)]">On disk, not deployed.</p>
             ) : (

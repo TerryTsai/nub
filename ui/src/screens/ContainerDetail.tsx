@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate, peek, useQuery } from "@/state/cache";
-import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary } from "@/api/types";
+import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary, PortMapping } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { KvLine } from "@/components/KvLine";
@@ -131,6 +131,7 @@ export function ContainerDetail() {
         <>
           <Section>
             {/* identity + spec config */}
+            <Row label="ID" value={detail.id} mono />
             <Row label="Image" value={detail.image} mono />
             {detail.network_mode && <Row label="Network" value={detail.network_mode} mono />}
             {detail.restart_policy && <Row label="Restart" value={detail.restart_policy} />}
@@ -138,6 +139,8 @@ export function ContainerDetail() {
             {detail.cmd.length > 0 && <Row label="Cmd" value={detail.cmd.join(" ")} mono />}
             {detail.working_dir && <Row label="Working dir" value={detail.working_dir} mono />}
             {detail.user && <Row label="User" value={detail.user} mono />}
+            {detail.privileged && <Row label="Privileged" value="yes" />}
+            {detail.memory_limit > 0 && <Row label="Memory" value={formatBytes(detail.memory_limit)} />}
             {/* runtime status */}
             {detail.health && <Row label="Health" value={detail.health} />}
             {detail.exit_code !== 0 && <Row label="Exit code" value={String(detail.exit_code)} />}
@@ -148,6 +151,40 @@ export function ContainerDetail() {
             {detail.finished_at && <Row label="Finished" value={detail.finished_at} mono />}
           </Section>
 
+          {detail.ports.length > 0 && (
+            <Section label={`ports (${detail.ports.length})`}>
+              {detail.ports.map((p, i) => (
+                <KvLine
+                  key={i}
+                  k={p.container_port}
+                  v={formatHostBinding(p)}
+                  copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
+                />
+              ))}
+            </Section>
+          )}
+
+          {detail.mounts.length > 0 && (
+            <Section label={`volumes (${detail.mounts.length})`}>
+              {detail.mounts.map((m, i) => (
+                <KvLine
+                  key={i}
+                  k={m.destination}
+                  v={`${m.source}${m.rw ? "" : " (ro)"}${m.kind === "tmpfs" ? " (tmpfs)" : ""}`}
+                  copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
+                />
+              ))}
+            </Section>
+          )}
+
+          {Object.keys(detail.networks).length > 0 && (
+            <Section label={`networks (${Object.keys(detail.networks).length})`}>
+              {Object.entries(detail.networks).map(([name, ep]) => (
+                <KvLine key={name} k={name} v={ep.ip_address || "—"} />
+              ))}
+            </Section>
+          )}
+
           {detail.env.length > 0 && (
             <Section label={`env (${detail.env.length})`}>
               {detail.env.map((e, i) => {
@@ -156,6 +193,14 @@ export function ContainerDetail() {
                 const v = eq >= 0 ? e.slice(eq + 1) : "";
                 return <KvLine key={i} k={k} v={v} copyAs={e} />;
               })}
+            </Section>
+          )}
+
+          {Object.keys(detail.labels).length > 0 && (
+            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+              {Object.entries(detail.labels).map(([k, v]) => (
+                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+              ))}
             </Section>
           )}
 
@@ -181,6 +226,25 @@ function pastTense(name: string): string {
     case "kill":    return "killed";
     default:        return name;
   }
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let v = n / 1024;
+  for (const u of units) {
+    if (v < 1024) return `${v.toFixed(v < 10 ? 1 : 0)} ${u}`;
+    v /= 1024;
+  }
+  return `${v.toFixed(0)} PB`;
+}
+
+// "0.0.0.0:8080" → "8080"; "127.0.0.1:8080" → "127.0.0.1:8080";
+// "" → "(not published)".
+function formatHostBinding(p: PortMapping): string {
+  if (!p.host_port) return "(not published)";
+  if (!p.host_ip || p.host_ip === "0.0.0.0" || p.host_ip === "::") return p.host_port;
+  return `${p.host_ip}:${p.host_port}`;
 }
 
 function RemoveButton({

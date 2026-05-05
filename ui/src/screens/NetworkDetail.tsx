@@ -7,6 +7,7 @@ import { invalidate, useQuery } from "@/state/cache";
 import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { KvLine } from "@/components/KvLine";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -99,9 +100,25 @@ export function NetworkDetail() {
           </Section>
 
           {detail && detail.containers.length > 0 && (
-            <Section label="attached">
+            <Section label={`attached (${detail.containers.length})`}>
               {detail.containers.map((c) => (
                 <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
+              ))}
+            </Section>
+          )}
+
+          {detail && Object.keys(detail.options).length > 0 && (
+            <Section label={`options (${Object.keys(detail.options).length})`}>
+              {Object.entries(detail.options).map(([k, v]) => (
+                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+              ))}
+            </Section>
+          )}
+
+          {detail && Object.keys(detail.labels).length > 0 && (
+            <Section label={`labels (${Object.keys(detail.labels).length})`}>
+              {Object.entries(detail.labels).map(([k, v]) => (
+                <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
               ))}
             </Section>
           )}
