@@ -179,6 +179,7 @@ function KvRow({
         <EditCell
           mono
           value={entry.key}
+          placeholder="key"
           onChange={(e) => onChange({ ...entry, key: e.target.value })}
         />
       </div>
@@ -186,6 +187,7 @@ function KvRow({
         mono
         className="flex-1"
         value={entry.value}
+        placeholder="value"
         onChange={(e) => onChange({ ...entry, value: e.target.value })}
       />
       <RemoveBtn onClick={onRemove} />

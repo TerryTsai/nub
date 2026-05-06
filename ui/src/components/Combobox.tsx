@@ -97,7 +97,7 @@ export function Combobox({
                   : "text-[var(--id-color)]"
               }`
             : pill
-            ? "shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
+            ? "shrink-0 inline-flex items-center gap-1.5 h-[26px] px-3 rounded-full text-xs leading-none font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
             : `input flex items-center justify-between text-left ${mono ? "mono" : ""} ${
                 displayLabel ? "" : "text-[var(--text-tertiary)]"
               }`

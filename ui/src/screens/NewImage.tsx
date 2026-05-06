@@ -253,6 +253,7 @@ export function NewImage() {
                   <EditCell
                     mono
                     value={argValues[a.name] ?? ""}
+                    placeholder={a.default ?? "value"}
                     onChange={(e) => setArgValues({ ...argValues, [a.name]: e.target.value })}
                     disabled={running}
                   />

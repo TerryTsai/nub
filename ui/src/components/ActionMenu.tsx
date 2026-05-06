@@ -67,7 +67,7 @@ export function ActionMenu({
         ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
+        className="shrink-0 inline-flex items-center gap-1.5 h-[26px] px-3 rounded-full text-xs leading-none font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
       >
         <span>{trigger ?? label}</span>
         <Chevron />

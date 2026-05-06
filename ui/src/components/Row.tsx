@@ -39,7 +39,7 @@ export function Row({
       {right ? (
         <div className="flex-1 min-w-0">{right}</div>
       ) : !value ? (
-        <span className="flex-1 min-w-0 text-xs text-[var(--text-tertiary)]">—</span>
+        <span className="flex-1 min-w-0 text-base leading-snug text-[var(--text-tertiary)]">—</span>
       ) : (
         <div className="flex-1 min-w-0">
           <CopyLine value={value} mono={mono} />

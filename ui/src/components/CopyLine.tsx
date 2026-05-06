@@ -54,7 +54,7 @@ export function CopyLine({
         type="button"
         onClick={copy}
         aria-label={`copy ${target}`}
-        className={`block text-left text-xs leading-5 whitespace-nowrap cursor-pointer transition-colors active:opacity-75 ${mono ? "mono" : ""} ${tone}`}
+        className={`block text-left text-base leading-snug whitespace-nowrap cursor-pointer transition-colors active:opacity-75 ${mono ? "mono" : ""} ${tone}`}
       >
         {copied ? "copied" : value}
       </button>
