@@ -28,15 +28,15 @@ export function Collapsible({ label = "info", count, defaultOpen = false, childr
       className={className}
     >
       <summary
-        className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"
+        className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
       >
         <span>{label}</span>
         {count !== undefined && count > 0 && (
-          <span className="text-[var(--text-secondary)] font-normal normal-case tracking-normal">
+          <span className="ml-auto text-[var(--text-secondary)] font-normal normal-case tracking-normal">
             {count}
           </span>
         )}
-        <Chevron open={open} className="ml-auto" />
+        <Chevron open={open} className={count !== undefined && count > 0 ? "" : "ml-auto"} />
       </summary>
       <div className="flex flex-col gap-1.5 mt-1.5">{children}</div>
     </details>

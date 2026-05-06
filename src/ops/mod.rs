@@ -80,6 +80,7 @@ impl EngineHandler {
 
 #[async_trait]
 impl OpHandler for EngineHandler {
+    #[allow(clippy::too_many_lines)]
     async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         match op {
             // Whoami is auth-layer info; transport short-circuits before us.

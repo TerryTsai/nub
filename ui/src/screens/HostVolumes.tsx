@@ -4,6 +4,7 @@ import type { VolumeSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useQuery } from "@/state/cache";
 import { volumeStatus } from "@/state/status";
+import { FAB } from "@/components/FAB";
 import { Filters } from "@/components/Filters";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
@@ -65,7 +66,7 @@ export function HostVolumes() {
   const visible = volumes?.filter((v) => matchesVolumeFilter(v, filter)) ?? null;
 
   return (
-    <Page crumbs={crumbs} subnav={subnav}>
+    <Page crumbs={crumbs} subnav={subnav} fab={<FAB to={`/h/${hid}/volumes/new`} label="volume" />}>
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {volumes === null && !error && <LoadingBar />}
       {volumes?.length === 0 && (

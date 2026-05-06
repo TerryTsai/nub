@@ -20,7 +20,7 @@ export function Section({ label, right, children, className = "" }: Props) {
       {(label || right) && (
         <div className="flex items-center justify-between gap-2">
           {label && (
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
               {label}
             </span>
           )}
