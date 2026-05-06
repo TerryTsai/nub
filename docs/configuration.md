@@ -18,8 +18,8 @@ starter file at path #1.
 ## Schema
 
 ```toml
-id   = "host1"                              # also: --id host1
-bind = "127.0.0.1:8080"                     # also: --bind 127.0.0.1:8080
+id     = "host1"                            # also: --id host1
+listen = "127.0.0.1:8080"                   # also: --listen 127.0.0.1:8080
 # tls_cert = "/etc/nub/cert.pem"            # also: --tls-cert
 # tls_key  = "/etc/nub/key.pem"             # also: --tls-key
 # allowed_binds = ["/data/nub"]             # host paths usable as bind-mount sources
@@ -34,7 +34,7 @@ bind = "127.0.0.1:8080"                     # also: --bind 127.0.0.1:8080
 | Field | Default | Notes |
 |---|---|---|
 | `id` | `/etc/hostname` (else `nub`) | Identifier this nub advertises in JWT `aud` and the connect URL. Also `--id`. |
-| `bind` | `0.0.0.0:8080` | Listen address. Also `--bind`. |
+| `listen` | `0.0.0.0:8080` | Listen address. Also `--listen`. |
 | `tls_cert` | (off) | PEM cert path. Pair with `tls_key`. Also `--tls-cert`. |
 | `tls_key` | (off) | PEM key path. Pair with `tls_cert`. Also `--tls-key`. |
 | `allowed_binds` | `[]` | Host paths usable as bind-mount sources in `create_container`. Empty = bind mounts denied. |

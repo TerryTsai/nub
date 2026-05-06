@@ -113,9 +113,9 @@ async fn forward_frames(mut body: Incoming, prefix: String, tx: &mpsc::Sender<St
 struct RawListItem {
     #[serde(rename = "Id")]
     id: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     names: Vec<String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     labels: HashMap<String, String>,
 }
 

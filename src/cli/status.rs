@@ -20,9 +20,9 @@ pub fn run() -> Result<()> {
         println!("  config        (none — using defaults)");
     }
     let cfg = Config::load(None)?.unwrap_or_default();
-    let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let listen = cfg.listen.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
     let tls = cfg.tls_cert.is_some() && cfg.tls_key.is_some();
-    println!("  bind          {bind}");
+    println!("  listen        {listen}");
     println!("  tls           {}", if tls { "on" } else { "off" });
     println!("  data dir      {}", config::xdg_data_home().join("nub").display());
     print_engine();

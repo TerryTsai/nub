@@ -4,11 +4,9 @@ import { useHosts } from "@/state/hosts";
 import { useQuery } from "@/state/cache";
 import type { HostInfo as HostInfoT } from "@/api/types";
 import { Collapsible } from "@/components/Collapsible";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 
 export function HostInfoScreen() {
   const { hid } = useParams<{ hid: string }>();
@@ -27,15 +25,13 @@ export function HostInfoScreen() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Host" title={saved.label} />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {/* meta: identity */}
-      <Section>
+      <Collapsible label="Host" defaultOpen>
+        <Row label="Name" value={saved.label} mono />
         <Row label="URL" value={saved.url} mono />
         <Row label="nub" value={info?.nub} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="system">
         <Row label="Engine" value={info ? `${info.engine} ${info.version}` : undefined} mono />

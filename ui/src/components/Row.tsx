@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { CopyLine } from "./CopyLine";
 
-/** Key/value row used inside a Section.
+/** Key/value row used inside a Collapsible.
  *
  * Always rendered — the row is structural, not contingent on having a
  * value. Empty/missing values render as a dim em-dash so the page layout
@@ -40,14 +40,10 @@ export function Row({
         <div className="flex-1 min-w-0">{right}</div>
       ) : !value ? (
         <span className="flex-1 min-w-0 text-xs text-[var(--text-tertiary)]">—</span>
-      ) : mono ? (
-        <div className="flex-1 min-w-0">
-          <CopyLine value={value} />
-        </div>
       ) : (
-        <span className="flex-1 min-w-0 text-xs leading-5 break-words text-[var(--text-primary)]">
-          {value}
-        </span>
+        <div className="flex-1 min-w-0">
+          <CopyLine value={value} mono={mono} />
+        </div>
       )}
     </div>
   );

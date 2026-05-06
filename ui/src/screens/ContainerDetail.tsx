@@ -9,15 +9,13 @@ import { containerStatus } from "@/state/status";
 import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
+import { EmptyRow } from "@/components/EmptyRow";
 import { KvLine } from "@/components/KvLine";
 import { useToast } from "@/components/Toaster";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
-import { StatusBadge } from "@/components/StatusBadge";
 
 export function ContainerDetail() {
   const { hid, cid } = useParams<{ hid: string; cid: string }>();
@@ -112,20 +110,18 @@ export function ContainerDetail() {
 
   return (
     <Page crumbs={crumbs} subnav={subnav}>
-      <Heading
-        category="Container"
-        title={displayName}
-        right={<StatusBadge status={detail ? containerStatus(detail.state, detail.exit_code, detail.health) : null} />}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {/* meta: identity + timestamps */}
-      <Section>
+      <Collapsible label="Container" defaultOpen>
+        <Row label="Name" value={displayName} mono />
+        <Row
+          label="Status"
+          value={detail ? containerStatus(detail.state, detail.exit_code, detail.health).label : undefined}
+        />
         <Row label="ID" value={detail?.id} mono />
         <Row label="Image" value={detail?.image} mono />
         <Row label="Created" value={detail?.created} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="spec">
         <Row label="Entrypoint" value={detail?.entrypoint.join(" ")} mono />
@@ -147,66 +143,66 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="ports" count={detail?.ports.length}>
-        {detail && detail.ports.length > 0 && (
-          detail.ports.map((p, i) => (
-            <KvLine
-              key={i}
-              k={p.container_port}
-              v={formatHostBinding(p)}
-              copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
-            />
-          ))
-        )}
+        {detail && detail.ports.length > 0
+          ? detail.ports.map((p, i) => (
+              <KvLine
+                key={i}
+                k={p.container_port}
+                v={formatHostBinding(p)}
+                copyAs={`${p.container_port} → ${formatHostBinding(p)}`}
+              />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="volumes" count={detail?.mounts.length}>
-        {detail && detail.mounts.length > 0 && (
-          detail.mounts.map((m, i) => (
-            <KvLine
-              key={i}
-              k={m.destination}
-              v={`${m.source}${m.rw ? "" : " (ro)"}${m.kind === "tmpfs" ? " (tmpfs)" : ""}`}
-              copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
-            />
-          ))
-        )}
+        {detail && detail.mounts.length > 0
+          ? detail.mounts.map((m, i) => (
+              <KvLine
+                key={i}
+                k={m.destination}
+                v={`${m.source}${m.rw ? "" : " (ro)"}${m.kind === "tmpfs" ? " (tmpfs)" : ""}`}
+                copyAs={`${m.source}:${m.destination}${m.rw ? "" : ":ro"}`}
+              />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="networks" count={detail ? Object.keys(detail.networks).length : undefined}>
-        {detail && Object.keys(detail.networks).length > 0 && (
-          Object.entries(detail.networks).map(([name, ep]) => (
-            <KvLine key={name} k={name} v={ep.ip_address || "—"} />
-          ))
-        )}
+        {detail && Object.keys(detail.networks).length > 0
+          ? Object.entries(detail.networks).map(([name, ep]) => (
+              <KvLine key={name} k={name} v={ep.ip_address || "—"} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="env" count={detail?.env.length}>
-        {detail && detail.env.length > 0 && (
-          detail.env.map((e, i) => {
-            const eq = e.indexOf("=");
-            const k = eq >= 0 ? e.slice(0, eq) : e;
-            const v = eq >= 0 ? e.slice(eq + 1) : "";
-            return <KvLine key={i} k={k} v={v} copyAs={e} />;
-          })
-        )}
+        {detail && detail.env.length > 0
+          ? detail.env.map((e, i) => {
+              const eq = e.indexOf("=");
+              const k = eq >= 0 ? e.slice(0, eq) : e;
+              const v = eq >= 0 ? e.slice(eq + 1) : "";
+              return <KvLine key={i} k={k} v={v} copyAs={e} />;
+            })
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {detail && Object.keys(detail.labels).length > 0 && (
-          Object.entries(detail.labels).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.labels).length > 0
+          ? Object.entries(detail.labels).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <RemoveButton
           pending={pending}
           running={detail?.running ?? false}
           disabled={!detail}
           onConfirm={(force) => act("remove", { op: "remove_container", id: cid!, force }, () => nav(`/h/${hid}`))}
         />
-      </Section>
+      </Collapsible>
     </Page>
   );
 }

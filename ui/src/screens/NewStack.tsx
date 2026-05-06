@@ -4,10 +4,11 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Heading } from "@/components/Heading";
+import { Collapsible } from "@/components/Collapsible";
+import { EditCell } from "@/components/EditCell";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
-import { Section } from "@/components/Section";
+import { Row } from "@/components/Row";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -55,19 +56,24 @@ export function NewStack() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Stack"
-        editable={{
-          value: name,
-          onChange: setName,
-          placeholder: "new stack",
-        }}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-        <Section label="compose">
+        <Collapsible label="Stack" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={name}
+                placeholder="new stack"
+                onChange={(e) => setName(e.target.value)}
+              />
+            }
+          />
+        </Collapsible>
+
+        <Collapsible label="compose" defaultOpen>
           <textarea
             className="input-code"
             spellCheck={false}
@@ -79,9 +85,9 @@ export function NewStack() {
             onChange={(e) => setYaml(e.target.value)}
             style={{ minHeight: "320px" }}
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="create">
+        <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(`/h/${hid}/stacks`)} className="flex-1">
               Cancel
@@ -90,7 +96,7 @@ export function NewStack() {
               {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

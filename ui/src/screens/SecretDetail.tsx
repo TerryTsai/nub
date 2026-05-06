@@ -5,12 +5,11 @@ import type { SecretSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { invalidate, useQuery } from "@/state/cache";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { useToast } from "@/components/Toaster";
 
@@ -61,14 +60,13 @@ export function SecretDetail() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading category="Secret" title={name} />
-
-      <Section>
+      <Collapsible label="Secret" defaultOpen>
+        <Row label="Name" value={name} mono />
         <Row label="Size" value={secret ? `${secret.size}B` : undefined} />
         <Row label="Modified" value={secret?.modified_at} mono />
-      </Section>
+      </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <Button
           variant="destructive"
           disabled={!secret || pending}
@@ -76,7 +74,7 @@ export function SecretDetail() {
         >
           {pending ? (<><Spinner /> Removing…</>) : "Remove"}
         </Button>
-      </Section>
+      </Collapsible>
 
       <ConfirmDialog
         open={confirmOpen}

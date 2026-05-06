@@ -104,13 +104,13 @@ Frame format and full op catalog: [docs/api.md](docs/api.md).
 
 nub reads `nub.toml` from the first match of: `--config <path>`,
 `$XDG_CONFIG_HOME/nub/nub.toml`, `./nub.toml`, `/etc/nub/config.toml`.
-With no file, sane defaults apply (`bind = 0.0.0.0:8080`, hostname-derived
+With no file, sane defaults apply (`listen = 0.0.0.0:8080`, hostname-derived
 `id`).
 
 | Field | Default | Notes |
 |---|---|---|
 | `id` | `/etc/hostname` | Identifier this nub advertises. Also `--id`. |
-| `bind` | `0.0.0.0:8080` | Listen address. Also `--bind`. |
+| `listen` | `0.0.0.0:8080` | Listen address. Also `--listen`. |
 | `tls_cert` / `tls_key` | (off) | PEM paths. Both required to enable TLS. |
 | `allowed_binds` | `[]` | Host paths usable as bind-mount sources. |
 | `dockerfiles` | `$XDG_DATA_HOME/nub/dockerfiles` | Stored Dockerfile texts. |

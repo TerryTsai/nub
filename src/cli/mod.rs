@@ -114,7 +114,7 @@ pub struct Args {
     pub id: Option<String>,
     /// Address to listen on.
     #[arg(long, value_name = "ADDR")]
-    pub bind: Option<String>,
+    pub listen: Option<String>,
     /// TLS certificate path (PEM). Pair with --tls-key.
     #[arg(long, value_name = "PATH")]
     pub tls_cert: Option<PathBuf>,

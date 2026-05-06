@@ -3,11 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { EditCell } from "@/components/EditCell";
-import { Heading } from "@/components/Heading";
 import { Page } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -70,21 +69,23 @@ export function AddHost() {
 
   return (
     <Page>
-      <Heading
-        category="Host"
-        editable={{
-          value: label,
-          onChange: setLabel,
-          placeholder: "new host",
-        }}
-      />
-
       {error && (
         <p className="text-[var(--error)] text-xs">{error}</p>
       )}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-        <Section>
+        <Collapsible label="Host" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={label}
+                placeholder="new host"
+                onChange={(e) => setLabel(e.target.value)}
+              />
+            }
+          />
           <Row
             label="URL"
             right={
@@ -116,9 +117,9 @@ export function AddHost() {
               />
             }
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="connect">
+        <Collapsible label="connect" defaultOpen>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav("/")} className="flex-1">
               Cancel
@@ -127,7 +128,7 @@ export function AddHost() {
               {pending ? (<><Spinner /> Connecting…</>) : "Connect & save"}
             </Button>
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

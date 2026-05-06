@@ -90,7 +90,7 @@ struct RawConfig {
     working_dir: String,
     #[serde(default)]
     user: String,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     labels: HashMap<String, String>,
 }
 
@@ -117,9 +117,9 @@ struct RawRestartPolicy {
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct RawNetSettings {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     networks: HashMap<String, RawNetEndpoint>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     ports: HashMap<String, Option<Vec<RawPortBinding>>>,
 }
 

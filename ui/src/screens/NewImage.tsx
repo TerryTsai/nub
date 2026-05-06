@@ -10,12 +10,10 @@ import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, EMPTY_PULL, type PullState } from "@/components/PullProgress";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
 /** "still-building" = WS dropped after we'd already received some progress.
@@ -212,19 +210,21 @@ export function NewImage() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Image"
-        editable={{
-          value: imageRef,
-          onChange: setImageRef,
-          placeholder: "image:tag",
-        }}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-        <Section>
+        <Collapsible label="Image" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={imageRef}
+                placeholder="image:tag"
+                onChange={(e) => setImageRef(e.target.value)}
+              />
+            }
+          />
           <Row
             label="From"
             right={
@@ -241,7 +241,7 @@ export function NewImage() {
               />
             }
           />
-        </Section>
+        </Collapsible>
 
         {isBuild && args.length > 0 && (
           <Collapsible label="build args" count={args.length} defaultOpen>
@@ -263,7 +263,7 @@ export function NewImage() {
         )}
 
         {phase !== "idle" && (
-          <Section label="progress">
+          <Collapsible label="progress" defaultOpen>
             {!isBuild ? <PullProgress pull={pull} /> : <BuildLog stream={build.stream} imageId={build.imageId} />}
             {phase === "still-building" && (
               <p className="text-xs text-[var(--text-secondary)] pt-2">
@@ -271,10 +271,10 @@ export function NewImage() {
                 waiting for <span className="mono">{imageRef}</span> to appear in the image list…
               </p>
             )}
-          </Section>
+          </Collapsible>
         )}
 
-        <Section label={isBuild ? "build" : "pull"}>
+        <Collapsible label={isBuild ? "build" : "pull"} defaultOpen>
           {phase === "done" ? (
             <div className="flex gap-2">
               <Button variant="ghost" onClick={reset} className="flex-1">
@@ -298,7 +298,7 @@ export function NewImage() {
               </Button>
             </div>
           )}
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

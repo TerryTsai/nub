@@ -5,12 +5,12 @@ import type { DockerfileContent } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
+import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Heading } from "@/components/Heading";
+import { EditCell } from "@/components/EditCell";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -118,31 +118,33 @@ export function DockerfileEdit() {
 
   return (
     <Page crumbs={crumbs} subnav={subnav}>
-      {isNew ? (
-        <Heading
-          category="Dockerfile"
-          editable={{
-            value: draftName,
-            onChange: setDraftName,
-            placeholder: "new.Dockerfile",
-          }}
-        />
-      ) : (
-        <Heading category="Dockerfile" title={name} />
-      )}
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {!isNew && (
-        <Section>
-          <Row label="Size" value={meta ? `${meta.size}B` : undefined} />
-          <Row label="Modified" value={meta?.modified_at} mono />
-        </Section>
-      )}
+      <Collapsible label="Dockerfile" defaultOpen>
+        {isNew ? (
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={draftName}
+                placeholder="new.Dockerfile"
+                onChange={(e) => setDraftName(e.target.value)}
+              />
+            }
+          />
+        ) : (
+          <>
+            <Row label="Name" value={name} mono />
+            <Row label="Size" value={meta ? `${meta.size}B` : undefined} />
+            <Row label="Modified" value={meta?.modified_at} mono />
+          </>
+        )}
+      </Collapsible>
 
       {!loading && (
         <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-          <Section label="content">
+          <Collapsible label="content" defaultOpen>
             <textarea
               className="input-code"
               spellCheck={false}
@@ -154,10 +156,10 @@ export function DockerfileEdit() {
               onChange={(e) => setContent(e.target.value)}
               style={{ minHeight: "320px" }}
             />
-          </Section>
+          </Collapsible>
 
           {isNew && (
-            <Section label="create">
+            <Collapsible label="create" defaultOpen>
               <div className="flex gap-2">
                 <Button
                   variant="ghost"
@@ -174,11 +176,11 @@ export function DockerfileEdit() {
                   {pending === "save" ? (<><Spinner /> Creating…</>) : "Create"}
                 </Button>
               </div>
-            </Section>
+            </Collapsible>
           )}
 
           {!isNew && (
-            <Section label="danger">
+            <Collapsible label="danger">
               <Button
                 variant="destructive"
                 onClick={() => setConfirmDelete(true)}
@@ -186,7 +188,7 @@ export function DockerfileEdit() {
               >
                 {pending === "delete" ? <><Spinner /> Removing…</> : "Remove"}
               </Button>
-            </Section>
+            </Collapsible>
           )}
 
           <ConfirmDialog

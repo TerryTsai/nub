@@ -8,14 +8,12 @@ import { networkStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyRow } from "@/components/EmptyRow";
 import { KvLine } from "@/components/KvLine";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
-import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toaster";
 
 export function NetworkDetail() {
@@ -74,18 +72,14 @@ export function NetworkDetail() {
 
   return (
     <Page crumbs={crumbs} subnav={undefined}>
-      <Heading
-        category="Network"
-        title={title}
-        right={<StatusBadge status={network ? networkStatus(network.in_use) : null} />}
-      />
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {/* meta: identity + timestamps */}
-      <Section>
-        <Row label="ID" value={network?.id} mono />
+      <Collapsible label="Network" defaultOpen>
         <Row label="Name" value={network?.name} mono />
+        <Row label="Status" value={network ? networkStatus(network.in_use).label : undefined} />
+        <Row label="ID" value={network?.id} mono />
         <Row label="Created" value={network?.created} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="spec">
         <Row label="Driver" value={network?.driver} />
@@ -100,30 +94,30 @@ export function NetworkDetail() {
       </Collapsible>
 
       <Collapsible label="attached" count={detail?.containers.length}>
-        {detail && detail.containers.length > 0 && (
-          detail.containers.map((c) => (
-            <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
-          ))
-        )}
+        {detail && detail.containers.length > 0
+          ? detail.containers.map((c) => (
+              <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="options" count={detail ? Object.keys(detail.options).length : undefined}>
-        {detail && Object.keys(detail.options).length > 0 && (
-          Object.entries(detail.options).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.options).length > 0
+          ? Object.entries(detail.options).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {detail && Object.keys(detail.labels).length > 0 && (
-          Object.entries(detail.labels).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.labels).length > 0
+          ? Object.entries(detail.labels).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <Button
           variant="destructive"
           disabled={!network || pending}
@@ -131,8 +125,7 @@ export function NetworkDetail() {
         >
           {pending ? <><Spinner /> Removing…</> : "Remove"}
         </Button>
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      </Section>
+      </Collapsible>
 
       {network && (
         <ConfirmDialog

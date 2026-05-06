@@ -113,11 +113,11 @@ struct RawCompat {
     internal: bool,
     #[serde(default)]
     ipam: Option<RawIpam>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     containers: HashMap<String, RawNetContainer>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     options: HashMap<String, String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     labels: HashMap<String, String>,
 }
 
@@ -160,11 +160,11 @@ struct RawLibpod {
     created: String,
     #[serde(default)]
     internal: bool,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     subnets: Vec<RawLibpodSubnet>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     options: HashMap<String, String>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     labels: HashMap<String, String>,
 }
 

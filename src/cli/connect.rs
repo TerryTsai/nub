@@ -19,9 +19,9 @@ pub fn print_qr() -> Result<()> {
     Ok(())
 }
 
-/// Read the persisted admin token + the saved (or default) bind config
-/// and assemble the URL the boot banner emits. Returns a friendly error
-/// if nub has never been run on this host (admin.jwt absent).
+/// Read the persisted admin token + the saved (or default) listen
+/// address and assemble the URL the boot banner emits. Returns a friendly
+/// error if nub has never been run on this host (admin.jwt absent).
 pub(super) fn url_from_disk() -> Result<String> {
     let admin_path = config::default_admin_jwt();
     if !admin_path.exists() {
@@ -46,9 +46,9 @@ fn locate_config() -> Result<Option<Config>> {
 }
 
 fn build_url(cfg: &Config, token: &str) -> String {
-    let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let listen = cfg.listen.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
     let scheme = if tls_enabled(cfg) { "https" } else { "http" };
-    format!("{scheme}://{}/add#t={token}", display_authority(&bind))
+    format!("{scheme}://{}/add#t={token}", display_authority(&listen))
 }
 
 fn tls_enabled(cfg: &Config) -> bool {
@@ -57,15 +57,15 @@ fn tls_enabled(cfg: &Config) -> bool {
 
 /// Compose the URL the boot banner shows. Used by main.rs.
 #[cfg(feature = "embed-ui")]
-pub fn url_for_banner(bind: &str, tls: bool, token: &str) -> String {
+pub fn url_for_banner(listen: &str, tls: bool, token: &str) -> String {
     let scheme = if tls { "https" } else { "http" };
-    format!("{scheme}://{}/add#t={token}", display_authority(bind))
+    format!("{scheme}://{}/add#t={token}", display_authority(listen))
 }
 
-/// Substitute hostname for unspecified bind addresses so the printed URL
-/// is usable on the LAN. Specific binds pass through unchanged.
-pub fn display_authority(bind: &str) -> String {
-    let (host, port) = bind.rsplit_once(':').unwrap_or((bind, ""));
+/// Substitute hostname for unspecified listen addresses so the printed URL
+/// is usable on the LAN. Specific addresses pass through unchanged.
+pub fn display_authority(listen: &str) -> String {
+    let (host, port) = listen.rsplit_once(':').unwrap_or((listen, ""));
     let host = match host.trim_matches(['[', ']']) {
         "0.0.0.0" | "::" | "" => super::hostname(),
         h => h.to_string(),

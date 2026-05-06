@@ -15,12 +15,10 @@ import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { Combobox } from "@/components/Combobox";
 import { EditCell } from "@/components/EditCell";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { PullProgress, reducePull, type PullState } from "@/components/PullProgress";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -184,15 +182,6 @@ export function NewContainer() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Container"
-        editable={{
-          value: form.name,
-          onChange: (v) => setForm({ ...form, name: v }),
-          placeholder: "new container",
-        }}
-      />
-
       {cloning && sourceName && (
         <p className="text-xs text-[var(--text-secondary)]">
           cloned from <span className="mono text-[var(--id-color)]">{sourceName}</span>
@@ -202,7 +191,18 @@ export function NewContainer() {
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={(e) => { e.preventDefault(); submit(true); }} className="contents" {...scrollFocusedIntoView()}>
-        <Section>
+        <Collapsible label="Container" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={form.name}
+                placeholder="new container"
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            }
+          />
           <Row
             label="Image"
             right={
@@ -216,6 +216,9 @@ export function NewContainer() {
               />
             }
           />
+        </Collapsible>
+
+        <Collapsible label="spec" defaultOpen>
           <Row
             label="Network"
             right={
@@ -285,7 +288,7 @@ export function NewContainer() {
               />
             }
           />
-        </Section>
+        </Collapsible>
 
         <Collapsible label="ports" count={form.ports.length} defaultOpen>
           {form.ports.map((p, i) => (
@@ -352,12 +355,12 @@ export function NewContainer() {
         </Collapsible>
 
         {pull && (
-          <Section label="pull progress">
+          <Collapsible label="pull progress" defaultOpen>
             <PullProgress pull={pull} />
-          </Section>
+          </Collapsible>
         )}
 
-        <Section label="create">
+        <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
               Cancel
@@ -369,7 +372,7 @@ export function NewContainer() {
               onCreateAndStart={() => submit(true)}
             />
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

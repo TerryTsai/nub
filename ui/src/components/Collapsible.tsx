@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 
 interface Props {
-  /** Small-caps label, mirrors Section. Defaults to `info`. */
+  /** Small-caps section label. Defaults to `info`. */
   label?: string;
   /** Optional count badge after the label, e.g. an env var count. */
   count?: number;
@@ -11,10 +11,10 @@ interface Props {
   className?: string;
 }
 
-/** Folded info group — a `<details>`-shaped section that matches the
- * visual treatment of `Section` (small-caps label, top border, gap-2
- * children). Use to stash explanatory copy that's useful but doesn't
- * need to be on screen by default.
+/** Folded section — a `<details>`-shaped group with a small-caps label
+ * header and a chevron. Used as the universal page primitive: the first
+ * one on a detail page is `defaultOpen` (the resource's identity), the
+ * rest fold closed until the operator wants them.
  *
  * Built on the native `<details>` so keyboard expand and screen-reader
  * semantics come for free; CSS hides the default disclosure marker so
@@ -28,7 +28,7 @@ export function Collapsible({ label = "info", count, defaultOpen = false, childr
       className={className}
     >
       <summary
-        className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-secondary)]"
+        className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-primary)]"
       >
         <span>{label}</span>
         {count !== undefined && count > 0 && (

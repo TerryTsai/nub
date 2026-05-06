@@ -9,14 +9,12 @@ import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { CopyLine } from "@/components/CopyLine";
+import { EmptyRow } from "@/components/EmptyRow";
 import { KvLine } from "@/components/KvLine";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
-import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toaster";
 
 export function ImageDetail() {
@@ -73,18 +71,15 @@ export function ImageDetail() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Image"
-        title={title}
-        right={<StatusBadge status={image ? imageStatus(image.containers) : null} />}
-      />
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {/* meta: identity + timestamps */}
-      <Section>
+      <Collapsible label="Image" defaultOpen>
+        <Row label="Name" value={title} mono />
+        <Row label="Status" value={image ? imageStatus(image.containers).label : undefined} />
         <Row label="ID" value={image?.id} mono />
         <Row label="Tag" value={image?.repo_tag} mono />
         <Row label="Created" value={image ? formatTimestamp(image.created) : undefined} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="spec">
         <Row label="Platform" value={platformLabel(detail)} />
@@ -102,31 +97,31 @@ export function ImageDetail() {
       </Collapsible>
 
       <Collapsible label="digests" count={detail?.repo_digests.length}>
-        {detail && detail.repo_digests.length > 0 && (
-          detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)
-        )}
+        {detail && detail.repo_digests.length > 0
+          ? detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="env" count={detail?.env.length}>
-        {detail && detail.env.length > 0 && (
-          detail.env.map((e, i) => {
-            const eq = e.indexOf("=");
-            const k = eq >= 0 ? e.slice(0, eq) : e;
-            const v = eq >= 0 ? e.slice(eq + 1) : "";
-            return <KvLine key={i} k={k} v={v} copyAs={e} />;
-          })
-        )}
+        {detail && detail.env.length > 0
+          ? detail.env.map((e, i) => {
+              const eq = e.indexOf("=");
+              const k = eq >= 0 ? e.slice(0, eq) : e;
+              const v = eq >= 0 ? e.slice(eq + 1) : "";
+              return <KvLine key={i} k={k} v={v} copyAs={e} />;
+            })
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {detail && Object.keys(detail.labels).length > 0 && (
-          Object.entries(detail.labels).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.labels).length > 0
+          ? Object.entries(detail.labels).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <Button
           variant="destructive"
           disabled={!image || pending}
@@ -134,8 +129,7 @@ export function ImageDetail() {
         >
           {pending ? <><Spinner /> Removing…</> : "Remove"}
         </Button>
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      </Section>
+      </Collapsible>
 
       {image && (
         <ConfirmDialog

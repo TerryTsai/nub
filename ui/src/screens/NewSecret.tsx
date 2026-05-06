@@ -4,10 +4,11 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Heading } from "@/components/Heading";
+import { Collapsible } from "@/components/Collapsible";
+import { EditCell } from "@/components/EditCell";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
-import { Section } from "@/components/Section";
+import { Row } from "@/components/Row";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -47,19 +48,24 @@ export function NewSecret() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Secret"
-        editable={{
-          value: name,
-          onChange: setName,
-          placeholder: "new secret",
-        }}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-        <Section label="value">
+        <Collapsible label="Secret" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={name}
+                placeholder="new secret"
+                onChange={(e) => setName(e.target.value)}
+              />
+            }
+          />
+        </Collapsible>
+
+        <Collapsible label="value" defaultOpen>
           <textarea
             className="input-code"
             spellCheck={false}
@@ -72,9 +78,9 @@ export function NewSecret() {
             required
             style={{ minHeight: "96px" }}
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="create">
+        <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -91,7 +97,7 @@ export function NewSecret() {
               {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

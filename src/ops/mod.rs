@@ -9,6 +9,7 @@ mod host;
 mod images;
 mod networks;
 pub mod secrets;
+mod serde_util;
 pub mod stacks;
 mod volumes;
 

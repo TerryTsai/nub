@@ -1,6 +1,6 @@
 //! `nub config show` — print the resolved config plus the paths nub
 //! reads/writes. No mutation today; `nub bind` covers the only field
-//! worth scripted edits.
+//! (allowed_binds) that has a dedicated subcommand.
 
 use anyhow::Result;
 use std::path::PathBuf;
@@ -31,7 +31,7 @@ fn show() -> Result<()> {
     } else {
         println!("# (no config file; using compiled defaults)");
         println!("id = \"{}\"", super::hostname());
-        println!("bind = \"0.0.0.0:8080\"");
+        println!("listen = \"0.0.0.0:8080\"");
     }
     println!();
     println!("# Resolved paths:");

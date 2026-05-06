@@ -69,7 +69,7 @@ struct ContainerNets {
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct RawNetSettings {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
     networks: HashMap<String, serde_json::Value>,
 }
 

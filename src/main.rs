@@ -40,7 +40,7 @@ fn main() -> Result<()> {
 async fn serve(args: Args) -> Result<()> {
     let cfg = resolve_config(&args)?;
     let id = cfg.id.clone().unwrap_or_else(cli::hostname);
-    let bind = cfg.bind.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let listen = cfg.listen.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
     let tls = resolve_tls(&cfg)?;
 
     let issuer = Arc::new(resolve_issuer(&cfg)?);
@@ -50,7 +50,7 @@ async fn serve(args: Args) -> Result<()> {
     println!("admin token: {admin}");
     #[cfg(feature = "embed-ui")]
     {
-        let url = cli::connect::url_for_banner(&bind, tls.is_some(), &admin);
+        let url = cli::connect::url_for_banner(&listen, tls.is_some(), &admin);
         println!("connect:     {url}");
         cli::connect::render_qr(&url);
     }
@@ -64,9 +64,9 @@ async fn serve(args: Args) -> Result<()> {
     ops::stacks::rehydrate::rehydrate_all(&stacks_root, &secrets_root).await;
 
     let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
-    let listener = tokio::net::TcpListener::bind(&bind).await?;
+    let listener = tokio::net::TcpListener::bind(&listen).await?;
     let scheme = if tls.is_some() { "https" } else { "http" };
-    tracing::info!("nub {id} listening on {bind} ({scheme})");
+    tracing::info!("nub {id} listening on {listen} ({scheme})");
     if let Some(tls) = tls {
         if let Err(e) = server::tls::serve(listener, app, tls).await {
             tracing::error!("tls serve failed: {e}");
@@ -164,8 +164,8 @@ fn resolve_config(args: &Args) -> Result<config::Config> {
     if let Some(v) = &args.id {
         cfg.id = Some(v.clone());
     }
-    if let Some(v) = &args.bind {
-        cfg.bind = Some(v.clone());
+    if let Some(v) = &args.listen {
+        cfg.listen = Some(v.clone());
     }
     if let Some(v) = &args.tls_cert {
         cfg.tls_cert = Some(v.clone());

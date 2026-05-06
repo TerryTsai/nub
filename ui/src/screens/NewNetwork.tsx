@@ -4,11 +4,11 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Heading } from "@/components/Heading";
+import { Collapsible } from "@/components/Collapsible";
+import { EditCell } from "@/components/EditCell";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -48,19 +48,21 @@ export function NewNetwork() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Network"
-        editable={{
-          value: name,
-          onChange: setName,
-          placeholder: "new network",
-        }}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
-        <Section>
+        <Collapsible label="Network" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={name}
+                placeholder="new network"
+                onChange={(e) => setName(e.target.value)}
+              />
+            }
+          />
           <Row
             label="Internal"
             right={
@@ -73,9 +75,9 @@ export function NewNetwork() {
               </label>
             }
           />
-        </Section>
+        </Collapsible>
 
-        <Section label="create">
+        <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -92,7 +94,7 @@ export function NewNetwork() {
               {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

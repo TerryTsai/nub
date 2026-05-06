@@ -14,7 +14,7 @@ fn auto_paths() -> Vec<PathBuf> {
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub id: Option<String>,
-    pub bind: Option<String>,
+    pub listen: Option<String>,
     pub tls_cert: Option<PathBuf>,
     pub tls_key: Option<PathBuf>,
     /// Host paths permitted as bind-mount sources in CreateContainer.
@@ -115,14 +115,14 @@ mod tests {
     #[test]
     fn parses_flat_schema() {
         let s = r#"
-            id   = "host1"
-            bind = "127.0.0.1:8080"
+            id     = "host1"
+            listen = "127.0.0.1:8080"
             allowed_binds = ["/data/nub"]
             dockerfiles = "/srv/nub/dockerfiles"
         "#;
         let cfg: Config = toml::from_str(s).unwrap();
         assert_eq!(cfg.id.as_deref(), Some("host1"));
-        assert_eq!(cfg.bind.as_deref(), Some("127.0.0.1:8080"));
+        assert_eq!(cfg.listen.as_deref(), Some("127.0.0.1:8080"));
         assert_eq!(cfg.allowed_binds, vec![PathBuf::from("/data/nub")]);
         assert_eq!(cfg.dockerfiles, Some(PathBuf::from("/srv/nub/dockerfiles")));
         assert_eq!(cfg.trusted_issuer, None);

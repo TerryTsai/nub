@@ -6,11 +6,9 @@ import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { EditCell } from "@/components/EditCell";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
@@ -69,18 +67,23 @@ export function NewVolume() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Volume"
-        editable={{
-          value: name,
-          onChange: setName,
-          placeholder: "new volume",
-        }}
-      />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
+        <Collapsible label="Volume" defaultOpen>
+          <Row
+            label="Name"
+            right={
+              <EditCell
+                mono
+                value={name}
+                placeholder="new volume"
+                onChange={(e) => setName(e.target.value)}
+              />
+            }
+          />
+        </Collapsible>
+
         <Collapsible label="spec" defaultOpen>
           <Row
             label="Driver"
@@ -129,7 +132,7 @@ export function NewVolume() {
           />
         </Collapsible>
 
-        <Section label="create">
+        <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
             <Button
               variant="ghost"
@@ -146,7 +149,7 @@ export function NewVolume() {
               {pending ? (<><Spinner /> Creating…</>) : "Create"}
             </Button>
           </div>
-        </Section>
+        </Collapsible>
       </form>
     </Page>
   );

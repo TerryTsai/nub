@@ -8,14 +8,12 @@ import { volumeStatus } from "@/state/status";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { EmptyRow } from "@/components/EmptyRow";
 import { KvLine } from "@/components/KvLine";
-import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
 import { Row } from "@/components/Row";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
-import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/components/Toaster";
 
 export function VolumeDetail() {
@@ -73,17 +71,13 @@ export function VolumeDetail() {
 
   return (
     <Page crumbs={crumbs}>
-      <Heading
-        category="Volume"
-        title={title}
-        right={<StatusBadge status={volume ? volumeStatus(volume.in_use) : null} />}
-      />
+      {error && <p className="text-[var(--error)] text-xs">{error}</p>}
 
-      {/* meta: identity + timestamps */}
-      <Section>
+      <Collapsible label="Volume" defaultOpen>
         <Row label="Name" value={volume?.name} mono />
+        <Row label="Status" value={volume ? volumeStatus(volume.in_use).label : undefined} />
         <Row label="Created" value={volume?.created_at} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="spec">
         <Row label="Driver" value={volume?.driver} />
@@ -97,22 +91,22 @@ export function VolumeDetail() {
       </Collapsible>
 
       <Collapsible label="options" count={detail ? Object.keys(detail.options).length : undefined}>
-        {detail && Object.keys(detail.options).length > 0 && (
-          Object.entries(detail.options).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.options).length > 0
+          ? Object.entries(detail.options).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {detail && Object.keys(detail.labels).length > 0 && (
-          Object.entries(detail.labels).map(([k, v]) => (
-            <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
-          ))
-        )}
+        {detail && Object.keys(detail.labels).length > 0
+          ? Object.entries(detail.labels).map(([k, v]) => (
+              <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
+            ))
+          : <EmptyRow />}
       </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <Button
           variant="destructive"
           disabled={!volume || pending}
@@ -120,8 +114,7 @@ export function VolumeDetail() {
         >
           {pending ? <><Spinner /> Removing…</> : "Remove"}
         </Button>
-        {error && <p className="text-[var(--error)] text-xs">{error}</p>}
-      </Section>
+      </Collapsible>
 
       <ConfirmDialog
         open={confirmOpen}

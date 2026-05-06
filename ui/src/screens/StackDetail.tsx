@@ -9,12 +9,11 @@ import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import { Heading } from "@/components/Heading";
+import { EmptyRow } from "@/components/EmptyRow";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { ListRow } from "@/components/ListRow";
 import { Row } from "@/components/Row";
 import { Page, type Crumb } from "@/components/Page";
-import { Section } from "@/components/Section";
 import { Spinner } from "@/components/Spinner";
 import { useToast } from "@/components/Toaster";
 
@@ -138,19 +137,18 @@ export function StackDetailScreen() {
 
   return (
     <Page crumbs={crumbs} subnav={subnav}>
-      <Heading category="Stack" title={name} />
-
       {error && <p className="text-[var(--error)] text-xs">{error}</p>}
       {actionError && <p className="text-[var(--error)] text-xs">{actionError}</p>}
 
-      <Section>
+      <Collapsible label="Stack" defaultOpen>
+        <Row label="Name" value={name} mono />
         <Row label="Network" value={detail?.network_name} mono />
         <Row label="Modified" value={detail?.modified_at} mono />
-      </Section>
+      </Collapsible>
 
       <Collapsible label="containers" count={detail?.containers.length}>
         {!detail ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
+          <EmptyRow />
         ) : detail.containers.length === 0 ? (
           <p className="text-xs text-[var(--text-tertiary)]">On disk, not deployed.</p>
         ) : (
@@ -184,20 +182,22 @@ export function StackDetailScreen() {
       </Collapsible>
 
       <Collapsible label="dropped keys" count={droppedKeysCount}>
-        {detail && (detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0) && (
-          <>
-            <p className="text-xs text-[var(--text-tertiary)]">Recognized but ignored.</p>
-            {detail.unsupported.length > 0 && (
-              <p className="text-xs"><span className="text-[var(--text-tertiary)]">top-level:</span> {detail.unsupported.join(", ")}</p>
-            )}
-            {Object.entries(detail.service_unsupported).map(([svc, keys]) => (
-              <p key={svc} className="text-xs"><span className="text-[var(--text-tertiary)]">{svc}:</span> {keys.join(", ")}</p>
-            ))}
-          </>
-        )}
+        {detail && (detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0)
+          ? (
+            <>
+              <p className="text-xs text-[var(--text-tertiary)]">Recognized but ignored.</p>
+              {detail.unsupported.length > 0 && (
+                <p className="text-xs"><span className="text-[var(--text-tertiary)]">top-level:</span> {detail.unsupported.join(", ")}</p>
+              )}
+              {Object.entries(detail.service_unsupported).map(([svc, keys]) => (
+                <p key={svc} className="text-xs"><span className="text-[var(--text-tertiary)]">{svc}:</span> {keys.join(", ")}</p>
+              ))}
+            </>
+          )
+          : <EmptyRow />}
       </Collapsible>
 
-      <Section label="danger">
+      <Collapsible label="danger">
         <Button
           variant="destructive"
           onClick={() => setConfirmDelete(true)}
@@ -205,7 +205,7 @@ export function StackDetailScreen() {
         >
           {pending === "delete" ? <><Spinner /> Removing…</> : "Remove"}
         </Button>
-      </Section>
+      </Collapsible>
 
       <ConfirmDialog
         open={confirmDelete}
