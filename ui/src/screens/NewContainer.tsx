@@ -238,6 +238,7 @@ export function NewContainer() {
             right={
               <Combobox
                 cell
+                mono
                 dim={!cloning && form.restart.kind === EMPTY_FORM.restart.kind}
                 value={form.restart.kind}
                 onChange={(v) =>
@@ -369,7 +370,7 @@ export function NewContainer() {
 
         <Collapsible label="create" defaultOpen>
           <div className="flex gap-2">
-            <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1">
+            <Button variant="ghost" onClick={() => nav(`/h/${hid}`)} className="flex-1 min-w-0">
               Cancel
             </Button>
             <SplitSubmit
@@ -403,7 +404,7 @@ function SplitSubmit({
   const half =
     "flex-1 flex items-center justify-center gap-1 text-[13px] font-medium text-[var(--accent)] py-2 px-3 disabled:opacity-30 disabled:cursor-not-allowed active:opacity-75 transition-opacity";
   return (
-    <div className="flex-1 flex rounded-full overflow-hidden border border-[var(--accent-border)] bg-[var(--accent-soft)]">
+    <div className="flex-1 min-w-0 flex rounded-full overflow-hidden border border-[var(--accent-border)] bg-[var(--accent-soft)]">
       <button
         type="button"
         onClick={onCreate}
