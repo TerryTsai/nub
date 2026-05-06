@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate, peek, useQuery } from "@/state/cache";
 import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary, PortMapping } from "@/api/types";
 import { containerStatus } from "@/state/status";
+import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { KvLine } from "@/components/KvLine";
@@ -98,31 +99,14 @@ export function ContainerDetail() {
       >
         {pending === "restart" ? <Spinner /> : "Restart"}
       </Button>
-      <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
-      <Link to={`/h/${hid}/c/${cid}/logs`}>
-        <Button size="sm" variant="ghost">Logs</Button>
-      </Link>
-      <Link to={`/h/${hid}/c/${cid}/stats`}>
-        <Button size="sm" variant="ghost">Stats</Button>
-      </Link>
-      <Link to={`/h/${hid}/c/${cid}/exec`} aria-disabled={!running}>
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={!running}
-          title={!running ? "container is not running" : undefined}
-        >
-          Exec
-        </Button>
-      </Link>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!detail}
-        onClick={() => nav(`/h/${hid}/c/${cid}/clone`)}
-      >
-        Clone
-      </Button>
+      <ActionMenu
+        items={[
+          { label: "Logs", to: `/h/${hid}/c/${cid}/logs`, disabled: !detail },
+          { label: "Stats", to: `/h/${hid}/c/${cid}/stats`, disabled: !detail },
+          { label: "Exec", to: `/h/${hid}/c/${cid}/exec`, disabled: !detail || !running },
+          { label: "Clone", to: `/h/${hid}/c/${cid}/clone`, disabled: !detail },
+        ]}
+      />
     </>
   );
 

@@ -5,6 +5,7 @@ import type { StackDetail } from "@/api/types";
 import { useHosts } from "@/state/hosts";
 import { useQuery, invalidate } from "@/state/cache";
 import { containerStatus } from "@/state/status";
+import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
 import { Collapsible } from "@/components/Collapsible";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -121,21 +122,13 @@ export function StackDetailScreen() {
       >
         {pending === "save" ? <Spinner /> : "Save"}
       </Button>
-      <Button size="sm" variant="ghost" onClick={onRedeploy} disabled={actionsDisabled}>
-        {pending === "redeploy" ? <Spinner /> : "Redeploy"}
-      </Button>
-      <Button size="sm" variant="ghost" onClick={onPull} disabled={actionsDisabled}>
-        {pending === "pull" ? <Spinner /> : "Pull"}
-      </Button>
-      <span className="w-px h-4 bg-[var(--border-subtle)] mx-1 shrink-0" />
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={!detail}
-        onClick={() => nav(`/h/${hid}/stacks/${encodeURIComponent(name)}/logs`)}
-      >
-        Logs
-      </Button>
+      <ActionMenu
+        items={[
+          { label: "Redeploy", onClick: onRedeploy, disabled: actionsDisabled },
+          { label: "Pull", onClick: onPull, disabled: actionsDisabled },
+          { label: "Logs", to: `/h/${hid}/stacks/${encodeURIComponent(name)}/logs`, disabled: !detail },
+        ]}
+      />
     </>
   );
 

@@ -56,6 +56,7 @@ export function HostImages() {
   const tagged = images?.filter(isTagged).length ?? 0;
   const subnav = images !== null ? (
     <Filters
+      attribute="tagged"
       value={filter}
       onChange={setFilter}
       options={[

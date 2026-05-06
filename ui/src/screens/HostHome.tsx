@@ -58,6 +58,7 @@ export function HostHome() {
 
   const subnav = containers !== null ? (
     <Filters
+      attribute="status"
       value={filter}
       onChange={setFilter}
       options={[

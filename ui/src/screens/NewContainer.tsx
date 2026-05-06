@@ -409,7 +409,7 @@ function SplitSubmit({
         disabled={disabled}
         className={half}
       >
-        {pending === "create-start" ? <><Spinner /> Starting…</> : "Create & start"}
+        {pending === "create-start" ? <><Spinner /> Starting…</> : "Start"}
       </button>
     </div>
   );

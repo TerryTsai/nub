@@ -4,6 +4,7 @@ import { type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { useContainerName } from "@/state/containerName";
 import { useResilientStream } from "@/state/resilientStream";
+import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -50,8 +51,12 @@ export function ContainerLogs() {
       <Button size="sm" variant={follow ? "primary" : "ghost"} onClick={() => setFollow((f) => !f)}>
         {follow ? "pause" : "follow"}
       </Button>
-      <Button size="sm" variant="ghost" onClick={() => termRef.current?.copyAll()}>copy</Button>
-      <Button size="sm" variant="ghost" onClick={() => termRef.current?.clear()}>clear</Button>
+      <ActionMenu
+        items={[
+          { label: "Copy", onClick: () => termRef.current?.copyAll() },
+          { label: "Clear", onClick: () => termRef.current?.clear() },
+        ]}
+      />
     </>
   );
 

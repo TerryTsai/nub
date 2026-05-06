@@ -30,6 +30,8 @@ export function Combobox({
   freeTextHint,
   mono,
   cell,
+  pill,
+  attribute,
   dim,
 }: {
   value: string;
@@ -43,6 +45,13 @@ export function Combobox({
   /** Render the trigger as an inline spec cell (mono amber + chev, no input
    * border) instead of a full-width `.input` button. */
   cell?: boolean;
+  /** Render the trigger as a subnav-style pill — same geometry as `.btn-sm`,
+   * with an optional `attribute` prefix (`status: All ▾`). Use for filter
+   * subnavs where each filterable axis becomes one pill that opens a sheet. */
+  pill?: boolean;
+  /** Pill-only: a small label rendered in tertiary tone before the value,
+   * e.g. "status" for a filter pill that reads `status: All ▾`. */
+  attribute?: string;
   /** Cell-only: render the value in placeholder tone (tertiary italic)
    * instead of amber. Use when the current value is a default the user
    * hasn't actively chosen, so the cell reads as "system default" rather
@@ -87,13 +96,18 @@ export function Combobox({
                   ? "text-[var(--text-tertiary)] italic"
                   : "text-[var(--id-color)]"
               }`
+            : pill
+            ? "shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
             : `input flex items-center justify-between text-left ${mono ? "mono" : ""} ${
                 displayLabel ? "" : "text-[var(--text-tertiary)]"
               }`
         }
       >
-        <span className="truncate">{displayLabel || placeholder || "Select…"}</span>
-        <Chevron className={cell ? "shrink-0" : "shrink-0 ml-2"} />
+        {pill && attribute && (
+          <span className="text-[var(--text-tertiary)]">{attribute}:</span>
+        )}
+        <span className={pill ? "" : "truncate"}>{displayLabel || placeholder || "Select…"}</span>
+        <Chevron className={cell || pill ? "shrink-0" : "shrink-0 ml-2"} />
       </button>
       <Dialog.Root open={open} onOpenChange={setOpen}>
         <Dialog.Portal>
