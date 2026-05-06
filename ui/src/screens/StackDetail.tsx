@@ -99,7 +99,7 @@ export function StackDetailScreen() {
       unwrap(await call(host, { op: "delete_stack", name }), "ok");
       invalidate(`${host.url}:list_stacks`);
       invalidate(`${host.url}:list_containers`);
-      toast.push(`Deleted ${name}`, "success");
+      toast.push(`Removed ${name}`, "success");
       nav(`/h/${hid}/stacks`, { replace: true });
     } catch (e) {
       const msg = (e as Error).message;
@@ -184,13 +184,9 @@ export function StackDetailScreen() {
       </Collapsible>
 
       <Collapsible label="dropped keys" count={droppedKeysCount}>
-        {!detail || (detail.unsupported.length === 0 && Object.keys(detail.service_unsupported).length === 0) ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && (detail.unsupported.length > 0 || Object.keys(detail.service_unsupported).length > 0) && (
           <>
-            <p className="text-xs text-[var(--text-tertiary)]">
-              Compose keys we recognized but don't translate. The deployed stack ignores them.
-            </p>
+            <p className="text-xs text-[var(--text-tertiary)]">Recognized but ignored.</p>
             {detail.unsupported.length > 0 && (
               <p className="text-xs"><span className="text-[var(--text-tertiary)]">top-level:</span> {detail.unsupported.join(", ")}</p>
             )}
@@ -207,16 +203,16 @@ export function StackDetailScreen() {
           onClick={() => setConfirmDelete(true)}
           disabled={!detail || pending !== null}
         >
-          {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
+          {pending === "delete" ? <><Spinner /> Removing…</> : "Remove"}
         </Button>
       </Section>
 
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
-        title={`Delete stack ${name}?`}
+        title={`Remove stack ${name}?`}
         description="Stops and removes all containers, drops the stack network, and removes the manifest. Named volumes are preserved."
-        confirmLabel="Delete"
+        confirmLabel="Remove"
         destructive
         onConfirm={onDelete}
       />

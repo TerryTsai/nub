@@ -47,7 +47,7 @@ export function StackLogs() {
   const subnav = (
     <>
       <Button size="sm" variant={follow ? "primary" : "ghost"} onClick={() => setFollow((f) => !f)}>
-        {follow ? "pause" : "follow"}
+        {follow ? "Pause" : "Follow"}
       </Button>
       <ActionMenu
         items={[

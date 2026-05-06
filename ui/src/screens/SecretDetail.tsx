@@ -48,7 +48,7 @@ export function SecretDetail() {
     try {
       unwrap(await call(host, { op: "delete_secret", name }), "ok");
       if (queryKey) invalidate(queryKey);
-      toast.push(`removed ${name}`, "success");
+      toast.push(`Removed ${name}`, "success");
       nav(`/h/${hid}/secrets`, { replace: true });
     } catch (e) {
       toast.pushOpError("remove", e);

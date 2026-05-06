@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { call, streamOp, unwrap, type Host } from "@/api/client";
 import type { DockerfileContent, DockerfileSummary } from "@/api/types";
 import { useHosts } from "@/state/hosts";
@@ -18,7 +18,6 @@ import { Row } from "@/components/Row";
 import { Section } from "@/components/Section";
 import { scrollFocusedIntoView } from "@/lib/scrollIntoViewOnFocus";
 
-type Source = "pull" | "build";
 /** "still-building" = WS dropped after we'd already received some progress.
  * Engine keeps building; we wait for the tag to appear in list_images. */
 type Phase = "idle" | "running" | "still-building" | "done";
@@ -30,31 +29,20 @@ interface BuildState {
 
 const EMPTY_BUILD: BuildState = { stream: "", imageId: null };
 
-const SOURCE_OPTIONS = [
-  { value: "pull", label: "pull" },
-  { value: "build", label: "build" },
-];
-
 export function NewImage() {
   const { hid } = useParams<{ hid: string }>();
   const nav = useNavigate();
-  const [params, setParams] = useSearchParams();
   const { hosts } = useHosts();
   const saved = hosts.find((h) => h.hid === hid);
   const host: Host | undefined = saved && { url: saved.url, token: saved.token };
 
-  const source: Source = params.get("source") === "build" ? "build" : "pull";
-  const setSource = (s: Source) => setParams({ source: s }, { replace: true });
-
   // Single field for both modes: the image:tag we either pull or build into.
   const [imageRef, setImageRef] = useState("");
-
-  // Build-only state
+  // Mode is implicit: empty `dockerfileName` → pull; set → build.
   const [dockerfileName, setDockerfileName] = useState("");
   const [args, setArgs] = useState<DockerfileArg[]>([]);
   const [argValues, setArgValues] = useState<Record<string, string>>({});
 
-  // Shared
   const [phase, setPhase] = useState<Phase>("idle");
   const [pull, setPull] = useState<PullState>(EMPTY_PULL);
   const [build, setBuild] = useState<BuildState>(EMPTY_BUILD);
@@ -66,6 +54,8 @@ export function NewImage() {
     const r = unwrap(await call(host!, { op: "list_dockerfiles" }), "dockerfiles");
     return r.data;
   });
+
+  const isBuild = dockerfileName.trim() !== "";
 
   // When a dockerfile is picked, fetch its content and surface ARGs.
   useEffect(() => {
@@ -99,7 +89,7 @@ export function NewImage() {
     if (!ref) return;
     setError(null);
     abortRef.current = new AbortController();
-    if (source === "pull") {
+    if (!isBuild) {
       setPhase("running");
       setPull({ layers: {}, lastStatus: "starting pull…" });
       try {
@@ -117,7 +107,6 @@ export function NewImage() {
       }
     } else {
       const df = dockerfileName.trim();
-      if (!df) return;
       setPhase("running");
       setBuild(EMPTY_BUILD);
       let receivedAny = false;
@@ -204,16 +193,13 @@ export function NewImage() {
 
   const dfOptions = (dockerfiles ?? []).map((d) => ({ value: d.name }));
   const running = phase === "running" || phase === "still-building";
-  const submitDisabled =
-    running ||
-    !imageRef.trim() ||
-    (source === "build" && !dockerfileName.trim());
+  const submitDisabled = running || !imageRef.trim();
 
   const submitLabel = phase === "running"
-    ? source === "pull" ? "Pulling…" : "Building…"
+    ? isBuild ? "Building…" : "Pulling…"
     : phase === "still-building"
     ? "Waiting…"
-    : source === "pull" ? "Pull" : "Build";
+    : isBuild ? "Build" : "Pull";
 
   return (
     <Page crumbs={crumbs}>
@@ -231,35 +217,24 @@ export function NewImage() {
       <form onSubmit={onSubmit} className="contents" {...scrollFocusedIntoView()}>
         <Section>
           <Row
-            label="Source"
+            label="From"
             right={
               <Combobox
                 cell
-                dim={source === "pull"}
-                value={source}
-                onChange={(v) => setSource(v as Source)}
-                options={SOURCE_OPTIONS}
+                mono
+                dim={!isBuild}
+                value={dockerfileName}
+                onChange={setDockerfileName}
+                options={[
+                  { value: "", label: "registry" },
+                  ...dfOptions,
+                ]}
               />
             }
           />
-          {source === "build" && (
-            <Row
-              label="Dockerfile"
-              right={
-                <Combobox
-                  cell
-                  mono
-                  value={dockerfileName}
-                  onChange={setDockerfileName}
-                  placeholder={dfOptions.length === 0 ? "no dockerfiles yet" : "pick…"}
-                  options={dfOptions}
-                />
-              }
-            />
-          )}
         </Section>
 
-        {source === "build" && args.length > 0 && (
+        {isBuild && args.length > 0 && (
           <Collapsible label="build args" count={args.length} defaultOpen>
             {args.map((a) => (
               <Row
@@ -268,7 +243,6 @@ export function NewImage() {
                 right={
                   <EditCell
                     mono
-                    placeholder={a.default ?? ""}
                     value={argValues[a.name] ?? ""}
                     onChange={(e) => setArgValues({ ...argValues, [a.name]: e.target.value })}
                     disabled={running}
@@ -281,7 +255,7 @@ export function NewImage() {
 
         {phase !== "idle" && (
           <Section label="progress">
-            {source === "pull" ? <PullProgress pull={pull} /> : <BuildLog stream={build.stream} imageId={build.imageId} />}
+            {!isBuild ? <PullProgress pull={pull} /> : <BuildLog stream={build.stream} imageId={build.imageId} />}
             {phase === "still-building" && (
               <p className="text-xs text-[var(--text-secondary)] pt-2">
                 connection dropped, but the build is still running on the host —
@@ -291,11 +265,11 @@ export function NewImage() {
           </Section>
         )}
 
-        <Section label={source === "pull" ? "pull" : "build"}>
+        <Section label={isBuild ? "build" : "pull"}>
           {phase === "done" ? (
             <div className="flex gap-2">
               <Button variant="ghost" onClick={reset} className="flex-1">
-                {source === "pull" ? "Pull another" : "Build another"}
+                {isBuild ? "Build another" : "Pull another"}
               </Button>
               <Button onClick={() => nav(`/h/${hid}/images`)} className="flex-1">
                 Done

@@ -4,7 +4,6 @@ import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate } from "@/state/cache";
 import { Button } from "@/components/Button";
-import { Collapsible } from "@/components/Collapsible";
 import { Heading } from "@/components/Heading";
 import { useHostSectionCrumbs } from "@/components/HostCrumbs";
 import { Page, type Crumb } from "@/components/Page";
@@ -74,13 +73,6 @@ export function NewSecret() {
             style={{ minHeight: "96px" }}
           />
         </Section>
-
-        <Collapsible defaultOpen>
-          <p className="text-xs text-[var(--text-tertiary)]">
-            Encrypted at rest with the host's age key. Values are never read back over
-            the network — use <code className="mono">nub secret get NAME</code> on the host.
-          </p>
-        </Collapsible>
 
         <Section label="create">
           <div className="flex gap-2">

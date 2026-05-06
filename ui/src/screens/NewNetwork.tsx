@@ -70,7 +70,6 @@ export function NewNetwork() {
                   checked={internal}
                   onChange={(e) => setInternal(e.target.checked)}
                 />
-                no external traffic
               </label>
             }
           />

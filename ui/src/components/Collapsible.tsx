@@ -25,7 +25,7 @@ export function Collapsible({ label = "info", count, defaultOpen = false, childr
     <details
       open={open}
       onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}
-      className={`pt-2 border-t border-[var(--border-subtle)] first:border-t-0 first:pt-0 ${className}`}
+      className={className}
     >
       <summary
         className="flex items-center gap-2 cursor-pointer list-none select-none text-[11px] font-semibold uppercase tracking-wider text-[var(--text-tertiary)]"

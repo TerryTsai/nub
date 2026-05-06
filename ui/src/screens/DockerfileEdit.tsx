@@ -87,7 +87,7 @@ export function DockerfileEdit() {
       invalidate(`${host.url}:list_dockerfiles`);
       nav(`/h/${hid}/dockerfiles`, { replace: true });
     } catch (e) {
-      setError(`delete dockerfile: ${(e as Error).message}`);
+      setError(`remove dockerfile: ${(e as Error).message}`);
       setPending(null);
     }
   }
@@ -184,7 +184,7 @@ export function DockerfileEdit() {
                 onClick={() => setConfirmDelete(true)}
                 disabled={pending !== null}
               >
-                {pending === "delete" ? <><Spinner /> Deleting…</> : "Delete"}
+                {pending === "delete" ? <><Spinner /> Removing…</> : "Remove"}
               </Button>
             </Section>
           )}
@@ -192,9 +192,9 @@ export function DockerfileEdit() {
           <ConfirmDialog
             open={confirmDelete}
             onOpenChange={setConfirmDelete}
-            title={`Delete ${name}?`}
+            title={`Remove ${name}?`}
             description="This removes the file from the dockerfiles directory."
-            confirmLabel="Delete"
+            confirmLabel="Remove"
             destructive
             onConfirm={onDelete}
           />

@@ -147,9 +147,7 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="ports" count={detail?.ports.length}>
-        {!detail || detail.ports.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.ports.length > 0 && (
           detail.ports.map((p, i) => (
             <KvLine
               key={i}
@@ -162,9 +160,7 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="volumes" count={detail?.mounts.length}>
-        {!detail || detail.mounts.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.mounts.length > 0 && (
           detail.mounts.map((m, i) => (
             <KvLine
               key={i}
@@ -177,9 +173,7 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="networks" count={detail ? Object.keys(detail.networks).length : undefined}>
-        {!detail || Object.keys(detail.networks).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && Object.keys(detail.networks).length > 0 && (
           Object.entries(detail.networks).map(([name, ep]) => (
             <KvLine key={name} k={name} v={ep.ip_address || "—"} />
           ))
@@ -187,9 +181,7 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="env" count={detail?.env.length}>
-        {!detail || detail.env.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.env.length > 0 && (
           detail.env.map((e, i) => {
             const eq = e.indexOf("=");
             const k = eq >= 0 ? e.slice(0, eq) : e;
@@ -200,9 +192,7 @@ export function ContainerDetail() {
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {!detail || Object.keys(detail.labels).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && Object.keys(detail.labels).length > 0 && (
           Object.entries(detail.labels).map(([k, v]) => (
             <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
           ))

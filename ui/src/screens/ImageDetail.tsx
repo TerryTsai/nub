@@ -102,17 +102,13 @@ export function ImageDetail() {
       </Collapsible>
 
       <Collapsible label="digests" count={detail?.repo_digests.length}>
-        {!detail || detail.repo_digests.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.repo_digests.length > 0 && (
           detail.repo_digests.map((d, i) => <CopyLine key={i} value={d} />)
         )}
       </Collapsible>
 
       <Collapsible label="env" count={detail?.env.length}>
-        {!detail || detail.env.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.env.length > 0 && (
           detail.env.map((e, i) => {
             const eq = e.indexOf("=");
             const k = eq >= 0 ? e.slice(0, eq) : e;
@@ -123,9 +119,7 @@ export function ImageDetail() {
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {!detail || Object.keys(detail.labels).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && Object.keys(detail.labels).length > 0 && (
           Object.entries(detail.labels).map(([k, v]) => (
             <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
           ))

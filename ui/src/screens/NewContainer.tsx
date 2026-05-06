@@ -200,8 +200,6 @@ export function NewContainer() {
                 cell
                 mono
                 freeText
-                freeTextHint="type or pick"
-                placeholder="nginx:alpine"
                 value={form.image}
                 onChange={(v) => setForm({ ...form, image: v })}
                 options={imageOptions}
@@ -215,8 +213,6 @@ export function NewContainer() {
                 cell
                 mono
                 freeText
-                freeTextHint="type or pick"
-                placeholder="default"
                 value={form.network}
                 onChange={(v) => setForm({ ...form, network: v })}
                 options={networkOptions}
@@ -242,7 +238,6 @@ export function NewContainer() {
             right={
               <EditCell
                 mono
-                placeholder="/usr/bin/myprog"
                 value={form.entrypoint.join(" ")}
                 onChange={(e) =>
                   setForm({ ...form, entrypoint: splitTokens(e.target.value) })
@@ -255,7 +250,6 @@ export function NewContainer() {
             right={
               <EditCell
                 mono
-                placeholder="--flag value"
                 value={form.cmd.join(" ")}
                 onChange={(e) => setForm({ ...form, cmd: splitTokens(e.target.value) })}
               />
@@ -266,7 +260,6 @@ export function NewContainer() {
             right={
               <EditCell
                 mono
-                placeholder="/app"
                 value={form.workingDir}
                 onChange={(e) => setForm({ ...form, workingDir: e.target.value })}
               />
@@ -277,7 +270,6 @@ export function NewContainer() {
             right={
               <EditCell
                 mono
-                placeholder="1000 or 1000:1000"
                 value={form.user}
                 onChange={(e) => setForm({ ...form, user: e.target.value })}
               />
@@ -291,8 +283,6 @@ export function NewContainer() {
               key={i}
               left={p.container}
               right={p.host}
-              placeholderLeft="80/tcp"
-              placeholderRight="8080"
               inputModeRight="numeric"
               onChange={(left, right) => {
                 const next = form.ports.slice();
@@ -468,8 +458,8 @@ function PairRow({
 }: {
   left: string;
   right: string;
-  placeholderLeft: string;
-  placeholderRight: string;
+  placeholderLeft?: string;
+  placeholderRight?: string;
   inputModeLeft?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   inputModeRight?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
   onChange: (left: string, right: string) => void;
@@ -521,7 +511,6 @@ function EnvRow({
         <EditCell
           mono
           value={k}
-          placeholder="KEY"
           onChange={(e) => onChange(`${e.target.value}=${v}`)}
         />
       </div>
@@ -529,7 +518,6 @@ function EnvRow({
         mono
         className="flex-1"
         value={v}
-        placeholder="value"
         onChange={(e) => onChange(`${k}=${e.target.value}`)}
       />
       <RemoveBtn onClick={onRemove} />
@@ -553,7 +541,6 @@ function VolumeEntry({
           mono
           className="flex-1"
           value={mount.source}
-          placeholder="volume-name or /host/path"
           onChange={(e) => onChange({ source: e.target.value })}
         />
         <span className="text-[var(--text-tertiary)] text-xs">→</span>
@@ -561,7 +548,6 @@ function VolumeEntry({
           mono
           className="flex-1"
           value={mount.target}
-          placeholder="/container/path"
           onChange={(e) => onChange({ target: e.target.value })}
         />
         <RemoveBtn onClick={onRemove} />
@@ -572,7 +558,7 @@ function VolumeEntry({
           checked={!!mount.read_only}
           onChange={(e) => onChange({ read_only: e.target.checked })}
         />
-        read only
+        ro
       </label>
     </div>
   );

@@ -100,9 +100,7 @@ export function NetworkDetail() {
       </Collapsible>
 
       <Collapsible label="attached" count={detail?.containers.length}>
-        {!detail || detail.containers.length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && detail.containers.length > 0 && (
           detail.containers.map((c) => (
             <Row key={c.id} label={c.name || c.id.slice(0, 12)} value={c.ipv4 || c.ipv6} mono />
           ))
@@ -110,9 +108,7 @@ export function NetworkDetail() {
       </Collapsible>
 
       <Collapsible label="options" count={detail ? Object.keys(detail.options).length : undefined}>
-        {!detail || Object.keys(detail.options).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && Object.keys(detail.options).length > 0 && (
           Object.entries(detail.options).map(([k, v]) => (
             <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
           ))
@@ -120,9 +116,7 @@ export function NetworkDetail() {
       </Collapsible>
 
       <Collapsible label="labels" count={detail ? Object.keys(detail.labels).length : undefined}>
-        {!detail || Object.keys(detail.labels).length === 0 ? (
-          <p className="text-xs text-[var(--text-tertiary)]">—</p>
-        ) : (
+        {detail && Object.keys(detail.labels).length > 0 && (
           Object.entries(detail.labels).map(([k, v]) => (
             <KvLine key={k} k={k} v={v} copyAs={`${k}=${v}`} />
           ))
