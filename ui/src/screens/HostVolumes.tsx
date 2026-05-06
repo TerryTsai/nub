@@ -49,16 +49,15 @@ export function HostVolumes() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
-  const inUse = volumes?.filter((v) => v.in_use).length ?? 0;
   const subnav = volumes !== null ? (
     <Filters
       attribute="in use"
       value={filter}
       onChange={setFilter}
       options={[
-        { value: "all", label: "All", count: volumes.length },
-        { value: "in-use", label: "In use", count: inUse },
-        { value: "idle", label: "Idle", count: volumes.length - inUse },
+        { value: "all", label: "All" },
+        { value: "in-use", label: "In use" },
+        { value: "idle", label: "Idle" },
       ]}
     />
   ) : undefined;

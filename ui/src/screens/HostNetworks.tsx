@@ -49,16 +49,15 @@ export function HostNetworks() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
-  const inUse = networks?.filter((n) => n.in_use).length ?? 0;
   const subnav = networks !== null ? (
     <Filters
       attribute="in use"
       value={filter}
       onChange={setFilter}
       options={[
-        { value: "all", label: "All", count: networks.length },
-        { value: "in-use", label: "In use", count: inUse },
-        { value: "idle", label: "Idle", count: networks.length - inUse },
+        { value: "all", label: "All" },
+        { value: "in-use", label: "In use" },
+        { value: "idle", label: "Idle" },
       ]}
     />
   ) : undefined;

@@ -53,16 +53,15 @@ export function HostImages() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
-  const tagged = images?.filter(isTagged).length ?? 0;
   const subnav = images !== null ? (
     <Filters
       attribute="tagged"
       value={filter}
       onChange={setFilter}
       options={[
-        { value: "all", label: "All", count: images.length },
-        { value: "tagged", label: "Tagged", count: tagged },
-        { value: "untagged", label: "Untagged", count: images.length - tagged },
+        { value: "all", label: "All" },
+        { value: "tagged", label: "Tagged" },
+        { value: "untagged", label: "Untagged" },
       ]}
     />
   ) : undefined;

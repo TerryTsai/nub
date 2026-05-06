@@ -158,11 +158,13 @@ select:focus-visible,
 }
 
 /* Slim variant — used in the sub-nav row, where a regular pill would
- * dominate the 48px header strip. Sized to clear the ~30px touch-target
- * floor; the row gives it ~36px of vertical breathing room. */
+ * dominate the 40px header strip. Sized to align with the dropdown
+ * pills (Combobox pill, ActionMenu trigger): 12px text, 16px line,
+ * 4px+1px (padding+border) on each end → 26px total. */
 .btn-sm {
   font-size: 12px;
-  padding: 6px 12px;
+  line-height: 16px;
+  padding: 4px 12px;
 }
 
 .sr-only {

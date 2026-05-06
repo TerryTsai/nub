@@ -62,9 +62,9 @@ export function HostHome() {
       value={filter}
       onChange={setFilter}
       options={[
-        { value: "all", label: "All", count: containers.length },
-        { value: "running", label: "Running", count: countRunning(containers) },
-        { value: "stopped", label: "Stopped", count: containers.length - countRunning(containers) },
+        { value: "all", label: "All" },
+        { value: "running", label: "Running" },
+        { value: "stopped", label: "Stopped" },
       ]}
     />
   ) : undefined;
@@ -84,10 +84,6 @@ export function HostHome() {
       )}
     </Page>
   );
-}
-
-function countRunning(cs: ContainerSummary[]): number {
-  return cs.filter((c) => c.state === "running").length;
 }
 
 function ContainerList({

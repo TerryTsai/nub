@@ -48,17 +48,16 @@ export function HostStacks() {
 
   if (!saved || !hid) return <Page><p>Unknown host.</p></Page>;
 
-  const countBy = (status: string) => stacks?.filter((s) => s.status === status).length ?? 0;
   const subnav = stacks !== null ? (
     <Filters
       attribute="status"
       value={filter}
       onChange={setFilter}
       options={[
-        { value: "all", label: "All", count: stacks.length },
-        { value: "active", label: "Active", count: countBy("active") },
-        { value: "idle", label: "Idle", count: countBy("idle") },
-        { value: "pending", label: "Pending", count: countBy("pending") },
+        { value: "all", label: "All" },
+        { value: "active", label: "Active" },
+        { value: "idle", label: "Idle" },
+        { value: "pending", label: "Pending" },
       ]}
     />
   ) : undefined;

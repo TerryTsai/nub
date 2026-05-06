@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { Link } from "react-router-dom";
 
 export interface ActionItem {
@@ -14,8 +15,12 @@ export interface ActionItem {
 
 /** Subnav action group — one pill that opens a small popover of items.
  * Used to keep the subnav from filling up with secondary action pills.
- * The trigger is sized like `.btn-sm`; items inside use the same density
- * as MenuCrumb's menu rows. */
+ * The trigger is sized to match `.btn-sm` and the Combobox pill.
+ *
+ * The popover renders via a portal because the subnav strip uses
+ * `overflow-x: auto`, which (per CSS spec) coerces overflow-y to auto and
+ * would clip an in-place absolute popover invisibly. Portaling to body
+ * sidesteps that. */
 export function ActionMenu({
   label = "More",
   trigger,
@@ -27,48 +32,65 @@ export function ActionMenu({
   items: ActionItem[];
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null);
+
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") setOpen(false);
     }
+    function onResize() {
+      if (!triggerRef.current) return;
+      const r = triggerRef.current.getBoundingClientRect();
+      setPos({ top: r.bottom + 4, right: window.innerWidth - r.right });
+    }
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("scroll", onResize, true);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("scroll", onResize, true);
+    };
   }, [open]);
 
-  function dismiss(e: React.MouseEvent) {
-    e.stopPropagation();
-    e.preventDefault();
-    setOpen(false);
-  }
-
   return (
-    <div className="relative inline-flex">
+    <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
+        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border border-[var(--border-subtle)] bg-transparent text-[var(--text-secondary)] active:opacity-80 transition-opacity"
       >
         <span>{trigger ?? label}</span>
         <Chevron />
       </button>
-      {open && (
+      {open && pos && createPortal(
         <>
           <div
             className="fixed inset-0 z-40"
             aria-hidden="true"
-            onClick={dismiss}
-            onPointerDown={dismiss}
+            onClick={() => setOpen(false)}
           />
-          <div className="absolute right-0 top-full mt-1 min-w-[180px] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] py-1 z-50 shadow-lg">
+          <div
+            className="fixed min-w-[180px] bg-[var(--bg-base)] border border-[var(--border-subtle)] rounded-[var(--radius-md)] py-1 z-50 shadow-lg"
+            style={{ top: pos.top, right: pos.right }}
+          >
             {items.map((it, i) => (
               <Item key={i} item={it} onSelect={() => setOpen(false)} />
             ))}
           </div>
-        </>
+        </>,
+        document.body,
       )}
-    </div>
+    </>
   );
 }
 

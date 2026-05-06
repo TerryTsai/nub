@@ -3,7 +3,6 @@ import { Combobox } from "./Combobox";
 interface Option<T extends string> {
   value: T;
   label: string;
-  count?: number;
 }
 
 /** Filter pill in the subnav. Single control per filterable axis — tap to
@@ -30,10 +29,7 @@ export function Filters<T extends string>({
       attribute={attribute}
       value={value}
       onChange={(v) => onChange(v as T)}
-      options={options.map((o) => ({
-        value: o.value,
-        label: o.count !== undefined ? `${o.label} · ${o.count}` : o.label,
-      }))}
+      options={options}
     />
   );
 }
