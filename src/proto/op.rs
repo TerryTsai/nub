@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-use super::{Action, CreateContainerReq};
+use super::CreateContainerReq;
 use crate::auth::scope::Scope;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -15,9 +15,28 @@ pub enum Op {
     GetContainer {
         id: String,
     },
-    ContainerAction {
+    StartContainer {
         id: String,
-        action: Action,
+    },
+    StopContainer {
+        id: String,
+        #[serde(default)]
+        timeout: Option<i64>,
+    },
+    RestartContainer {
+        id: String,
+        #[serde(default)]
+        timeout: Option<i64>,
+    },
+    KillContainer {
+        id: String,
+        #[serde(default)]
+        signal: Option<String>,
+    },
+    RemoveContainer {
+        id: String,
+        #[serde(default)]
+        force: bool,
     },
     CreateContainer(Box<CreateContainerReq>),
     StreamLogs {
@@ -43,15 +62,15 @@ pub enum Op {
     },
     DeleteImage {
         id: String,
-        #[serde(default)]
-        force: bool,
     },
     PullImage {
         reference: String,
     },
     BuildImage {
-        /// Filename inside the configured dockerfiles directory.
-        dockerfile: String,
+        /// Dockerfile contents — caller fetches via GetDockerfile (or supplies
+        /// any source). The build handler does not touch the dockerfiles
+        /// directory; that's a separate scope.
+        dockerfile_content: String,
         /// Tag to apply to the built image, e.g. `nginx:dev`.
         tag: String,
         /// `--build-arg` values. Empty map is fine.
@@ -63,10 +82,17 @@ pub enum Op {
     GetVolume {
         name: String,
     },
-    DeleteVolume {
+    CreateVolume {
         name: String,
         #[serde(default)]
-        force: bool,
+        driver: Option<String>,
+        #[serde(default)]
+        labels: std::collections::HashMap<String, String>,
+        #[serde(default)]
+        options: std::collections::HashMap<String, String>,
+    },
+    DeleteVolume {
+        name: String,
     },
 
     ListNetworks,
@@ -141,59 +167,20 @@ pub enum Op {
 }
 
 impl Op {
-    /// Wire-format name (matches the `op` discriminator). Used for
-    /// logging and structured errors.
-    pub fn name(&self) -> &'static str {
-        match self {
-            Op::HostInfo => "host_info",
-            Op::Whoami => "whoami",
-            Op::ListContainers { .. } => "list_containers",
-            Op::GetContainer { .. } => "get_container",
-            Op::ContainerAction { .. } => "container_action",
-            Op::CreateContainer(_) => "create_container",
-            Op::StreamLogs { .. } => "stream_logs",
-            Op::StreamStats { .. } => "stream_stats",
-            Op::Exec { .. } => "exec",
-            Op::ListImages => "list_images",
-            Op::GetImage { .. } => "get_image",
-            Op::DeleteImage { .. } => "delete_image",
-            Op::PullImage { .. } => "pull_image",
-            Op::BuildImage { .. } => "build_image",
-            Op::ListVolumes => "list_volumes",
-            Op::GetVolume { .. } => "get_volume",
-            Op::DeleteVolume { .. } => "delete_volume",
-            Op::ListNetworks => "list_networks",
-            Op::GetNetwork { .. } => "get_network",
-            Op::CreateNetwork { .. } => "create_network",
-            Op::DeleteNetwork { .. } => "delete_network",
-            Op::ListDockerfiles => "list_dockerfiles",
-            Op::GetDockerfile { .. } => "get_dockerfile",
-            Op::PutDockerfile { .. } => "put_dockerfile",
-            Op::DeleteDockerfile { .. } => "delete_dockerfile",
-            Op::CreateStack { .. } => "create_stack",
-            Op::ListStacks => "list_stacks",
-            Op::GetStack { .. } => "get_stack",
-            Op::DeleteStack { .. } => "delete_stack",
-            Op::RedeployStack { .. } => "redeploy_stack",
-            Op::UpdateStack { .. } => "update_stack",
-            Op::PullStack { .. } => "pull_stack",
-            Op::StreamStackLogs { .. } => "stream_stack_logs",
-            Op::ListSecrets => "list_secrets",
-            Op::PutSecret { .. } => "put_secret",
-            Op::DeleteSecret { .. } => "delete_secret",
-            Op::GetSecret { .. } => "get_secret",
-        }
-    }
-
     /// Authorization scope this op requires, or `None` for introspection
     /// ops that any valid token may invoke.
     pub fn required_scope(&self) -> Option<Scope> {
         match self {
-            Op::HostInfo | Op::Whoami => None,
+            Op::HostInfo => Some(Scope::HostInfo),
+            Op::Whoami => Some(Scope::AuthWhoami),
 
             Op::ListContainers { .. } => Some(Scope::ContainersList),
             Op::GetContainer { .. } => Some(Scope::ContainersGet),
-            Op::ContainerAction { .. } => Some(Scope::ContainersAction),
+            Op::StartContainer { .. } => Some(Scope::ContainersStart),
+            Op::StopContainer { .. } => Some(Scope::ContainersStop),
+            Op::RestartContainer { .. } => Some(Scope::ContainersRestart),
+            Op::KillContainer { .. } => Some(Scope::ContainersKill),
+            Op::RemoveContainer { .. } => Some(Scope::ContainersRemove),
             Op::CreateContainer(_) => Some(Scope::ContainersCreate),
             Op::StreamLogs { .. } => Some(Scope::ContainersLogs),
             Op::StreamStats { .. } => Some(Scope::ContainersStats),
@@ -207,6 +194,7 @@ impl Op {
 
             Op::ListVolumes => Some(Scope::VolumesList),
             Op::GetVolume { .. } => Some(Scope::VolumesGet),
+            Op::CreateVolume { .. } => Some(Scope::VolumesCreate),
             Op::DeleteVolume { .. } => Some(Scope::VolumesDelete),
 
             Op::ListNetworks => Some(Scope::NetworksList),

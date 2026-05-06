@@ -20,6 +20,7 @@ use futures::stream::BoxStream;
 use std::future::Future;
 use tokio::sync::mpsc;
 
+use crate::auth::Claims;
 use crate::client::Engine;
 use crate::proto::*;
 
@@ -32,7 +33,7 @@ pub enum HandlerOutput {
 
 #[async_trait]
 pub trait OpHandler: Send + Sync + 'static {
-    async fn handle(&self, op: Op, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput;
+    async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput;
 }
 
 /// A pre-closed receiver. Use for transports that don't carry client→server
@@ -79,7 +80,7 @@ impl EngineHandler {
 
 #[async_trait]
 impl OpHandler for EngineHandler {
-    async fn handle(&self, op: Op, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
+    async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         match op {
             // Whoami is auth-layer info; transport short-circuits before us.
             Op::Whoami => unreachable!("Whoami handled by transport layer"),
@@ -88,7 +89,11 @@ impl OpHandler for EngineHandler {
 
             Op::ListContainers { all } => unary(containers::list::run(self, all).await, OpResult::Containers),
             Op::GetContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
-            Op::ContainerAction { id, action } => unary(containers::action::run(self, id, action).await, ok),
+            Op::StartContainer { id } => unary(containers::action::start(self, id).await, ok),
+            Op::StopContainer { id, timeout } => unary(containers::action::stop(self, id, timeout).await, ok),
+            Op::RestartContainer { id, timeout } => unary(containers::action::restart(self, id, timeout).await, ok),
+            Op::KillContainer { id, signal } => unary(containers::action::kill(self, id, signal).await, ok),
+            Op::RemoveContainer { id, force } => unary(containers::action::remove(self, id, force).await, ok),
             Op::CreateContainer(req) => unary(containers::create::run(self, *req).await, OpResult::ContainerCreated),
             Op::StreamLogs { id, follow, tail } => stream(containers::logs::run(self, id, follow, tail)),
             Op::StreamStats { id } => stream(containers::stats::run(self, id)),
@@ -96,17 +101,23 @@ impl OpHandler for EngineHandler {
 
             Op::ListImages => unary(images::list::run(self).await, OpResult::Images),
             Op::GetImage { id } => unary(images::inspect::run(self, id).await, OpResult::ImageDetail),
-            Op::DeleteImage { id, force } => unary(images::remove::run(self, id, force).await, ok),
+            Op::DeleteImage { id } => unary(images::remove::run(self, id).await, ok),
             Op::PullImage { reference } => stream(images::pull::run(self, reference)),
             Op::BuildImage {
-                dockerfile,
+                dockerfile_content,
                 tag,
                 build_args,
-            } => stream(images::build::run(self, dockerfile, tag, build_args)),
+            } => stream(images::build::run(self, dockerfile_content, tag, build_args)),
 
             Op::ListVolumes => unary(volumes::list(self).await, OpResult::Volumes),
             Op::GetVolume { name } => unary(volumes::inspect(self, &name).await, OpResult::VolumeDetail),
-            Op::DeleteVolume { name, force } => unary(volumes::remove(self, name, force).await, ok),
+            Op::CreateVolume {
+                name,
+                driver,
+                labels,
+                options,
+            } => unary(volumes::create(self, name, driver, labels, options).await, ok),
+            Op::DeleteVolume { name } => unary(volumes::remove(self, name).await, ok),
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
             Op::GetNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
@@ -118,17 +129,21 @@ impl OpHandler for EngineHandler {
             Op::PutDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
             Op::DeleteDockerfile { name } => unary(dockerfiles::delete(self, &name).await, ok),
 
-            Op::CreateStack { name, yaml } => {
-                unary(stacks::create::run(self, name, yaml).await, OpResult::StackCreated)
-            }
+            Op::CreateStack { name, yaml } => unary(
+                stacks::create::run(self, claims, name, yaml).await,
+                OpResult::StackCreated,
+            ),
             Op::ListStacks => unary(stacks::list::run(self).await, OpResult::Stacks),
             Op::GetStack { name } => unary(stacks::get::run(self, name).await, OpResult::StackDetail),
-            Op::DeleteStack { name } => unary(stacks::delete::run(self, name).await, ok),
-            Op::RedeployStack { name } => unary(stacks::redeploy::run(self, name).await, OpResult::StackCreated),
-            Op::UpdateStack { name, yaml } => {
-                unary(stacks::update::run(self, name, yaml).await, OpResult::StackCreated)
+            Op::DeleteStack { name } => unary(stacks::delete::run(self, claims, name).await, ok),
+            Op::RedeployStack { name } => {
+                unary(stacks::redeploy::run(self, claims, name).await, OpResult::StackCreated)
             }
-            Op::PullStack { name } => unary(stacks::pull::run(self, name).await, OpResult::StackCreated),
+            Op::UpdateStack { name, yaml } => unary(
+                stacks::update::run(self, claims, name, yaml).await,
+                OpResult::StackCreated,
+            ),
+            Op::PullStack { name } => unary(stacks::pull::run(self, claims, name).await, OpResult::StackCreated),
             Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
 
             Op::ListSecrets => unary(secrets::list(&self.policy.secrets_root).await, OpResult::Secrets),

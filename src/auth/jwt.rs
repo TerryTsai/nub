@@ -48,6 +48,22 @@ impl Claims {
     pub fn scopes(&self) -> Vec<String> {
         self.scope.split_ascii_whitespace().map(str::to_string).collect()
     }
+
+    /// Synthetic admin claims for in-process callers (the CLI invokes
+    /// op handlers directly without a real JWT). Wildcard scope means
+    /// every `allows()` check returns true; field values past `scope`
+    /// are placeholders and aren't sent over the wire.
+    pub fn local_admin() -> Self {
+        Self {
+            iss: "nub-cli".into(),
+            sub: "local".into(),
+            aud: "nub".into(),
+            exp: i64::MAX,
+            nbf: 0,
+            iat: 0,
+            scope: "*".into(),
+        }
+    }
 }
 
 /// Encode and sign a JWT.
@@ -191,12 +207,25 @@ mod tests {
     }
 
     #[test]
-    fn scope_allows_introspection_without_scope() {
+    fn scope_introspection_now_requires_explicit_scope() {
+        // After the pure-auth refactor, every wire op carries a scope —
+        // including Whoami and HostInfo. An empty scope authorizes nothing.
         let mut claims = fresh_claims("host-a", 3600);
         claims.scope = "".into();
-        assert!(claims.allows(&Op::Whoami));
-        assert!(claims.allows(&Op::HostInfo));
+        assert!(!claims.allows(&Op::Whoami));
+        assert!(!claims.allows(&Op::HostInfo));
         assert!(!claims.allows(&Op::ListContainers { all: false }));
+
+        // Targeted scopes work as expected.
+        let mut info = fresh_claims("host-a", 3600);
+        info.scope = "host:info".into();
+        assert!(info.allows(&Op::HostInfo));
+        assert!(!info.allows(&Op::Whoami));
+
+        let mut who = fresh_claims("host-a", 3600);
+        who.scope = "auth:whoami".into();
+        assert!(who.allows(&Op::Whoami));
+        assert!(!who.allows(&Op::HostInfo));
     }
 
     #[test]

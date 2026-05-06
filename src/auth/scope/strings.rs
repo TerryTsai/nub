@@ -7,12 +7,19 @@ impl Scope {
     /// Wire string for this scope (`<resource>:<action>`).
     pub fn as_str(self) -> &'static str {
         match self {
+            Scope::HostInfo => "host:info",
+            Scope::AuthWhoami => "auth:whoami",
+
             Scope::ContainersList => "containers:list",
             Scope::ContainersGet => "containers:get",
             Scope::ContainersLogs => "containers:logs",
             Scope::ContainersStats => "containers:stats",
             Scope::ContainersCreate => "containers:create",
-            Scope::ContainersAction => "containers:action",
+            Scope::ContainersStart => "containers:start",
+            Scope::ContainersStop => "containers:stop",
+            Scope::ContainersRestart => "containers:restart",
+            Scope::ContainersKill => "containers:kill",
+            Scope::ContainersRemove => "containers:remove",
             Scope::ContainersExec => "containers:exec",
 
             Scope::ImagesList => "images:list",
@@ -23,6 +30,7 @@ impl Scope {
 
             Scope::VolumesList => "volumes:list",
             Scope::VolumesGet => "volumes:get",
+            Scope::VolumesCreate => "volumes:create",
             Scope::VolumesDelete => "volumes:delete",
 
             Scope::NetworksList => "networks:list",

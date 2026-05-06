@@ -40,6 +40,7 @@ export function NewImage() {
   const [imageRef, setImageRef] = useState("");
   // Mode is implicit: empty `dockerfileName` → pull; set → build.
   const [dockerfileName, setDockerfileName] = useState("");
+  const [dockerfileContent, setDockerfileContent] = useState("");
   const [args, setArgs] = useState<DockerfileArg[]>([]);
   const [argValues, setArgValues] = useState<Record<string, string>>({});
 
@@ -57,9 +58,12 @@ export function NewImage() {
 
   const isBuild = dockerfileName.trim() !== "";
 
-  // When a dockerfile is picked, fetch its content and surface ARGs.
+  // When a dockerfile is picked, fetch its content (used to parse ARGs
+  // and to send as the build context — the build op no longer reads from
+  // the server's dockerfiles directory).
   useEffect(() => {
     if (!host || !dockerfileName) {
+      setDockerfileContent("");
       setArgs([]);
       setArgValues({});
       return;
@@ -72,7 +76,9 @@ export function NewImage() {
           "dockerfile",
         );
         if (cancelled) return;
-        const parsed = parseArgs((r.data as DockerfileContent).content);
+        const content = (r.data as DockerfileContent).content;
+        setDockerfileContent(content);
+        const parsed = parseArgs(content);
         setArgs(parsed);
         setArgValues(Object.fromEntries(parsed.map((a) => [a.name, a.default ?? ""])));
       } catch (e) {
@@ -106,14 +112,17 @@ export function NewImage() {
         setPhase("idle");
       }
     } else {
-      const df = dockerfileName.trim();
+      if (!dockerfileContent) {
+        setError("dockerfile content not loaded yet");
+        return;
+      }
       setPhase("running");
       setBuild(EMPTY_BUILD);
       let receivedAny = false;
       try {
         await streamOp(
           host,
-          { op: "build_image", dockerfile: df, tag: ref, build_args: argValues },
+          { op: "build_image", dockerfile_content: dockerfileContent, tag: ref, build_args: argValues },
           (chunk) => {
             if (chunk.type !== "build_progress") return;
             receivedAny = true;

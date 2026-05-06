@@ -43,12 +43,12 @@ export function VolumeDetail() {
     return r.data;
   });
 
-  async function onRemove(force: boolean) {
+  async function onRemove() {
     if (!host || !vname) return;
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "delete_volume", name: vname, force }), "ok");
+      unwrap(await call(host, { op: "delete_volume", name: vname }), "ok");
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/volumes`, { replace: true });
     } catch (e) {
@@ -130,7 +130,7 @@ export function VolumeDetail() {
         description="Volume contents are deleted. This cannot be undone."
         confirmLabel="Remove"
         destructive
-        onConfirm={() => onRemove(false)}
+        onConfirm={onRemove}
       />
     </Page>
   );

@@ -4,7 +4,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { call, unwrap, type Host } from "@/api/client";
 import { useHosts } from "@/state/hosts";
 import { invalidate, peek, useQuery } from "@/state/cache";
-import type { Action, ContainerDetail as ContainerDetailT, ContainerSummary, PortMapping } from "@/api/types";
+import type { Op, ContainerDetail as ContainerDetailT, ContainerSummary, PortMapping } from "@/api/types";
 import { containerStatus } from "@/state/status";
 import { ActionMenu } from "@/components/ActionMenu";
 import { Button } from "@/components/Button";
@@ -37,12 +37,12 @@ export function ContainerDetail() {
   });
   const error = actionError ?? queryError;
 
-  async function act(name: string, action: Action, after?: () => void) {
+  async function act(name: string, op: Op, after?: () => void) {
     if (!host || !cid) return;
     setPending(name);
     setActionError(null);
     try {
-      unwrap(await call(host, { op: "container_action", id: cid, action }), "ok");
+      unwrap(await call(host, op), "ok");
       invalidate(`${host.url}:list_containers`);
       toast.push(`${pastTense(name)} ${detail?.name || cid.slice(0, 12)}`, "success");
       if (after) after();
@@ -79,7 +79,7 @@ export function ContainerDetail() {
         size="sm"
         variant="ghost"
         disabled={actionsDisabled || running}
-        onClick={() => act("start", { kind: "start" })}
+        onClick={() => act("start", { op: "start_container", id: cid! })}
       >
         {pending === "start" ? <Spinner /> : "Start"}
       </Button>
@@ -87,7 +87,7 @@ export function ContainerDetail() {
         size="sm"
         variant="ghost"
         disabled={actionsDisabled || !running}
-        onClick={() => act("stop", { kind: "stop" })}
+        onClick={() => act("stop", { op: "stop_container", id: cid! })}
       >
         {pending === "stop" ? <Spinner /> : "Stop"}
       </Button>
@@ -95,7 +95,7 @@ export function ContainerDetail() {
         size="sm"
         variant="ghost"
         disabled={actionsDisabled || !running}
-        onClick={() => act("restart", { kind: "restart" })}
+        onClick={() => act("restart", { op: "restart_container", id: cid! })}
       >
         {pending === "restart" ? <Spinner /> : "Restart"}
       </Button>
@@ -204,7 +204,7 @@ export function ContainerDetail() {
           pending={pending}
           running={detail?.running ?? false}
           disabled={!detail}
-          onConfirm={(force) => act("remove", { kind: "remove", force }, () => nav(`/h/${hid}`))}
+          onConfirm={(force) => act("remove", { op: "remove_container", id: cid!, force }, () => nav(`/h/${hid}`))}
         />
       </Section>
     </Page>

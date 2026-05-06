@@ -44,7 +44,7 @@ async fn op(
         tracing::warn!("caller {} denied op {}", claims.sub, op.name());
         return Err(StatusCode::FORBIDDEN);
     }
-    match h.handle(op, closed_input()).await {
+    match h.handle(op, &claims, closed_input()).await {
         HandlerOutput::Unary(r) => Ok(Json(r)),
         HandlerOutput::Stream(_) => Err(StatusCode::BAD_REQUEST),
     }

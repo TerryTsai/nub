@@ -16,17 +16,22 @@ pub const ADMIN_LITERAL: &str = "*";
 
 /// Phone UI: everything an operator does day-to-day from a phone.
 /// Excludes:
-///   - `containers:create`  (phone uses stacks for new workloads)
+///   - `containers:kill`    (SIGKILL is CLI-only; phone uses stop/restart)
 ///   - `images:build`       (build flow lives behind the CLI)
-///   - `networks:create`    (managed by stacks)
 ///   - all `dockerfiles:*`  (CLI authoring)
 ///   - `secrets:reveal`     (CLI-only by policy)
 pub const PHONE: &[Scope] = &[
+    Scope::HostInfo,
+    Scope::AuthWhoami,
     Scope::ContainersList,
     Scope::ContainersGet,
     Scope::ContainersLogs,
     Scope::ContainersStats,
-    Scope::ContainersAction,
+    Scope::ContainersCreate,
+    Scope::ContainersStart,
+    Scope::ContainersStop,
+    Scope::ContainersRestart,
+    Scope::ContainersRemove,
     Scope::ContainersExec,
     Scope::ImagesList,
     Scope::ImagesGet,
@@ -34,9 +39,11 @@ pub const PHONE: &[Scope] = &[
     Scope::ImagesDelete,
     Scope::VolumesList,
     Scope::VolumesGet,
+    Scope::VolumesCreate,
     Scope::VolumesDelete,
     Scope::NetworksList,
     Scope::NetworksGet,
+    Scope::NetworksCreate,
     Scope::NetworksDelete,
     Scope::StacksList,
     Scope::StacksGet,
@@ -54,6 +61,8 @@ pub const PHONE: &[Scope] = &[
 /// Read-only across every resource. No state changes; secret values
 /// are NOT included (`SecretsReveal` is privileged and admin-only).
 pub const READONLY: &[Scope] = &[
+    Scope::HostInfo,
+    Scope::AuthWhoami,
     Scope::ContainersList,
     Scope::ContainersGet,
     Scope::ContainersLogs,

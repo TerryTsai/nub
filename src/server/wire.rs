@@ -67,8 +67,9 @@ fn start_request(id: u64, op: Op, h: &Shared, caller: &Claims, out: &mpsc::Sende
     let h = h.clone();
     let out = out.clone();
     let routes = routes.clone();
+    let claims = caller.clone();
     tokio::spawn(async move {
-        handle_request(id, op, h, in_rx, out).await;
+        handle_request(id, op, h, &claims, in_rx, out).await;
         routes.lock().unwrap().remove(&id);
     });
 }
@@ -119,8 +120,15 @@ fn stream_frame(id: u64, chunk: StreamChunk) -> Frame {
     Frame::Stream { id, chunk }
 }
 
-async fn handle_request(id: u64, op: Op, h: Shared, in_rx: mpsc::Receiver<StreamChunk>, out: mpsc::Sender<String>) {
-    match h.handle(op, in_rx).await {
+async fn handle_request(
+    id: u64,
+    op: Op,
+    h: Shared,
+    claims: &Claims,
+    in_rx: mpsc::Receiver<StreamChunk>,
+    out: mpsc::Sender<String>,
+) {
+    match h.handle(op, claims, in_rx).await {
         HandlerOutput::Unary(result) => {
             send_frame(&out, response(id, result)).await;
         }

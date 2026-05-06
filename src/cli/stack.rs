@@ -8,6 +8,7 @@ use anyhow::{Context, Result};
 use futures::StreamExt as _;
 use std::io::{BufRead as _, IsTerminal as _, Read, Write as _};
 
+use crate::auth::Claims;
 use crate::config;
 use crate::ops;
 use crate::proto::StreamChunk;
@@ -43,7 +44,7 @@ async fn connect() -> Result<ops::EngineHandler> {
 
 async fn deploy(h: &ops::EngineHandler, name: String, file: String) -> Result<()> {
     let yaml = read_yaml(&file)?;
-    let result = ops::stacks::create::run(h, name, yaml).await?;
+    let result = ops::stacks::create::run(h, &Claims::local_admin(), name, yaml).await?;
     println!("deployed stack `{}`", result.name);
     for id in result.container_ids {
         println!("  started {id}");
@@ -81,13 +82,13 @@ async fn remove(h: &ops::EngineHandler, name: String, yes: bool) -> Result<()> {
         println!("aborted");
         return Ok(());
     }
-    ops::stacks::delete::run(h, name.clone()).await?;
+    ops::stacks::delete::run(h, &Claims::local_admin(), name.clone()).await?;
     println!("removed stack `{name}`");
     Ok(())
 }
 
 async fn redeploy(h: &ops::EngineHandler, name: String) -> Result<()> {
-    let result = ops::stacks::redeploy::run(h, name).await?;
+    let result = ops::stacks::redeploy::run(h, &Claims::local_admin(), name).await?;
     println!("redeployed stack `{}`", result.name);
     for id in result.container_ids {
         println!("  started {id}");

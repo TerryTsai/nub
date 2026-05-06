@@ -26,12 +26,19 @@ use std::str::FromStr;
 /// Every scope nub recognizes. One variant per network-exposed op.
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Scope {
+    HostInfo,
+    AuthWhoami,
+
     ContainersList,
     ContainersGet,
     ContainersLogs,
     ContainersStats,
     ContainersCreate,
-    ContainersAction,
+    ContainersStart,
+    ContainersStop,
+    ContainersRestart,
+    ContainersKill,
+    ContainersRemove,
     ContainersExec,
 
     ImagesList,
@@ -42,6 +49,7 @@ pub enum Scope {
 
     VolumesList,
     VolumesGet,
+    VolumesCreate,
     VolumesDelete,
 
     NetworksList,
@@ -75,12 +83,18 @@ impl Scope {
     /// Every scope, in declaration order. Used for validation, listing,
     /// and completions; not for runtime checks.
     pub const ALL: &'static [Scope] = &[
+        Scope::HostInfo,
+        Scope::AuthWhoami,
         Scope::ContainersList,
         Scope::ContainersGet,
         Scope::ContainersLogs,
         Scope::ContainersStats,
         Scope::ContainersCreate,
-        Scope::ContainersAction,
+        Scope::ContainersStart,
+        Scope::ContainersStop,
+        Scope::ContainersRestart,
+        Scope::ContainersKill,
+        Scope::ContainersRemove,
         Scope::ContainersExec,
         Scope::ImagesList,
         Scope::ImagesGet,
@@ -89,6 +103,7 @@ impl Scope {
         Scope::ImagesDelete,
         Scope::VolumesList,
         Scope::VolumesGet,
+        Scope::VolumesCreate,
         Scope::VolumesDelete,
         Scope::NetworksList,
         Scope::NetworksGet,
@@ -145,6 +160,8 @@ impl std::error::Error for ParseScopeError {}
 /// Resources that admit `<resource>:*` wildcards. Kept in sync with
 /// `Scope::ALL` by `tests::resources_match_scopes`.
 pub const RESOURCES: &[&str] = &[
+    "host",
+    "auth",
     "containers",
     "images",
     "volumes",

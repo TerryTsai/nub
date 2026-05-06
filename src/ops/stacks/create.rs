@@ -8,6 +8,8 @@ use std::collections::{HashMap, HashSet};
 
 use anyhow::{anyhow, Result};
 
+use crate::auth::scope::Scope;
+use crate::auth::Claims;
 use crate::compose;
 use crate::ops::configs;
 use crate::ops::containers;
@@ -15,11 +17,12 @@ use crate::ops::secrets;
 use crate::ops::EngineHandler;
 use crate::proto::{CreateContainerReq, StackCreated, VolumeMount};
 
+use super::auth::require;
 use super::engine;
 use super::labels::{container_name, network_name, stack_labels, volume_name, STACK_LABEL};
 use super::store;
 
-pub(crate) async fn run(h: &EngineHandler, name: String, yaml: String) -> Result<StackCreated> {
+pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: String) -> Result<StackCreated> {
     store::validate_name(&name)?;
     if store::exists(&h.policy.stacks_root, &name) {
         return Err(anyhow!("stack `{name}` already exists; use redeploy or update"));
@@ -29,7 +32,7 @@ pub(crate) async fn run(h: &EngineHandler, name: String, yaml: String) -> Result
         return Err(anyhow!("stack `{name}` has no services"));
     }
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
-    deploy_from_spec(h, &name, spec).await.map(|ids| StackCreated {
+    deploy_from_spec(h, claims, &name, spec).await.map(|ids| StackCreated {
         name,
         container_ids: ids,
     })
@@ -38,11 +41,27 @@ pub(crate) async fn run(h: &EngineHandler, name: String, yaml: String) -> Result
 /// Provision engine resources from an already-parsed spec. Used by both
 /// `create_stack` and `redeploy_stack`. Caller is responsible for the
 /// on-disk manifest and for tearing down any prior resources.
-pub(super) async fn deploy_from_spec(h: &EngineHandler, name: &str, spec: compose::StackSpec) -> Result<Vec<String>> {
+///
+/// Each composing action is gated against `claims` here, not at the wire
+/// layer — `stacks:create` alone authorizes invocation, but `images:pull`,
+/// `networks:create`, `volumes:create`, `containers:create`, and
+/// `containers:start` are each checked separately.
+pub(super) async fn deploy_from_spec(
+    h: &EngineHandler,
+    claims: &Claims,
+    name: &str,
+    spec: compose::StackSpec,
+) -> Result<Vec<String>> {
     let stack_label_only = label_only(name);
+
+    require(claims, Scope::NetworksCreate)?;
     engine::create_network(h, &network_name(name), stack_label_only.clone()).await?;
 
     let declared_volumes: HashSet<String> = spec.volumes.iter().map(|v| v.name.clone()).collect();
+    let needs_volume_create = spec.volumes.iter().any(|v| !v.external);
+    if needs_volume_create {
+        require(claims, Scope::VolumesCreate)?;
+    }
     for v in &spec.volumes {
         if v.external {
             continue;
@@ -50,6 +69,25 @@ pub(super) async fn deploy_from_spec(h: &EngineHandler, name: &str, spec: compos
         engine::create_volume(h, &volume_name(name, &v.name), stack_label_only.clone()).await?;
     }
 
+    // CreateContainer rejects non-local images. Pull each unique service
+    // image up front so the per-service create call has its image present.
+    let unique_images: HashSet<&str> = spec
+        .services
+        .iter()
+        .map(|s| s.container.image.as_str())
+        .filter(|i| !i.is_empty())
+        .collect();
+    if !unique_images.is_empty() {
+        require(claims, Scope::ImagesPull)?;
+    }
+    for img in &unique_images {
+        engine::pull_image(h, img).await?;
+    }
+
+    if !spec.services.is_empty() {
+        require(claims, Scope::ContainersCreate)?;
+        require(claims, Scope::ContainersStart)?;
+    }
     let mut ids = Vec::with_capacity(spec.services.len());
     let mut spec = spec;
     let services = std::mem::take(&mut spec.services);
@@ -80,6 +118,10 @@ async fn create_service(
     let extra_mounts = secret_mounts.into_iter().chain(config_mounts).collect();
     let req = build_request(stack, svc, declared_volumes, extra_mounts);
     let created = containers::create::run(h, req).await?;
+    // Start is a separate scope/op now — call StartContainer's underlying
+    // engine action explicitly. The orchestrator (Stage 3) will gate this
+    // on `containers:start`.
+    containers::action::start(h, created.id.clone()).await?;
     Ok(created.id)
 }
 
@@ -101,7 +143,6 @@ fn build_request(
         .chain(extra_mounts)
         .collect();
     merge_labels(&mut req.labels, stack, &svc.name);
-    req.start = true;
     req
 }
 

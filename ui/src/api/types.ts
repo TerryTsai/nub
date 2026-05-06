@@ -6,19 +6,24 @@ export type Op =
   | { op: "whoami" }
   | { op: "list_containers"; all: boolean }
   | { op: "get_container"; id: string }
-  | { op: "container_action"; id: string; action: Action }
-  | { op: "create_container"; image: string; name?: string; cmd?: string[]; entrypoint?: string[]; env?: string[]; working_dir?: string; user?: string; labels?: Record<string, string>; ports?: PortPublish[]; volumes?: VolumeMount[]; network?: string; restart?: RestartPolicySpec; memory_limit?: number; cpu_shares?: number; start?: boolean }
+  | { op: "start_container"; id: string }
+  | { op: "stop_container"; id: string; timeout?: number }
+  | { op: "restart_container"; id: string; timeout?: number }
+  | { op: "kill_container"; id: string; signal?: string }
+  | { op: "remove_container"; id: string; force?: boolean }
+  | { op: "create_container"; image: string; name?: string; cmd?: string[]; entrypoint?: string[]; env?: string[]; working_dir?: string; user?: string; labels?: Record<string, string>; ports?: PortPublish[]; volumes?: VolumeMount[]; network?: string; restart?: RestartPolicySpec; memory_limit?: number; cpu_shares?: number }
   | { op: "stream_logs"; id: string; follow?: boolean; tail?: number }
   | { op: "stream_stats"; id: string }
   | { op: "exec"; id: string; cmd: string[]; tty?: boolean }
   | { op: "list_images" }
   | { op: "get_image"; id: string }
-  | { op: "delete_image"; id: string; force?: boolean }
+  | { op: "delete_image"; id: string }
   | { op: "pull_image"; reference: string }
-  | { op: "build_image"; dockerfile: string; tag: string; build_args: Record<string, string> }
+  | { op: "build_image"; dockerfile_content: string; tag: string; build_args: Record<string, string> }
   | { op: "list_volumes" }
   | { op: "get_volume"; name: string }
-  | { op: "delete_volume"; name: string; force?: boolean }
+  | { op: "create_volume"; name: string; driver?: string; labels?: Record<string, string>; options?: Record<string, string> }
+  | { op: "delete_volume"; name: string }
   | { op: "list_networks" }
   | { op: "get_network"; id: string }
   | { op: "create_network"; name: string; internal?: boolean }
@@ -39,13 +44,6 @@ export type Op =
   | { op: "put_secret"; name: string; value: string }
   | { op: "delete_secret"; name: string }
   | { op: "get_secret"; name: string };
-
-export type Action =
-  | { kind: "start" }
-  | { kind: "stop"; timeout?: number }
-  | { kind: "restart"; timeout?: number }
-  | { kind: "kill"; signal?: string }
-  | { kind: "remove"; force?: boolean; volumes?: boolean };
 
 export interface PortPublish { container: string; host: string }
 export interface VolumeMount { source: string; target: string; read_only?: boolean }
@@ -137,7 +135,7 @@ export interface NetworkDetail {
   options: Record<string, string>;
   labels: Record<string, string>;
 }
-export interface ContainerCreated { id: string; started: boolean; warnings: string[] }
+export interface ContainerCreated { id: string; warnings: string[] }
 export interface DockerfileSummary { name: string; size: number; modified_at: string }
 export interface DockerfileContent { name: string; content: string; size: number; modified_at: string }
 

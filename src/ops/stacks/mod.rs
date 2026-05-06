@@ -18,6 +18,7 @@ pub mod redeploy;
 pub mod rehydrate;
 pub mod update;
 
+mod auth;
 mod discover;
 mod engine;
 mod labels;

@@ -44,12 +44,12 @@ export function ImageDetail() {
     return r.data;
   });
 
-  async function onRemove(force: boolean) {
+  async function onRemove() {
     if (!host || !iid) return;
     setPending(true);
     setError(null);
     try {
-      unwrap(await call(host, { op: "delete_image", id: iid, force }), "ok");
+      unwrap(await call(host, { op: "delete_image", id: iid }), "ok");
       if (queryKey) invalidate(queryKey);
       nav(`/h/${hid}/images`, { replace: true });
     } catch (e) {
@@ -143,11 +143,11 @@ export function ImageDetail() {
           onOpenChange={setConfirmOpen}
           title={`Remove ${title}?`}
           description={image.containers > 0
-            ? `In use by ${image.containers} container${image.containers === 1 ? "" : "s"}. Remove with force?`
+            ? `In use by ${image.containers} container${image.containers === 1 ? "" : "s"}. Remove the dependent containers first.`
             : "This will delete the image."}
-          confirmLabel={image.containers > 0 ? "Force remove" : "Remove"}
+          confirmLabel="Remove"
           destructive
-          onConfirm={() => onRemove(image.containers > 0)}
+          onConfirm={onRemove}
         />
       )}
     </Page>

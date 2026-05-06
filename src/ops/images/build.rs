@@ -1,12 +1,17 @@
 //! `docker image build` — `POST /build`. Streams line-delimited JSON
 //! progress events. Build context is a single-file ustar tar containing
-//! just the Dockerfile (read from the configured dockerfiles directory).
-//! `COPY` / `ADD` of other files is unsupported by design — keep the
-//! "phone-shaped" scope, fail loudly at engine build time if someone
-//! tries.
+//! just the Dockerfile content the caller passed in.
+//!
+//! The handler is content-only: it does NOT touch the dockerfiles
+//! directory. Callers fetch dockerfile bytes via `Op::GetDockerfile`
+//! (gated by `dockerfiles:get`) and pass them here. This keeps `images:build`
+//! from being a transitive `dockerfiles:get`.
+//!
+//! `pull=never` is forced on the engine, so a missing `FROM` base image
+//! fails the build instead of triggering an implicit `images:pull`. The
+//! caller pre-pulls explicitly.
 
 use std::collections::HashMap;
-use std::path::PathBuf;
 
 use bytes::Bytes;
 use futures::stream::{BoxStream, StreamExt};
@@ -15,7 +20,6 @@ use serde::Deserialize;
 use tokio::sync::mpsc;
 
 use crate::client::{Engine, LineStream, Query, Req};
-use crate::ops::dockerfiles::valid_name;
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
 
@@ -23,31 +27,22 @@ use super::tar;
 
 pub(crate) fn run(
     h: &EngineHandler,
-    dockerfile: String,
+    dockerfile_content: String,
     tag: String,
     build_args: HashMap<String, String>,
 ) -> BoxStream<'static, StreamChunk> {
     let engine = h.engine.clone();
-    let root = h.policy.dockerfiles_root.clone();
-    spawn_chunked(move |tx| pump(engine, root, dockerfile, tag, build_args, tx))
+    spawn_chunked(move |tx| pump(engine, dockerfile_content, tag, build_args, tx))
 }
 
 async fn pump(
     engine: Engine,
-    root: PathBuf,
-    dockerfile: String,
+    dockerfile_content: String,
     tag: String,
     build_args: HashMap<String, String>,
     tx: mpsc::Sender<StreamChunk>,
 ) -> Result<(), String> {
-    if !valid_name(&dockerfile) {
-        return Err(format!("invalid dockerfile name: {dockerfile:?}"));
-    }
-    let path = root.join(&dockerfile);
-    let content = tokio::fs::read(&path)
-        .await
-        .map_err(|e| format!("reading {}: {e}", path.display()))?;
-    let body = tar::one_file(b"Dockerfile", &content);
+    let body = tar::one_file(b"Dockerfile", dockerfile_content.as_bytes());
     let path = format!("/build{}", build_query(&tag, &build_args)?);
     let req = Req::post(path)
         .bytes("application/x-tar", Bytes::from(body))
@@ -84,6 +79,9 @@ async fn pump(
 fn build_query(tag: &str, build_args: &HashMap<String, String>) -> Result<String, String> {
     let mut q = Query::new();
     q.push("dockerfile", "Dockerfile");
+    // Force engine to use only locally-present base images. A missing FROM
+    // image fails the build cleanly rather than implicitly invoking pull.
+    q.push("pull", "never");
     if !tag.is_empty() {
         q.push("t", tag);
     }

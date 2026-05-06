@@ -127,13 +127,21 @@ export function NewContainer() {
     setError(null);
     const image = form.image.trim();
     try {
-      // Pull only if the image isn't already local. Skips a confusing stall
-      // on Podman's compat /containers/create, which doesn't auto-pull.
+      // Pull only if the image isn't already local. CreateContainer rejects
+      // non-local images — the API never auto-pulls.
       if (!localTags.has(image)) {
         setPull({ layers: {}, lastStatus: "starting pull…" });
         await streamOp(host, { op: "pull_image", reference: image }, (chunk) => {
           setPull((prev) => reducePull(prev ?? { layers: {}, lastStatus: "" }, chunk));
         });
+      }
+      // Pre-create named volumes — CreateContainer rejects unknown names.
+      // /volumes/create is idempotent (existing names succeed), so we
+      // don't need to query first.
+      for (const v of form.volumes) {
+        const src = v.source.trim();
+        if (!src || src.startsWith("/") || src.startsWith("./") || src.startsWith("../")) continue;
+        unwrap(await call(host, { op: "create_volume", name: src }), "ok");
       }
       const r = unwrap(
         await call(host, {
@@ -149,10 +157,12 @@ export function NewContainer() {
           working_dir: form.workingDir.trim() || undefined,
           user: form.user.trim() || undefined,
           restart: form.restart,
-          start,
         }),
         "container_created",
       );
+      if (start) {
+        unwrap(await call(host, { op: "start_container", id: r.data.id }), "ok");
+      }
       nav(`/h/${hid}/c/${r.data.id}`, { replace: true });
     } catch (e) {
       setError(`create container: ${(e as Error).message}`);

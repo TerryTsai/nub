@@ -1,5 +1,6 @@
 mod create;
 mod op;
+mod op_strings;
 mod stream;
 mod types;
 
@@ -16,30 +17,6 @@ pub enum Frame {
     Request { id: u64, op: Op },
     Response { id: u64, result: OpResult },
     Stream { id: u64, chunk: StreamChunk },
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-#[serde(tag = "kind", rename_all = "snake_case")]
-pub enum Action {
-    Start,
-    Stop {
-        #[serde(default)]
-        timeout: Option<i64>,
-    },
-    Restart {
-        #[serde(default)]
-        timeout: Option<i64>,
-    },
-    Kill {
-        #[serde(default)]
-        signal: Option<String>,
-    },
-    Remove {
-        #[serde(default)]
-        force: bool,
-        #[serde(default)]
-        volumes: bool,
-    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

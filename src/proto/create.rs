@@ -58,8 +58,6 @@ pub struct CreateContainerReq {
     pub dns: Vec<String>,
     #[serde(default)]
     pub expose: Vec<String>,
-    #[serde(default)]
-    pub start: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -94,7 +92,6 @@ pub enum RestartPolicySpec {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ContainerCreated {
     pub id: String,
-    pub started: bool,
     pub warnings: Vec<String>,
 }
 

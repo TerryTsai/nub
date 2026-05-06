@@ -84,7 +84,6 @@ fn transform_service(
         hostname: svc.hostname,
         dns: vec![],
         expose: svc.expose,
-        start: false,
     };
     Ok(ServiceSpec {
         name,
