@@ -1,9 +1,9 @@
 # Security
 
 The Docker socket is root-equivalent. Anyone with a valid token can do
-everything Docker can within their `scope` allowlist. nub layers two
-defenses on top of that reality: per-token scopes, and a constrained
-container-create surface.
+everything the engine permits within their `scope` allowlist. nub
+layers two defenses on top of that reality: per-token scopes, and a
+constrained `create_container` surface.
 
 ## Per-token scopes
 
@@ -14,60 +14,85 @@ are enforced; mismatches are 401, scope-misses are 403.
 
 ### Resources and actions
 
-Resources: `containers`, `images`, `volumes`, `networks`, `dockerfiles`,
-`stacks`, `secrets`. Each op declares exactly one required scope —
-`list_containers` needs `containers:list`, `delete_image` needs
-`images:delete`, and so on. `host_info` and `whoami` are introspection
-ops and require no scope.
+Resources: `host`, `auth`, `containers`, `images`, `volumes`,
+`networks`, `dockerfiles`, `stacks`, `secrets`. Each op declares
+exactly one required scope — `list_containers` needs `containers:list`,
+`delete_image` needs `images:delete`, and so on. Full op-to-scope
+mapping in [API → Op catalog](api.md#op-catalog).
+
+`whoami` is auth-layer introspection: any valid token may call it
+regardless of its scope claim. Every other op gates on scope.
 
 ### Presets
 
 Presets are CLI sugar — they expand to explicit scope lists at mint
-time, so the JWT contents are always auditable end-to-end. Definitions
-live in [`src/auth/scope/presets.rs`](../src/auth/scope/presets.rs).
+time, so the JWT contents are always auditable end-to-end. Presets are
+general-purpose roles, not device-specific.
 
 | Preset | Grants |
 |---|---|
 | `admin` | `*` |
-| `phone` | Day-to-day operations: list/get/logs/stats, container actions, exec, image pull/delete, stack deploy/redeploy/update/delete/logs/pull, secret put/list/delete |
-| `readonly` | `:list` and `:get` across every resource |
+| `operator` | Day-to-day operations: list/get/logs/stats; create/start/stop/restart/remove/exec containers; pull/delete images; create/delete volumes and networks; deploy/redeploy/update/delete/logs/pull stacks; secrets put/list/delete |
+| `deploy` | Stack delivery: list/get for every resource the stack runtime touches, plus stack lifecycle (create/update/delete/redeploy/pull/logs) and the composing sub-ops (`images:pull`, `networks:*`, `volumes:*`, `containers:create`/`start`/`stop`/`remove`). No exec, no secret writes |
+| `readonly` | `:list` and `:get` across every resource. No state changes; secret values not included |
 
 ```sh
-nub token mint --sub me  --preset admin
-nub token mint --sub box --preset phone
-nub token mint --sub ci  --scope containers:list,stacks:deploy,images:pull
+nub token mint --sub me   --preset admin     --expires 1y
+nub token mint --sub box  --preset operator  --expires 90d
+nub token mint --sub ci   --preset deploy    --expires 90d
+nub token mint --sub mon  --preset readonly  --expires 90d
+nub token mint --sub fine --scope containers:list,stacks:get
 nub token scopes
 ```
 
 `--preset` and `--scope` are mutually exclusive. Default (neither) is
-`--preset admin`.
+`--preset admin`. Definitions: `src/auth/scope/presets.rs`.
 
 ### `secrets:reveal` is admin-only
 
 The `secrets:reveal` scope authorizes reading a secret's plaintext
-value back over the wire. It is **not** in any preset. Phones and
-generated tokens cannot read secrets; only `*` (admin) authorizes
-reveal. Operators read values via `nub secret get` on the host.
+value back over the wire. It is **not** in any preset. Only `*`
+(admin) authorizes reveal. Non-admin tokens can write and delete
+secrets but never read plaintext over the wire — operators read
+values via `nub secret get` on the host.
 
-## Constrained container-create
+## Constrained `create_container`
 
-Even with `containers:create` allowed, `create_container` rejects the
-following — independent of token scope:
+The wire surface accepts most engine flags including `privileged`,
+`cap_add`/`cap_drop`, `devices`, `sysctls`, `tmpfs`, `ulimits`,
+`shm_size`, `init`, and `extra_hosts`. Treat the scope grant and the
+bind allowlist below as the actual security boundary; `create_container`
+is not a sandbox.
+
+That said, even with `containers:create` granted, the handler rejects
+the following — independent of token scope:
 
 - `network = "host"` and `network = "container:..."`
 - Bind-mount sources outside the configured `allowed_binds` list
-  (default empty — only named volumes work out of the box)
+  (default empty — only named volumes and nub-managed tmpfs paths
+  work out of the box)
+- Anonymous volume mounts (`[{"source":"","target":"/data"}]`) — name
+  the volume and `create_volume` first
+- Image references that aren't already local — pull explicitly with
+  `images:pull` before creating
+- Named volume mounts whose volume doesn't exist — create it first
+  with `create_volume`
 
-Several engine flags are not exposed in the wire format at all:
-`Privileged`, `PidMode`, `IpcMode`, `UTSMode`, `CapAdd`, `CapDrop`,
-`SecurityOpt`, `Sysctls`, `Devices`. If you need any of these, nub is
-the wrong tool — by design.
+The "no implicit resource creation" rules let you mint a token with
+`containers:create` and know it can't trigger background pulls, name
+volumes, or grow the host attack surface in ways the caller didn't ask
+for. Stack ops compose these primitives explicitly, with each
+sub-action gated against the caller's scope.
 
 To allow specific host paths as bind sources:
 
 ```toml
 allowed_binds = ["/data/nub", "/var/lib/nub"]
 ```
+
+Engine flags not modeled in nub's wire format today (no scope, no
+field): `PidMode`, `IpcMode`, `UTSMode`, `SecurityOpt`. Adding these
+is a wire change and would need a release note.
 
 ## Secrets
 
@@ -171,3 +196,37 @@ The cert and key are loaded once at startup; rotation requires a
 restart. Provisioning is out of scope: bring your own files from
 wherever (Let's Encrypt, mkcert, your CA). Without TLS configured,
 nub serves plaintext.
+
+For a homelab, [mkcert](https://github.com/FiloSottile/mkcert) is the
+shortest path:
+
+```sh
+mkcert -install
+mkcert -cert-file ~/.config/nub/cert.pem -key-file ~/.config/nub/key.pem nub.local 127.0.0.1
+```
+
+```toml
+tls_cert = "/home/you/.config/nub/cert.pem"
+tls_key  = "/home/you/.config/nub/key.pem"
+```
+
+Restart nub and the connect URL switches to `https://`.
+
+## Glossary
+
+- **Audience (`aud`)**: the host id a token is for. Tokens minted for
+  one nub won't authenticate against another even with the same issuer
+  key.
+- **Issuer**: the Ed25519 keypair that signs tokens. nub manages its
+  own by default; set `trusted_issuer = "<pubkey>"` to delegate
+  signing to an external service (nub becomes verify-only).
+- **Scope**: a `<resource>:<action>` string in a token's `scope`
+  claim. Each op declares one required scope.
+- **Stack**: a directory of compose YAML deployed as a labeled set of
+  containers, networks, and volumes — `nub.stack=<name>` is the
+  invariant that ties them together.
+- **Stack network**: the user-defined bridge nub creates per stack so
+  service-name DNS works between its containers.
+- **Rehydrate**: re-materialize a stack's compose `secrets:` /
+  `configs:` to tmpfs on daemon startup, so containers with
+  `restart: always` find their files after a reboot.

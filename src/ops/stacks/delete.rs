@@ -3,18 +3,17 @@
 //! directory. Named volumes are preserved so data survives a delete; the
 //! user can prune volumes through the existing volume ops if they want.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 use crate::auth::scope::Scope;
 use crate::auth::Claims;
 use crate::ops::configs;
 use crate::ops::containers;
+use crate::ops::networks;
 use crate::ops::secrets;
 use crate::ops::EngineHandler;
 
-use super::auth::require;
 use super::discover::list_stack_containers;
-use super::engine;
 use super::labels::network_name;
 use super::store;
 
@@ -34,8 +33,12 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String) -> Res
 pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name: &str) -> Result<()> {
     let stack_containers = list_stack_containers(h, name).await?;
     if !stack_containers.is_empty() {
-        require(claims, Scope::ContainersStop)?;
-        require(claims, Scope::ContainersRemove)?;
+        if !claims.allows_scope(Scope::ContainersStop) {
+            bail!("missing scope: {}", Scope::ContainersStop);
+        }
+        if !claims.allows_scope(Scope::ContainersRemove) {
+            bail!("missing scope: {}", Scope::ContainersRemove);
+        }
     }
     for c in &stack_containers {
         let _ = containers::action::stop(h, c.id.clone(), Some(10)).await;
@@ -43,8 +46,10 @@ pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name:
     for c in stack_containers {
         let _ = containers::action::remove(h, c.id.clone(), true).await;
     }
-    require(claims, Scope::NetworksDelete)?;
-    engine::remove_network(h, &network_name(name)).await?;
+    if !claims.allows_scope(Scope::NetworksDelete) {
+        bail!("missing scope: {}", Scope::NetworksDelete);
+    }
+    networks::remove_idempotent(h, &network_name(name)).await?;
     secrets::runtime::cleanup_stack(name).await;
     configs::runtime::cleanup_stack(name).await;
     Ok(())

@@ -24,3 +24,10 @@ pub fn parse(yaml: &str, env: &HashMap<String, String>) -> Result<StackSpec, Par
     let raw: wire::Compose = serde_yaml::from_str(&substituted).map_err(|e| ParseError(format!("yaml: {e}")))?;
     transform::transform(raw)
 }
+
+/// Parse without env substitution. Stack ops never run YAML through a
+/// shell-style env, so this is the form every internal caller wants;
+/// `parse` stays available for any future call site that does.
+pub fn parse_no_env(yaml: &str) -> Result<StackSpec, ParseError> {
+    parse(yaml, &HashMap::new())
+}

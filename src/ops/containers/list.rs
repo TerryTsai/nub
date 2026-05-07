@@ -50,7 +50,7 @@ fn query(all: bool) -> String {
 struct RawListItem {
     #[serde(rename = "Id")]
     id: String,
-    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
+    #[serde(default, deserialize_with = "crate::ops::util::null_to_default")]
     names: Vec<String>,
     #[serde(default)]
     image: String,
@@ -62,7 +62,7 @@ struct RawListItem {
     created: serde_json::Value,
     #[serde(default)]
     exit_code: i32,
-    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
+    #[serde(default, deserialize_with = "crate::ops::util::null_to_default")]
     labels: HashMap<String, String>,
 }
 

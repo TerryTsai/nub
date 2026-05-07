@@ -107,7 +107,8 @@ fn granted_allows_multi_token() {
 
 #[test]
 fn presets_dont_grant_secrets_reveal() {
-    assert!(!presets::PHONE.contains(&Scope::SecretsReveal));
+    assert!(!presets::OPERATOR.contains(&Scope::SecretsReveal));
+    assert!(!presets::DEPLOY.contains(&Scope::SecretsReveal));
     assert!(!presets::READONLY.contains(&Scope::SecretsReveal));
 }
 

@@ -61,8 +61,8 @@ pub enum TokenCmd {
         /// exclusive with `--preset`. See `nub token scopes`.
         #[arg(long, value_name = "SCOPES", conflicts_with = "preset")]
         scope: Option<String>,
-        /// Named preset: `admin`, `phone`, or `readonly`. Expanded to an
-        /// explicit scope list at mint time.
+        /// Named preset: `admin`, `operator`, `deploy`, or `readonly`.
+        /// Expanded to an explicit scope list at mint time.
         #[arg(long, value_name = "NAME", conflicts_with = "scope")]
         preset: Option<String>,
         /// TTL: e.g. `90d`, `1y`, `12h`.

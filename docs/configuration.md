@@ -13,7 +13,8 @@ in this order, taking the first that exists:
 3. `/etc/nub/config.toml`
 
 With no file in any of those, defaults apply. `nub init` materializes a
-starter file at path #1.
+starter file at path #1. `nub config show` prints the file nub is
+actually loading (or "(no config file; using compiled defaults)").
 
 ## Schema
 
@@ -33,13 +34,13 @@ listen = "127.0.0.1:8080"                   # also: --listen 127.0.0.1:8080
 
 | Field | Default | Notes |
 |---|---|---|
-| `id` | `/etc/hostname` (else `nub`) | Identifier this nub advertises in JWT `aud` and the connect URL. Also `--id`. |
+| `id` | `/etc/hostname` (else `nub`) | Identifier this nub advertises. Set per-host so a token issued for one box can't authenticate against another (it's the JWT `aud`). Also `--id`. |
 | `listen` | `0.0.0.0:8080` | Listen address. Also `--listen`. |
 | `tls_cert` | (off) | PEM cert path. Pair with `tls_key`. Also `--tls-cert`. |
 | `tls_key` | (off) | PEM key path. Pair with `tls_cert`. Also `--tls-key`. |
 | `allowed_binds` | `[]` | Host paths usable as bind-mount sources in `create_container`. Empty = bind mounts denied. |
 | `dockerfiles` | `$XDG_DATA_HOME/nub/dockerfiles` | Flat directory of Dockerfile texts. |
-| `stacks` | `$XDG_DATA_HOME/nub/stacks` | Compose-stack manifests, one subdir per stack. |
+| `stacks` | `$XDG_DATA_HOME/nub/stacks` | Compose-stack manifests. See [docs/compose.md](compose.md) for what's translated and what's flagged-unsupported. |
 | `secrets` | `$XDG_DATA_HOME/nub/secrets` | age-encrypted secrets + per-host identity. |
 | `trusted_issuer` | (self-managed) | Base64url Ed25519 pubkey. When set, nub validates JWTs against this key and never mints. |
 
@@ -52,7 +53,7 @@ starts re-print the same admin token, so paired clients stay paired
 across restarts.
 
 ```sh
-nub token mint --sub phone-1 --preset phone --expires 1y
+nub token mint --sub box --preset operator --expires 1y
 ```
 
 Rotate the issuer key (invalidates everything): `nub key rotate`.

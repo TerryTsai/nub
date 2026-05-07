@@ -1,8 +1,8 @@
-//! `nub stack` — CLI lifecycle for compose-shaped stacks. The phone UI
+//! `nub stack` — CLI lifecycle for compose-shaped stacks. The web UI
 //! is the primary interactive surface; the CLI exists for codified /
 //! scriptable deploys (`nub stack deploy app.yml` from CI or cron) and
-//! for SSH'd-in operators who want a quick `ls`/`rm`/`logs` without
-//! reaching for the phone.
+//! for SSH'd-in operators who want a quick `ls`/`rm`/`logs` from the
+//! shell.
 
 use anyhow::{Context, Result};
 use futures::StreamExt as _;
@@ -33,13 +33,7 @@ async fn dispatch(action: StackCmd) -> Result<()> {
 
 async fn connect() -> Result<ops::EngineHandler> {
     let cfg = config::Config::load(None)?.unwrap_or_default();
-    let policy = ops::Policy {
-        allowed_binds: cfg.allowed_binds,
-        dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
-        stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
-        secrets_root: cfg.secrets.unwrap_or_else(config::default_secrets_dir),
-    };
-    ops::EngineHandler::connect(policy).await
+    ops::EngineHandler::connect(ops::Policy::from_config(&cfg)).await
 }
 
 async fn deploy(h: &ops::EngineHandler, name: String, file: String) -> Result<()> {

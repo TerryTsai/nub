@@ -10,7 +10,6 @@
 //! propagated. A single broken stack must not keep the daemon from
 //! coming up — the operator's still-good stacks need the rehydration.
 
-use std::collections::HashMap;
 use std::path::Path;
 
 use crate::compose;
@@ -44,7 +43,7 @@ fn list_stacks_or_warn(stacks_root: &Path) -> Vec<String> {
 
 async fn rehydrate_one(stacks_root: &Path, secrets_root: &Path, name: &str) -> anyhow::Result<()> {
     let yaml = store::read_yaml(stacks_root, name)?;
-    let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow::anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow::anyhow!("compose: {e}"))?;
     if spec.secrets.is_empty() && spec.configs.is_empty() {
         return Ok(());
     }

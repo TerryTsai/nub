@@ -1,6 +1,7 @@
 //! `docker image pull` — `POST /images/create?fromImage=...`. Streams
 //! line-delimited JSON progress events. Each line is one layer-status update.
 
+use anyhow::{anyhow, Result};
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
 use serde::Deserialize;
@@ -13,6 +14,21 @@ use crate::proto::StreamChunk;
 pub(crate) fn run(h: &EngineHandler, reference: String) -> BoxStream<'static, StreamChunk> {
     let engine = h.engine.clone();
     spawn_chunked(move |tx| pump(engine, reference, tx))
+}
+
+/// Drain `run`'s stream into a unary `Result`. Used by stack
+/// deploy/pull to honor the "no implicit pull" rule on
+/// `CreateContainer` — every `FROM`/`image:` ref must be local before
+/// the engine sees it. Streaming `Op::PullImage` (the BoxStream
+/// version) stays available for callers that want layer progress.
+pub(crate) async fn run_unary(h: &EngineHandler, reference: &str) -> Result<()> {
+    let mut stream = run(h, reference.to_string());
+    while let Some(chunk) = stream.next().await {
+        if let StreamChunk::End { ok: false, err } = chunk {
+            return Err(anyhow!("pull {reference}: {}", err.unwrap_or_default()));
+        }
+    }
+    Ok(())
 }
 
 async fn pump(engine: Engine, reference: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {

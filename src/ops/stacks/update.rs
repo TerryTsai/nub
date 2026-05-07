@@ -2,8 +2,6 @@
 //! redeploy. Pre-parses the new YAML so a bad paste fails before we
 //! tear anything down.
 
-use std::collections::HashMap;
-
 use anyhow::{anyhow, Result};
 
 use crate::auth::Claims;
@@ -20,7 +18,7 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: 
     if !store::exists(&h.policy.stacks_root, &name) {
         return Err(anyhow!("stack `{name}` not found"));
     }
-    let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
     if spec.services.is_empty() {
         return Err(anyhow!("stack `{name}` has no services"));
     }

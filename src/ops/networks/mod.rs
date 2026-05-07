@@ -69,7 +69,7 @@ struct ContainerNets {
 #[derive(Default, Deserialize)]
 #[serde(rename_all = "PascalCase")]
 struct RawNetSettings {
-    #[serde(default, deserialize_with = "crate::ops::serde_util::null_to_default")]
+    #[serde(default, deserialize_with = "crate::ops::util::null_to_default")]
     networks: HashMap<String, serde_json::Value>,
 }
 
@@ -84,11 +84,17 @@ pub(super) async fn inspect(h: &EngineHandler, id: &str) -> Result<Box<NetworkDe
     inspect::run(h, id).await
 }
 
-pub(super) async fn create(h: &EngineHandler, name: String, internal: bool) -> Result<()> {
+pub(super) async fn create(
+    h: &EngineHandler,
+    name: String,
+    internal: bool,
+    labels: HashMap<String, String>,
+) -> Result<()> {
     let body = CreateBody {
         name,
         driver: "bridge".into(),
         internal,
+        labels,
     };
     h.engine
         .conn()
@@ -107,6 +113,18 @@ pub(super) async fn remove(h: &EngineHandler, id: String) -> Result<()> {
         .send_unary(Req::delete(path).build()?)
         .await?
         .ok()?;
+    Ok(())
+}
+
+/// Same as `remove` but treats engine 404 as success — for stack
+/// teardown, where the network may already have been pruned.
+pub(super) async fn remove_idempotent(h: &EngineHandler, id: &str) -> Result<()> {
+    let path = format!("/networks/{id}");
+    let resp = h.engine.conn().await?.send_unary(Req::delete(path).build()?).await?;
+    if resp.status.as_u16() == 404 {
+        return Ok(());
+    }
+    resp.ok()?;
     Ok(())
 }
 
@@ -184,6 +202,12 @@ struct CreateBody {
     name: String,
     driver: String,
     internal: bool,
+    /// Labels are an internal-only parameter (no wire field on
+    /// `Op::CreateNetwork`); the `Op` dispatch passes empty, the stack
+    /// runtime passes `nub.stack=<name>`. `skip_serializing_if` keeps
+    /// the public-op wire body byte-identical to before this refactor.
+    #[serde(skip_serializing_if = "HashMap::is_empty")]
+    labels: HashMap<String, String>,
 }
 
 impl LibpodNet {

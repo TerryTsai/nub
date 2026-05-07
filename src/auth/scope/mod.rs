@@ -10,10 +10,11 @@
 //! introspection ops like `whoami`/`host_info`). The check is trivially
 //! auditable: equality on three short strings.
 //!
-//! Presets (`presets::ADMIN_LITERAL`, `presets::PHONE`, `presets::READONLY`)
-//! are CLI sugar — the mint flow expands them into explicit scope lists
-//! embedded in the JWT, so the runtime check never knows about presets.
-//! To audit a preset, read `presets.rs`.
+//! Presets (`presets::ADMIN_LITERAL`, `presets::OPERATOR`,
+//! `presets::DEPLOY`, `presets::READONLY`) are CLI sugar — the mint
+//! flow expands them into explicit scope lists embedded in the JWT,
+//! so the runtime check never knows about presets. To audit a preset,
+//! read `presets.rs`.
 
 pub mod presets;
 mod strings;

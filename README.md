@@ -6,8 +6,9 @@
 
 A control plane for one container host.
 
-Runs on your box. Drives from any browser. Manages containers, stacks,
-and secrets without making you reach for `docker run`.
+Runs on your box. Drives from any browser — phone, tablet, desktop —
+or the API directly. Manages containers, stacks, and secrets without
+making you reach for `docker run`.
 
 ## What you do with it
 
@@ -25,20 +26,23 @@ happen. Open a shell in any container without SSHing the host first.
 
 **Stash secrets without thinking.** Add a value once on the host,
 reference it by name from any stack. Encrypted at rest with age.
-Decrypted only while a stack uses it. Phones can write secrets but
-can't read them back over the network.
+Decrypted only while a stack uses it. Non-admin tokens can write
+secrets but can't read them back over the network.
 
-**Hand out limited access.** Mint a token for your phone that does
-phone things. Mint another for CI that only deploys stacks. Each token
-says exactly what it can and can't do. Rotate by deleting it.
+**Hand out limited access.** Mint scoped tokens — `admin`, `operator`,
+`deploy`, `readonly`, or any explicit scope list. Each token says
+exactly what it can and can't do. Rotate by deleting it.
 
 **One host on purpose.** No fleet, no cluster, no orchestrator. Run
 nub on each box you have and switch between them in the UI. The
 single-host scope is what lets it stay simple.
 
-**Stays out of your way.** ~5 MB binary, ~4 MiB RAM at idle, zero idle
-CPU. Works against Docker or Podman. Doesn't fight your other services
-for resources.
+**Stays out of your way.** ~5 MB binary, single-digit MiB RAM at idle,
+zero idle CPU.[^1] Works against Docker or Podman. Doesn't fight your
+other services for resources.
+
+[^1]: Measured on Linux x86_64 musl, 0.0.62, idle. Your numbers will
+vary with workload.
 
 ## Install
 
@@ -50,6 +54,9 @@ Installs `~/.local/bin/nub`, sets up a user-level systemd unit, and
 prints a connect URL. Source builds, system-wide installs, and env
 overrides (`NUB_VERSION`, `NUB_PREFIX`, `NUB_SERVICE`):
 [docs/install.md](docs/install.md).
+
+**First five minutes:** [docs/quickstart.md](docs/quickstart.md) walks
+you from fresh install to first stack deployed.
 
 ## CLI
 
@@ -63,16 +70,17 @@ overrides (`NUB_VERSION`, `NUB_PREFIX`, `NUB_SERVICE`):
 | **Connect** | `nub url` · `nub qr` |
 | **Stacks** | `nub stack deploy\|ls\|rm\|redeploy\|logs` |
 | **Secrets** | `nub secret put\|ls\|rm\|get` |
-| **Tokens** | `nub token mint --preset {admin\|phone\|readonly}` · `nub token scopes` |
+| **Tokens** | `nub token mint --preset {admin\|operator\|deploy\|readonly}` · `nub token scopes` |
 | **Keys** | `nub key gen\|rotate` |
 | **Bind allowlist** | `nub bind list\|allow\|deny` |
 
-Per-command help: `nub <cmd> --help`. Shell completion: `nub completions {bash,zsh,fish}`.
+Bare `nub <noun>` prints the noun's verb list. Per-command help:
+`nub <cmd> --help`. Shell completion: `nub completions {bash,zsh,fish}`.
 
 ## Usage
 
-Once the daemon is running, open the connect URL on any device — the
-same UI works on phone, tablet, or desktop. Print it any time:
+Once the daemon is running, open the connect URL on any device. Print
+it any time:
 
 ```sh
 nub url      # text URL
@@ -82,16 +90,31 @@ nub qr       # scannable QR code
 Paste-and-deploy a stack from a terminal:
 
 ```sh
+cat > compose.yml <<'EOF'
+services:
+  web:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+EOF
+
 nub stack deploy myapp ./compose.yml
 nub stack logs myapp --follow
 ```
 
+Compose feature support (what's translated, flagged, or rejected):
+[docs/compose.md](docs/compose.md).
+
 ## API
 
 The CLI uses a stable JSON+WebSocket API; you can hit it directly from
-scripts or CI:
+scripts or CI. Get a token from `nub url` (the `#t=...` fragment) or
+mint one with `nub token mint`.
 
 ```sh
+TOKEN=$(awk -F'#t=' '/#t=/{print $2}' <<<"$(nub url)")
+
 curl http://127.0.0.1:8080/api/op \
   -H "Authorization: Bearer $TOKEN" \
   -d '{"op":"list_containers","all":true}'
@@ -104,21 +127,11 @@ Frame format and full op catalog: [docs/api.md](docs/api.md).
 
 nub reads `nub.toml` from the first match of: `--config <path>`,
 `$XDG_CONFIG_HOME/nub/nub.toml`, `./nub.toml`, `/etc/nub/config.toml`.
-With no file, sane defaults apply (`listen = 0.0.0.0:8080`, hostname-derived
-`id`).
+With no file, sane defaults apply (`listen = 0.0.0.0:8080`,
+hostname-derived `id`).
 
-| Field | Default | Notes |
-|---|---|---|
-| `id` | `/etc/hostname` | Identifier this nub advertises. Also `--id`. |
-| `listen` | `0.0.0.0:8080` | Listen address. Also `--listen`. |
-| `tls_cert` / `tls_key` | (off) | PEM paths. Both required to enable TLS. |
-| `allowed_binds` | `[]` | Host paths usable as bind-mount sources. |
-| `dockerfiles` | `$XDG_DATA_HOME/nub/dockerfiles` | Stored Dockerfile texts. |
-| `stacks` | `$XDG_DATA_HOME/nub/stacks` | Compose-stack manifests. |
-| `secrets` | `$XDG_DATA_HOME/nub/secrets` | age-encrypted secrets. |
-| `trusted_issuer` | (self) | Base64url Ed25519 pubkey; verify-only mode. |
-
-Generate a starter file: `nub init`. Full schema with examples:
+Common fields: `id`, `listen`, `tls_cert`/`tls_key`, `allowed_binds`,
+`trusted_issuer`. Generate a starter file: `nub init`. Full schema:
 [docs/configuration.md](docs/configuration.md).
 
 ## Authentication
@@ -130,15 +143,23 @@ scopes are granular and never all-or-nothing. The presets:
 | Preset | Grants |
 |---|---|
 | `admin` | `*` (everything) |
-| `phone` | Day-to-day operations: list/get/logs/stats, container actions, exec, image pull/delete, stack deploy/redeploy/update/delete/logs/pull, secret put/list/delete |
+| `operator` | Day-to-day operations: list/get/logs/stats; create/start/stop/restart/remove/exec containers; pull/delete images; create/delete volumes and networks; deploy/redeploy/update/delete/logs/pull stacks; secrets put/list/delete |
+| `deploy` | Stack delivery from CI: stack lifecycle plus the composing sub-ops (`images:pull`, `networks:*`, `volumes:*`, `containers:create`/`start`/`stop`/`remove`). No exec, no secret writes |
 | `readonly` | `:list` and `:get` across every resource |
 
 ```sh
-nub token mint --sub me  --preset admin
-nub token mint --sub box --preset phone
-nub token mint --sub ci  --scope containers:list,stacks:deploy,images:pull
+nub token mint --sub me   --preset admin
+nub token mint --sub box  --preset operator
+nub token mint --sub ci   --preset deploy
+nub token mint --sub mon  --preset readonly
+nub token mint --sub fine --scope containers:list,stacks:get
 nub token scopes                         # full vocabulary
 ```
+
+Use a minted token from a script: `Authorization: Bearer <token>`.
+Use it from a browser: open the connect URL nub printed at startup
+(or `nub url`/`nub qr`) — the token is in the `#t=` fragment, the UI
+strips it from history once paired.
 
 `secrets:reveal` (reading a secret's plaintext over the wire) is
 admin-only by policy and isn't in any preset. Threat model and full
@@ -170,8 +191,38 @@ ordering, identity rotation): [docs/security.md](docs/security.md#secrets).
 
 Set `tls_cert` and `tls_key` to PEM file paths and nub serves HTTPS
 (and `wss://` for streaming). rustls + ring; TLS 1.2 minimum, 1.3
-preferred. Bring your own files (Let's Encrypt, mkcert, your CA);
-provisioning is out of scope.
+preferred. Bring your own files; provisioning is out of scope.
+
+For a homelab, [mkcert](https://github.com/FiloSottile/mkcert) is the
+shortest path:
+
+```sh
+mkcert -install
+mkcert -cert-file ~/.config/nub/cert.pem -key-file ~/.config/nub/key.pem nub.local 127.0.0.1
+```
+
+```toml
+tls_cert = "/home/you/.config/nub/cert.pem"
+tls_key  = "/home/you/.config/nub/key.pem"
+```
+
+## Troubleshooting
+
+Common pitfalls. Full list: [docs/troubleshooting.md](docs/troubleshooting.md).
+
+- **`no docker or podman socket found`** — start the engine. For
+  Podman: `systemctl --user enable --now podman.socket` (rootless) or
+  `sudo systemctl enable --now podman.socket` (rootful). Override
+  with `DOCKER_HOST` if the socket lives somewhere unusual.
+- **`401 Unauthorized`** — token expired (mint a new one), audience
+  mismatch (`--aud` at mint must equal nub's `id`), or signature
+  invalid (the issuer key was rotated).
+- **`403 Forbidden`** — token is valid but its `scope` claim doesn't
+  cover the op. Call `whoami` to see what your token can actually do.
+- **`image 'foo' not local — pull it first`** — `create_container`
+  doesn't auto-pull. `nub stack pull <name>` (or `images:pull`) first.
+- **Port already in use** — change `listen` in `nub.toml` or pass
+  `--listen 0.0.0.0:8081`.
 
 ## File layout
 
@@ -188,9 +239,10 @@ Wipe all state: `nub uninstall`.
 
 ## Status
 
-Active. Single-host scope is intentional and not a phase. The roadmap
-of acknowledged-but-deferred items (token revoke, rotate-on-put for
-secrets, hot config reload) is tracked in-tree.
+Active. Single-host scope is intentional and not a phase. Acknowledged
+deferred items (token revoke, rotate-on-put for secrets, hot config
+reload) live in [CHANGELOG.md](CHANGELOG.md) under "Deferred." Release
+history: [GitHub releases](https://github.com/TerryTsai/nub/releases).
 
 ## Maintainers
 

@@ -10,8 +10,8 @@ pub struct SecretSummary {
 }
 
 /// Plaintext secret value. Returned only by the `get_secret` op, which
-/// is gated behind `secrets:reveal` (admin-only). Never shipped to the
-/// phone UI.
+/// is gated behind `secrets:reveal` (admin-only). Non-admin tokens —
+/// regardless of where they're held — never see plaintext over the wire.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SecretValue {
     pub name: String,

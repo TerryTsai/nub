@@ -102,7 +102,8 @@ pub fn default_issuer_key() -> PathBuf {
 }
 
 /// Default admin JWT path: `$XDG_DATA_HOME/nub/admin.jwt`. Persisted
-/// once at first run; re-printed on subsequent starts so phone pairings
+/// once at first run; re-printed on subsequent starts so paired
+/// clients (browsers, scripts, anything holding the connect URL)
 /// survive restart.
 pub fn default_admin_jwt() -> PathBuf {
     xdg_data_home().join("nub/admin.jwt")
@@ -143,7 +144,7 @@ mod tests {
         let s = r#"
             id = "x"
             [[trust]]
-            id = "phone"
+            id = "host2"
         "#;
         let err = toml::from_str::<Config>(s).unwrap_err().to_string();
         assert!(err.contains("unknown field"), "got: {err}");

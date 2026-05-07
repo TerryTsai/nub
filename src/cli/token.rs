@@ -90,9 +90,10 @@ fn resolve_scope(scope_arg: Option<String>, preset_arg: Option<String>) -> Resul
 fn preset_to_scope_string(name: &str) -> Result<String> {
     match name {
         "admin" => Ok(scope::presets::ADMIN_LITERAL.to_string()),
-        "phone" => Ok(scope::join_scopes(scope::presets::PHONE)),
+        "operator" => Ok(scope::join_scopes(scope::presets::OPERATOR)),
+        "deploy" => Ok(scope::join_scopes(scope::presets::DEPLOY)),
         "readonly" | "read-only" => Ok(scope::join_scopes(scope::presets::READONLY)),
-        other => bail!("unknown preset `{other}`. Valid: admin, phone, readonly"),
+        other => bail!("unknown preset `{other}`. Valid: admin, operator, deploy, readonly"),
     }
 }
 
@@ -109,8 +110,12 @@ fn print_scopes() -> Result<()> {
     println!("Presets:");
     println!("  admin     → *");
     println!(
-        "  phone     → {} scopes (everyday operator surface; no secrets:reveal)",
-        scope::presets::PHONE.len()
+        "  operator  → {} scopes (day-to-day operations; no kill, build, dockerfiles, secrets:reveal)",
+        scope::presets::OPERATOR.len()
+    );
+    println!(
+        "  deploy    → {} scopes (CI: stack lifecycle plus what stack ops compose)",
+        scope::presets::DEPLOY.len()
     );
     println!(
         "  readonly  → {} scopes (state-changing ops excluded)",

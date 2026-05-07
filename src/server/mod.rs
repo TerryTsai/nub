@@ -3,7 +3,7 @@ pub mod ui;
 mod wire;
 mod ws;
 
-use crate::auth::{require_token, AuthState, Claims};
+use crate::auth::{introspect, require_token, AuthState, Claims};
 use crate::ops::{closed_input, HandlerOutput, OpHandler};
 use crate::proto::*;
 use axum::{
@@ -32,13 +32,8 @@ async fn op(
     Extension(claims): Extension<Claims>,
     Json(op): Json<Op>,
 ) -> Result<Json<OpResult>, StatusCode> {
-    // whoami is auth-layer info; bypass permission gate so any valid
-    // token can introspect itself.
-    if matches!(op, Op::Whoami) {
-        return Ok(Json(OpResult::Whoami(WhoamiInfo {
-            id: claims.sub.clone(),
-            allowed: claims.scopes(),
-        })));
+    if let Some(result) = introspect(&claims, &op) {
+        return Ok(Json(result));
     }
     if !claims.allows(&op) {
         tracing::warn!("caller {} denied op {}", claims.sub, op.name());

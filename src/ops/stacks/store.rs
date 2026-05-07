@@ -7,6 +7,8 @@ use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use crate::ops::util::iso8601_mtime;
+
 /// Validate a user-supplied stack name. lowercase, `[a-z0-9_-]`, max 63
 /// chars (Docker label limit). Reject path-traversal characters loudly
 /// rather than risk writing outside `stacks_root`.
@@ -67,15 +69,7 @@ pub fn modified_at(root: &Path, name: &str) -> String {
         Ok(m) => m,
         Err(_) => return String::new(),
     };
-    let modified = match meta.modified() {
-        Ok(t) => t,
-        Err(_) => return String::new(),
-    };
-    let secs = match modified.duration_since(std::time::UNIX_EPOCH) {
-        Ok(d) => d.as_secs() as i64,
-        Err(_) => return String::new(),
-    };
-    format_iso8601(secs)
+    iso8601_mtime(meta.modified().ok())
 }
 
 /// List stack names — directories under `root` that contain a `compose.yml`.
@@ -106,33 +100,6 @@ pub fn list_names(root: &Path) -> Result<Vec<String>> {
     Ok(names)
 }
 
-/// Minimal ISO 8601 (UTC) formatter — `YYYY-MM-DDTHH:MM:SSZ`. Avoids a
-/// chrono dep for one timestamp format.
-fn format_iso8601(secs: i64) -> String {
-    let days_from_epoch = secs.div_euclid(86_400);
-    let time_of_day = secs.rem_euclid(86_400);
-    let (y, mo, d) = civil_from_days(days_from_epoch);
-    let h = time_of_day / 3600;
-    let m = (time_of_day % 3600) / 60;
-    let s = time_of_day % 60;
-    format!("{y:04}-{mo:02}-{d:02}T{h:02}:{m:02}:{s:02}Z")
-}
-
-/// Howard Hinnant's civil-from-days. Date math without dependencies.
-fn civil_from_days(days: i64) -> (i64, u32, u32) {
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097) as u64;
-    let yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365;
-    let y = yoe as i64 + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = (doy - (153 * mp + 2) / 5 + 1) as u32;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 } as u32;
-    let y = if m <= 2 { y + 1 } else { y };
-    (y, m, d)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,13 +118,5 @@ mod tests {
         assert!(validate_name("foo").is_ok());
         assert!(validate_name("foo-bar_2").is_ok());
         assert!(validate_name("a").is_ok());
-    }
-
-    #[test]
-    fn iso_format_known_epoch() {
-        // 2026-05-03T00:00:00Z — verified via `date -u -d "@1777766400"`.
-        assert_eq!(format_iso8601(1_777_766_400), "2026-05-03T00:00:00Z");
-        // Spot-check different time-of-day to catch off-by-ones.
-        assert_eq!(format_iso8601(1_777_823_730), "2026-05-03T15:55:30Z");
     }
 }

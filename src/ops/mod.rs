@@ -9,8 +9,8 @@ mod host;
 mod images;
 mod networks;
 pub mod secrets;
-mod serde_util;
 pub mod stacks;
+mod util;
 mod volumes;
 
 use std::path::PathBuf;
@@ -63,6 +63,24 @@ pub struct Policy {
     pub secrets_root: PathBuf,
 }
 
+impl Policy {
+    /// Resolve a `Policy` from a loaded `Config`, applying XDG defaults
+    /// for any unset paths. Used by both `nub run` (server) and the
+    /// in-process CLI (`nub stack`, `nub secret`) so the two share one
+    /// resolution rule.
+    pub fn from_config(cfg: &crate::config::Config) -> Self {
+        Self {
+            allowed_binds: cfg.allowed_binds.clone(),
+            dockerfiles_root: cfg
+                .dockerfiles
+                .clone()
+                .unwrap_or_else(crate::config::default_dockerfiles_dir),
+            stacks_root: cfg.stacks.clone().unwrap_or_else(crate::config::default_stacks_dir),
+            secrets_root: cfg.secrets.clone().unwrap_or_else(crate::config::default_secrets_dir),
+        }
+    }
+}
+
 pub struct EngineHandler {
     pub(crate) engine: Engine,
     pub(crate) policy: Policy,
@@ -84,8 +102,12 @@ impl OpHandler for EngineHandler {
     #[allow(clippy::too_many_lines)]
     async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         match op {
-            // Whoami is auth-layer info; transport short-circuits before us.
-            Op::Whoami => unreachable!("Whoami handled by transport layer"),
+            // Introspection ops are answered by `auth::introspect` before
+            // dispatch ever sees them. Reaching this arm means a transport
+            // forgot to call `introspect` — keep it `unreachable!` so the
+            // bug surfaces loudly. New introspection ops MUST be added to
+            // both `auth::introspect` AND this match.
+            Op::Whoami => unreachable!("Whoami handled by auth::introspect"),
 
             Op::HostInfo => unary(host::run(self).await, OpResult::HostInfo),
 
@@ -123,7 +145,9 @@ impl OpHandler for EngineHandler {
 
             Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
             Op::GetNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
-            Op::CreateNetwork { name, internal } => unary(networks::create(self, name, internal).await, ok),
+            Op::CreateNetwork { name, internal } => {
+                unary(networks::create(self, name, internal, Default::default()).await, ok)
+            }
             Op::DeleteNetwork { id } => unary(networks::remove(self, id).await, ok),
 
             Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),

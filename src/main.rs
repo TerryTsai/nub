@@ -55,15 +55,14 @@ async fn serve(args: Args) -> Result<()> {
         cli::connect::render_qr(&url);
     }
 
+    let policy = ops::Policy::from_config(&cfg);
     // Re-materialize secret tmpfs files for every stack on disk before
     // we start serving. /run/nub/secrets/ is wiped by reboot; without
     // this, containers with `secrets:` references would fail to start
     // when the engine restart-policy kicks in.
-    let stacks_root = cfg.stacks.clone().unwrap_or_else(config::default_stacks_dir);
-    let secrets_root = cfg.secrets.clone().unwrap_or_else(config::default_secrets_dir);
-    ops::stacks::rehydrate::rehydrate_all(&stacks_root, &secrets_root).await;
+    ops::stacks::rehydrate::rehydrate_all(&policy.stacks_root, &policy.secrets_root).await;
 
-    let app = build_app(cfg, id.clone(), Arc::clone(&issuer)).await?;
+    let app = build_app(policy, id.clone(), Arc::clone(&issuer)).await?;
     let listener = tokio::net::TcpListener::bind(&listen).await?;
     let scheme = if tls.is_some() { "https" } else { "http" };
     tracing::info!("nub {id} listening on {listen} ({scheme})");
@@ -142,13 +141,7 @@ fn resolve_tls(cfg: &config::Config) -> Result<Option<Arc<rustls::ServerConfig>>
     }
 }
 
-async fn build_app(cfg: config::Config, id: String, issuer: Arc<Issuer>) -> Result<axum::Router> {
-    let policy = ops::Policy {
-        allowed_binds: cfg.allowed_binds,
-        dockerfiles_root: cfg.dockerfiles.unwrap_or_else(config::default_dockerfiles_dir),
-        stacks_root: cfg.stacks.unwrap_or_else(config::default_stacks_dir),
-        secrets_root: cfg.secrets.unwrap_or_else(config::default_secrets_dir),
-    };
+async fn build_app(policy: ops::Policy, id: String, issuer: Arc<Issuer>) -> Result<axum::Router> {
     let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
 
     let auth = Arc::new(AuthState { issuer, audience: id });

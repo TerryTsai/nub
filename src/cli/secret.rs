@@ -8,6 +8,7 @@ use std::io::{IsTerminal as _, Read as _};
 use anyhow::{Context, Result};
 
 use crate::config;
+use crate::ops;
 use crate::ops::secrets;
 
 use super::SecretCmd;
@@ -78,5 +79,5 @@ fn read_stdin_value() -> Result<String> {
 
 fn secrets_root() -> std::path::PathBuf {
     let cfg = config::Config::load(None).ok().flatten().unwrap_or_default();
-    cfg.secrets.unwrap_or_else(config::default_secrets_dir)
+    ops::Policy::from_config(&cfg).secrets_root
 }

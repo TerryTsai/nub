@@ -1,7 +1,7 @@
 //! `nub url` / `nub qr` — emit the connect URL stored on disk so a
-//! phone can pair without parsing a 270-char JWT out of journalctl.
-//! Also home of the helpers the boot banner uses to render the same
-//! URL and QR — single source of truth.
+//! browser (or any device with a camera) can pair without parsing a
+//! 270-char JWT out of journalctl. Also home of the helpers the boot
+//! banner uses to render the same URL and QR — single source of truth.
 
 use anyhow::{anyhow, Context, Result};
 
@@ -77,10 +77,10 @@ pub fn display_authority(listen: &str) -> String {
     }
 }
 
-/// Render the connect URL as a terminal QR. Phones scan with their
-/// camera and land directly on /add#t=…, sidestepping the need to type
-/// or paste a 270-char JWT. Colors are inverted for dark terminals
-/// (the common case for ssh / journalctl).
+/// Render the connect URL as a terminal QR. Any device with a camera
+/// can scan it and land directly on /add#t=…, sidestepping the need
+/// to type or paste a 270-char JWT. Colors are inverted for dark
+/// terminals (the common case for ssh / journalctl).
 #[cfg(feature = "embed-ui")]
 pub fn render_qr(url: &str) {
     use qrcode::render::unicode::Dense1x2;

@@ -19,6 +19,26 @@ use axum::{
 pub use issuer::Issuer;
 pub use jwt::Claims;
 
+use crate::proto::{Op, OpResult, WhoamiInfo};
+
+/// Pre-dispatch hook for ops the auth layer answers itself, bypassing
+/// both the per-op scope check and the engine handler. Today only
+/// `Op::Whoami` qualifies — `whoami` is "what does this token say?",
+/// which any holder of a valid token may ask regardless of scope.
+///
+/// Both transports call this before checking `claims.allows(&op)`. If
+/// you add a new introspection op, add it here AND update the dispatch
+/// match in `ops::EngineHandler::handle`.
+pub fn introspect(claims: &Claims, op: &Op) -> Option<OpResult> {
+    match op {
+        Op::Whoami => Some(OpResult::Whoami(WhoamiInfo {
+            id: claims.sub.clone(),
+            allowed: claims.scopes(),
+        })),
+        _ => None,
+    }
+}
+
 /// State injected into the auth middleware.
 pub struct AuthState {
     pub issuer: Arc<Issuer>,

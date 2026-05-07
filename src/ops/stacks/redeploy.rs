@@ -2,8 +2,6 @@
 //! the stored manifest. Brief downtime per stack; acceptable at the
 //! homelab "3 services" scale we target.
 
-use std::collections::HashMap;
-
 use anyhow::{anyhow, Result};
 
 use crate::auth::Claims;
@@ -21,7 +19,7 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String) -> Res
         return Err(anyhow!("stack `{name}` not found"));
     }
     let yaml = store::read_yaml(&h.policy.stacks_root, &name)?;
-    let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
     delete::teardown_resources(h, claims, &name).await?;
     let ids = create::deploy_from_spec(h, claims, &name, spec).await?;
     Ok(StackCreated {

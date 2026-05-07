@@ -6,19 +6,20 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 
 use crate::auth::scope::Scope;
 use crate::auth::Claims;
 use crate::compose;
 use crate::ops::configs;
 use crate::ops::containers;
+use crate::ops::images;
+use crate::ops::networks;
 use crate::ops::secrets;
+use crate::ops::volumes;
 use crate::ops::EngineHandler;
 use crate::proto::{CreateContainerReq, StackCreated, VolumeMount};
 
-use super::auth::require;
-use super::engine;
 use super::labels::{container_name, network_name, stack_labels, volume_name, STACK_LABEL};
 use super::store;
 
@@ -27,7 +28,7 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: 
     if store::exists(&h.policy.stacks_root, &name) {
         return Err(anyhow!("stack `{name}` already exists; use redeploy or update"));
     }
-    let spec = compose::parse(&yaml, &HashMap::new()).map_err(|e| anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
     if spec.services.is_empty() {
         return Err(anyhow!("stack `{name}` has no services"));
     }
@@ -54,19 +55,28 @@ pub(super) async fn deploy_from_spec(
 ) -> Result<Vec<String>> {
     let stack_label_only = label_only(name);
 
-    require(claims, Scope::NetworksCreate)?;
-    engine::create_network(h, &network_name(name), stack_label_only.clone()).await?;
+    if !claims.allows_scope(Scope::NetworksCreate) {
+        bail!("missing scope: {}", Scope::NetworksCreate);
+    }
+    networks::create(h, network_name(name), false, stack_label_only.clone()).await?;
 
     let declared_volumes: HashSet<String> = spec.volumes.iter().map(|v| v.name.clone()).collect();
     let needs_volume_create = spec.volumes.iter().any(|v| !v.external);
-    if needs_volume_create {
-        require(claims, Scope::VolumesCreate)?;
+    if needs_volume_create && !claims.allows_scope(Scope::VolumesCreate) {
+        bail!("missing scope: {}", Scope::VolumesCreate);
     }
     for v in &spec.volumes {
         if v.external {
             continue;
         }
-        engine::create_volume(h, &volume_name(name, &v.name), stack_label_only.clone()).await?;
+        volumes::create(
+            h,
+            volume_name(name, &v.name),
+            None,
+            stack_label_only.clone(),
+            HashMap::new(),
+        )
+        .await?;
     }
 
     // CreateContainer rejects non-local images. Pull each unique service
@@ -77,16 +87,20 @@ pub(super) async fn deploy_from_spec(
         .map(|s| s.container.image.as_str())
         .filter(|i| !i.is_empty())
         .collect();
-    if !unique_images.is_empty() {
-        require(claims, Scope::ImagesPull)?;
+    if !unique_images.is_empty() && !claims.allows_scope(Scope::ImagesPull) {
+        bail!("missing scope: {}", Scope::ImagesPull);
     }
     for img in &unique_images {
-        engine::pull_image(h, img).await?;
+        images::pull::run_unary(h, img).await?;
     }
 
     if !spec.services.is_empty() {
-        require(claims, Scope::ContainersCreate)?;
-        require(claims, Scope::ContainersStart)?;
+        if !claims.allows_scope(Scope::ContainersCreate) {
+            bail!("missing scope: {}", Scope::ContainersCreate);
+        }
+        if !claims.allows_scope(Scope::ContainersStart) {
+            bail!("missing scope: {}", Scope::ContainersStart);
+        }
     }
     let mut ids = Vec::with_capacity(spec.services.len());
     let mut spec = spec;

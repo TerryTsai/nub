@@ -1,4 +1,4 @@
-use crate::auth::Claims;
+use crate::auth::{introspect, Claims};
 use crate::ops::{HandlerOutput, OpHandler};
 use crate::proto::*;
 use futures::stream::BoxStream;
@@ -11,6 +11,10 @@ const STREAM_BUF: usize = 64;
 const INPUT_BUF: usize = 64;
 
 type Shared = Arc<dyn OpHandler>;
+/// Per-connection inbound-routing table: request id → input channel for
+/// the spawned handler task. We use `std::sync::Mutex` rather than
+/// tokio's because the lock is taken only for short, synchronous
+/// HashMap insert/get/remove calls and is NEVER held across `.await`.
 type Routes = Arc<Mutex<HashMap<u64, mpsc::Sender<StreamChunk>>>>;
 
 enum Inbound {
@@ -42,14 +46,10 @@ async fn dispatch(text: &str, h: &Shared, caller: &Claims, out: &mpsc::Sender<St
 }
 
 fn start_request(id: u64, op: Op, h: &Shared, caller: &Claims, out: &mpsc::Sender<String>, routes: &Routes) {
-    if matches!(op, Op::Whoami) {
+    if let Some(result) = introspect(caller, &op) {
         let out = out.clone();
-        let info = OpResult::Whoami(WhoamiInfo {
-            id: caller.sub.clone(),
-            allowed: caller.scopes(),
-        });
         tokio::spawn(async move {
-            send_frame(&out, response(id, info)).await;
+            send_frame(&out, response(id, result)).await;
         });
         return;
     }
