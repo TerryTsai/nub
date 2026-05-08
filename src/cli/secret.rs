@@ -6,12 +6,37 @@
 use std::io::{IsTerminal as _, Read as _};
 
 use anyhow::{Context, Result};
+use clap::Subcommand;
 
 use crate::config;
 use crate::ops;
 use crate::ops::secrets;
 
-use super::SecretCmd;
+#[derive(Subcommand)]
+pub enum SecretCmd {
+    /// Store a secret value. Reads from stdin by default — pipe or
+    /// type-then-Ctrl-D — to keep the value out of shell history.
+    Put {
+        /// Secret name. Letters, digits, dot, underscore, dash.
+        #[arg(value_name = "NAME")]
+        name: String,
+        /// Read the value from this file instead of stdin.
+        #[arg(long, value_name = "PATH")]
+        from_file: Option<String>,
+    },
+    /// List secret names + sizes. Values are never printed.
+    List,
+    /// Delete a secret. Idempotent — succeeds if the name doesn't exist.
+    Rm {
+        #[arg(value_name = "NAME")]
+        name: String,
+    },
+    /// Print a secret's plaintext value to stdout. Admin-only by policy.
+    Get {
+        #[arg(value_name = "NAME")]
+        name: String,
+    },
+}
 
 pub fn run(action: SecretCmd) -> Result<()> {
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;

@@ -4,10 +4,17 @@
 //! token.
 
 use anyhow::{Context, Result};
+use clap::Subcommand;
 
 use crate::auth::Issuer;
 
-use super::KeyCmd;
+#[derive(Subcommand)]
+pub enum KeyCmd {
+    /// Generate the keypair if missing; print the public key either way.
+    Gen,
+    /// Replace the keypair. Invalidates ALL previously-issued tokens.
+    Rotate,
+}
 
 pub fn run(action: KeyCmd) -> Result<()> {
     match action {

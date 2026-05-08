@@ -5,6 +5,7 @@
 //! shell.
 
 use anyhow::{Context, Result};
+use clap::Subcommand;
 use futures::StreamExt as _;
 use std::io::{BufRead as _, IsTerminal as _, Read, Write as _};
 
@@ -13,7 +14,45 @@ use crate::config;
 use crate::ops;
 use crate::proto::StreamChunk;
 
-use super::StackCmd;
+#[derive(Subcommand)]
+pub enum StackCmd {
+    /// Deploy a compose file as a stack.
+    Deploy {
+        /// Stack name. Lowercase alphanumeric, dash, underscore.
+        #[arg(value_name = "NAME")]
+        name: String,
+        /// Path to compose file. Use `-` for stdin.
+        #[arg(value_name = "FILE")]
+        file: String,
+    },
+    /// List stacks on this host.
+    Ls,
+    /// Tear down a stack: stop and remove its containers, drop the
+    /// stack network, delete the manifest. Named volumes are preserved.
+    Rm {
+        #[arg(value_name = "NAME")]
+        name: String,
+        /// Skip the confirmation prompt.
+        #[arg(long)]
+        yes: bool,
+    },
+    /// Redeploy a stack from its stored manifest. Always-recreate.
+    Redeploy {
+        #[arg(value_name = "NAME")]
+        name: String,
+    },
+    /// Stream interleaved logs from every container in a stack.
+    Logs {
+        #[arg(value_name = "NAME")]
+        name: String,
+        /// Keep streaming after current logs flush.
+        #[arg(long, short)]
+        follow: bool,
+        /// Lines of history to replay. Default: 100.
+        #[arg(long, value_name = "N")]
+        tail: Option<u32>,
+    },
+}
 
 pub fn run(action: StackCmd) -> Result<()> {
     let runtime = tokio::runtime::Builder::new_current_thread().enable_all().build()?;

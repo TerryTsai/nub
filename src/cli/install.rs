@@ -3,10 +3,25 @@
 //! unit always points at the nub that emitted it.
 
 use anyhow::{anyhow, Context, Result};
+use clap::Subcommand;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use super::InstallTarget;
+#[derive(Subcommand)]
+pub enum InstallTarget {
+    /// Install a systemd unit. User-level by default; `--system` for /etc.
+    Systemd {
+        /// User-level unit (default).
+        #[arg(long, conflicts_with = "system")]
+        user: bool,
+        /// System-level unit (requires root).
+        #[arg(long, conflicts_with = "user")]
+        system: bool,
+        /// Print the unit text instead of installing.
+        #[arg(long)]
+        print: bool,
+    },
+}
 
 pub fn run(target: InstallTarget) -> Result<()> {
     match target {

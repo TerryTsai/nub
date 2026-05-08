@@ -93,5 +93,4 @@ mod tests {
         let err = toml::from_str::<Config>(s).unwrap_err().to_string();
         assert!(err.contains("unknown field"), "got: {err}");
     }
-
 }

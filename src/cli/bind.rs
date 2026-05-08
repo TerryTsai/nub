@@ -4,12 +4,27 @@
 //! (Policy is read once at boot).
 
 use anyhow::{anyhow, bail, Context, Result};
+use clap::Subcommand;
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::config;
 
-use super::BindCmd;
+#[derive(Subcommand)]
+pub enum BindCmd {
+    /// List the current allowlist.
+    List,
+    /// Add a path to the allowlist. Path must exist; canonicalized before write.
+    Allow {
+        #[arg(value_name = "PATH")]
+        path: String,
+    },
+    /// Remove a path from the allowlist.
+    Deny {
+        #[arg(value_name = "PATH")]
+        path: String,
+    },
+}
 
 pub fn run(action: BindCmd) -> Result<()> {
     match action {

@@ -1,10 +1,36 @@
 //! `nub token` — token operations. Today: `mint` and `scopes`.
 
 use anyhow::{anyhow, bail, Context, Result};
+use clap::Subcommand;
 
 use crate::auth::{jwt, scope, Issuer};
 
-use super::TokenCmd;
+#[derive(Subcommand)]
+pub enum TokenCmd {
+    /// Mint a JWT signed by nub's issuer key.
+    Mint {
+        /// Subject claim — the identity this token represents.
+        #[arg(long, value_name = "ID")]
+        sub: String,
+        /// Explicit scope list (space- or comma-separated). Each entry is
+        /// a `<resource>:<action>` scope, `*`, or `<resource>:*`. Mutually
+        /// exclusive with `--preset`. See `nub token scopes`.
+        #[arg(long, value_name = "SCOPES", conflicts_with = "preset")]
+        scope: Option<String>,
+        /// Named preset: `admin`, `operator`, `deploy`, or `readonly`.
+        /// Expanded to an explicit scope list at mint time.
+        #[arg(long, value_name = "NAME", conflicts_with = "scope")]
+        preset: Option<String>,
+        /// TTL: e.g. `90d`, `1y`, `12h`.
+        #[arg(long, value_name = "DUR", default_value = "90d")]
+        expires: String,
+        /// Audience — the host id this token is for.
+        #[arg(long, value_name = "HOST")]
+        aud: Option<String>,
+    },
+    /// List every recognized scope, plus the named presets.
+    Scopes,
+}
 
 pub fn run(action: TokenCmd) -> Result<()> {
     match action {

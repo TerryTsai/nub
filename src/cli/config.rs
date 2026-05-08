@@ -3,10 +3,15 @@
 //! (allowed_binds) that has a dedicated subcommand.
 
 use anyhow::Result;
+use clap::Subcommand;
 
 use crate::config;
 
-use super::ConfigCmd;
+#[derive(Subcommand)]
+pub enum ConfigCmd {
+    /// Print effective config (defaults + file + flags).
+    Show,
+}
 
 pub fn run(action: ConfigCmd) -> Result<()> {
     match action {
