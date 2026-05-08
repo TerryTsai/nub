@@ -3,7 +3,6 @@
 //! (allowed_binds) that has a dedicated subcommand.
 
 use anyhow::Result;
-use std::path::PathBuf;
 
 use crate::config;
 
@@ -16,12 +15,7 @@ pub fn run(action: ConfigCmd) -> Result<()> {
 }
 
 fn show() -> Result<()> {
-    let candidates = [
-        config::xdg_config_home().join("nub/nub.toml"),
-        PathBuf::from("./nub.toml"),
-        PathBuf::from("/etc/nub/config.toml"),
-    ];
-    if let Some(path) = candidates.into_iter().find(|p| p.exists()) {
+    if let Some(path) = config::locate_path() {
         println!("# {}", path.display());
         let content = std::fs::read_to_string(&path)?;
         print!("{content}");

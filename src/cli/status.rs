@@ -33,12 +33,7 @@ pub fn run() -> Result<()> {
 }
 
 fn locate_config() -> Option<PathBuf> {
-    let candidates = [
-        config::xdg_config_home().join("nub/nub.toml"),
-        PathBuf::from("./nub.toml"),
-        PathBuf::from("/etc/nub/config.toml"),
-    ];
-    candidates.into_iter().find(|p| p.exists())
+    config::locate_path()
 }
 
 fn print_engine() {
