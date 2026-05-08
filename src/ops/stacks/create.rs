@@ -58,7 +58,7 @@ pub(super) async fn deploy_from_spec(
     if !claims.allows_scope(Scope::NetworksCreate) {
         bail!("missing scope: {}", Scope::NetworksCreate);
     }
-    networks::create(h, network_name(name), false, stack_label_only.clone()).await?;
+    networks::create::run(h, network_name(name), false, stack_label_only.clone()).await?;
 
     let declared_volumes: HashSet<String> = spec.volumes.iter().map(|v| v.name.clone()).collect();
     let needs_volume_create = spec.volumes.iter().any(|v| !v.external);

@@ -3,16 +3,14 @@
 //! whole response), so we use libpod there. Output shapes differ; we
 //! decode each separately and project into the same proto type.
 
-use std::collections::HashMap;
-
 use anyhow::Result;
-use serde::Deserialize;
 
+use super::wire::{CompatInspect, LibpodInspect};
 use crate::client::{short_id, EngineKind, Req};
 use crate::ops::EngineHandler;
 use crate::proto::{IpamConfig, NetworkContainer, NetworkDetail};
 
-pub(super) async fn run(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
+pub(crate) async fn run(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     match h.engine.kind() {
         EngineKind::Podman => libpod(h, id).await,
         EngineKind::Docker => compat(h, id).await,
@@ -21,7 +19,7 @@ pub(super) async fn run(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail
 
 async fn compat(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     let path = format!("/networks/{id}");
-    let raw: RawCompat = h
+    let raw: CompatInspect = h
         .engine
         .conn()
         .await?
@@ -64,7 +62,7 @@ async fn compat(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
 
 async fn libpod(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     let path = format!("/v4.0.0/libpod/networks/{id}/json");
-    let raw: RawLibpod = h
+    let raw: LibpodInspect = h
         .engine
         .conn()
         .await?
@@ -94,84 +92,4 @@ async fn libpod(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
         options: raw.options,
         labels: raw.labels,
     }))
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawCompat {
-    #[serde(default, rename = "Id")]
-    id: String,
-    #[serde(default)]
-    name: String,
-    #[serde(default)]
-    driver: String,
-    #[serde(default)]
-    scope: String,
-    #[serde(default)]
-    created: String,
-    #[serde(default)]
-    internal: bool,
-    #[serde(default)]
-    ipam: Option<RawIpam>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    containers: HashMap<String, RawNetContainer>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    options: HashMap<String, String>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    labels: HashMap<String, String>,
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawIpam {
-    #[serde(default)]
-    config: Vec<RawIpamConfig>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawIpamConfig {
-    #[serde(default)]
-    subnet: String,
-    #[serde(default)]
-    gateway: String,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawNetContainer {
-    #[serde(default)]
-    name: String,
-    #[serde(default, rename = "IPv4Address")]
-    ipv4_address: String,
-    #[serde(default, rename = "IPv6Address")]
-    ipv6_address: String,
-}
-
-#[derive(Deserialize)]
-struct RawLibpod {
-    #[serde(default)]
-    id: String,
-    #[serde(default)]
-    name: String,
-    #[serde(default)]
-    driver: String,
-    #[serde(default)]
-    created: String,
-    #[serde(default)]
-    internal: bool,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    subnets: Vec<RawLibpodSubnet>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    options: HashMap<String, String>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    labels: HashMap<String, String>,
-}
-
-#[derive(Deserialize)]
-struct RawLibpodSubnet {
-    #[serde(default)]
-    subnet: String,
-    #[serde(default)]
-    gateway: String,
 }

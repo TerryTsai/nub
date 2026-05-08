@@ -98,12 +98,13 @@ impl OpHandler for EngineHandler {
             } => unary(volumes::create(self, name, driver, labels, options).await, ok),
             Op::DeleteVolume { name } => unary(volumes::remove(self, name).await, ok),
 
-            Op::ListNetworks => unary(networks::list(self).await, OpResult::Networks),
-            Op::GetNetwork { id } => unary(networks::inspect(self, &id).await, OpResult::NetworkDetail),
-            Op::CreateNetwork { name, internal } => {
-                unary(networks::create(self, name, internal, Default::default()).await, ok)
-            }
-            Op::DeleteNetwork { id } => unary(networks::remove(self, id).await, ok),
+            Op::ListNetworks => unary(networks::list::run(self).await, OpResult::Networks),
+            Op::GetNetwork { id } => unary(networks::inspect::run(self, &id).await, OpResult::NetworkDetail),
+            Op::CreateNetwork { name, internal } => unary(
+                networks::create::run(self, name, internal, Default::default()).await,
+                ok,
+            ),
+            Op::DeleteNetwork { id } => unary(networks::remove::run(self, id).await, ok),
 
             Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),
             Op::GetDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),

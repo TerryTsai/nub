@@ -49,7 +49,7 @@ pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name:
     if !claims.allows_scope(Scope::NetworksDelete) {
         bail!("missing scope: {}", Scope::NetworksDelete);
     }
-    networks::remove_idempotent(h, &network_name(name)).await?;
+    networks::remove::run_idempotent(h, &network_name(name)).await?;
     secrets::runtime::cleanup_stack(name).await;
     configs::runtime::cleanup_stack(name).await;
     Ok(())
