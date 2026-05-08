@@ -37,6 +37,11 @@ pub trait OpHandler: Send + Sync + 'static {
     async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput;
 }
 
+/// Shared handle to a boxed `OpHandler` — passed by both transports
+/// (HTTP unary, WebSocket framed) and shared between the spawned tasks
+/// inside the WebSocket pump.
+pub type Shared = std::sync::Arc<dyn OpHandler>;
+
 /// A pre-closed receiver. Use for transports that don't carry client→server
 /// stream chunks (e.g. unary HTTP /api/op).
 pub fn closed_input() -> mpsc::Receiver<StreamChunk> {

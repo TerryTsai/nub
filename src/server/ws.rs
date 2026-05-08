@@ -1,19 +1,19 @@
-use crate::auth::Claims;
-use crate::ops::OpHandler;
+//! WebSocket transport — accepts the upgrade, splits sink/stream, and
+//! hands each direction to the `wire` pump.
 
-use super::wire;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::State;
 use axum::response::Response;
 use axum::Extension;
 use futures::stream::{SplitSink, SplitStream};
 use futures::{SinkExt, StreamExt};
-use std::sync::Arc;
 use tokio::sync::mpsc;
 
-const WS_BUF: usize = 64;
+use super::wire;
+use crate::auth::Claims;
+use crate::ops::Shared;
 
-type Shared = Arc<dyn OpHandler>;
+const WS_BUF: usize = 64;
 
 pub async fn ws_handler(
     ws: WebSocketUpgrade,

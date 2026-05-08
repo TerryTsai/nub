@@ -1,16 +1,20 @@
-use crate::auth::{introspect, Claims};
-use crate::ops::{HandlerOutput, OpHandler};
-use crate::proto::*;
-use futures::stream::BoxStream;
-use futures::StreamExt;
+//! Transport-agnostic WebSocket pump. Drives the `Frame`/`StreamChunk`
+//! protocol against an mpsc pair so the same logic serves any transport
+//! that can deliver text frames in and out.
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+
+use futures::stream::BoxStream;
+use futures::StreamExt;
 use tokio::sync::{broadcast, mpsc};
+
+use crate::auth::{introspect, Claims};
+use crate::ops::{HandlerOutput, Shared};
+use crate::proto::{Frame, Op, OpResult, StreamChunk};
 
 const STREAM_BUF: usize = 64;
 const INPUT_BUF: usize = 64;
-
-type Shared = Arc<dyn OpHandler>;
 /// Per-connection inbound-routing table: request id → input channel for
 /// the spawned handler task. We use `std::sync::Mutex` rather than
 /// tokio's because the lock is taken only for short, synchronous
