@@ -41,10 +41,10 @@ pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name:
         }
     }
     for c in &stack_containers {
-        let _ = containers::action::stop(h, c.id.clone(), Some(10)).await;
+        let _ = containers::stop::run(h, c.id.clone(), Some(10)).await;
     }
     for c in stack_containers {
-        let _ = containers::action::remove(h, c.id.clone(), true).await;
+        let _ = containers::remove::run(h, c.id.clone(), true).await;
     }
     if !claims.allows_scope(Scope::NetworksDelete) {
         bail!("missing scope: {}", Scope::NetworksDelete);

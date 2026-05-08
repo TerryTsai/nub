@@ -3,12 +3,10 @@
 //! Podman: a single container in `Removing` state 500s the whole endpoint.
 //! Libpod tolerates it, so we use libpod when we know we're on Podman.
 
-use std::collections::HashMap;
-
 use anyhow::Result;
-use serde::Deserialize;
 
-use crate::client::{short_id, EngineKind, Query, Req};
+use super::wire::list::RawListItem;
+use crate::client::{EngineKind, Query, Req};
 use crate::ops::EngineHandler;
 use crate::proto::ContainerSummary;
 
@@ -37,101 +35,4 @@ fn query(all: bool) -> String {
     let mut q = Query::new();
     q.push_bool("all", all);
     q.finish()
-}
-
-/// Field set is the union of compat and libpod shapes; both use PascalCase
-/// so a single struct decodes both. `Created` differs (Unix int vs ISO
-/// string) so we accept either via `serde_json::Value`. ExitCode comes from
-/// libpod; Docker compat omits it on the list response (defaults to 0,
-/// which falls into the "Stopped" bucket — accept the loss of fidelity
-/// rather than parsing the free-form Status string).
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawListItem {
-    #[serde(rename = "Id")]
-    id: String,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    names: Vec<String>,
-    #[serde(default)]
-    image: String,
-    #[serde(default)]
-    state: String,
-    #[serde(default)]
-    status: String,
-    #[serde(default)]
-    created: serde_json::Value,
-    #[serde(default)]
-    exit_code: i32,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    labels: HashMap<String, String>,
-}
-
-impl RawListItem {
-    fn into_summary(self) -> ContainerSummary {
-        let health = parse_health(&self.status);
-        ContainerSummary {
-            id: short_id(&self.id),
-            name: first_name(&self.names),
-            image: self.image,
-            state: self.state,
-            status: self.status,
-            created: created_to_string(self.created),
-            exit_code: self.exit_code,
-            health,
-            labels: self.labels,
-        }
-    }
-}
-
-/// Pull a healthcheck state out of the engine's free-form Status string.
-/// Both engines render `Up 5 minutes (healthy)` / `(unhealthy)` /
-/// `(health: starting)`; we parse the parenthesized hint without pretending
-/// it's a structured field.
-fn parse_health(status: &str) -> String {
-    let (Some(open), Some(close)) = (status.find('('), status.rfind(')')) else {
-        return String::new();
-    };
-    if open >= close {
-        return String::new();
-    }
-    let inner = status[open + 1..close].trim();
-    let after_colon = inner.strip_prefix("health: ").unwrap_or(inner);
-    match after_colon {
-        "healthy" | "unhealthy" | "starting" => after_colon.to_string(),
-        _ => String::new(),
-    }
-}
-
-fn first_name(names: &[String]) -> String {
-    names
-        .first()
-        .map(|n| n.trim_start_matches('/').to_string())
-        .unwrap_or_default()
-}
-
-fn created_to_string(v: serde_json::Value) -> String {
-    match v {
-        serde_json::Value::String(s) => s,
-        serde_json::Value::Number(n) => n.to_string(),
-        _ => String::new(),
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::parse_health;
-
-    #[test]
-    fn extracts_known_states() {
-        assert_eq!(parse_health("Up 5 minutes (healthy)"), "healthy");
-        assert_eq!(parse_health("Up 12 hours (unhealthy)"), "unhealthy");
-        assert_eq!(parse_health("Up 3 seconds (health: starting)"), "starting");
-    }
-
-    #[test]
-    fn ignores_unrelated_parens() {
-        assert_eq!(parse_health("Exited (137) 2 weeks ago"), "");
-        assert_eq!(parse_health("Up 5 minutes"), "");
-        assert_eq!(parse_health(""), "");
-    }
 }

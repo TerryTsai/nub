@@ -135,7 +135,7 @@ async fn create_service(
     // Start is a separate scope/op now — call StartContainer's underlying
     // engine action explicitly. The orchestrator (Stage 3) will gate this
     // on `containers:start`.
-    containers::action::start(h, created.id.clone()).await?;
+    containers::start::run(h, created.id.clone()).await?;
     Ok(created.id)
 }
 

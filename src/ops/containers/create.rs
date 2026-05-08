@@ -1,32 +1,30 @@
-//! `docker container create` — `POST /containers/create`. Optionally starts
-//! the container after create (the `start: true` field on the request).
-//! Compat path works on both engines.
+//! `docker container create` — `POST /containers/create`. Compat path
+//! works on both engines.
 //!
 //! Validation enforces "no implicit resource creation": the image must
 //! already be local (no engine auto-pull), and every named volume mount
 //! must reference a volume that already exists. Caller is responsible for
 //! pre-pulling and pre-creating; the API layer never spawns side resources.
 
-mod build;
-mod wire;
-
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 
+use super::create_build;
+use super::wire::create::CreateResp;
 use crate::client::{Query, Req};
 use crate::ops::EngineHandler;
-use crate::proto::{ContainerCreated, CreateContainerReq};
+use crate::proto::{ContainerCreated, CreateContainerReq, VolumeMount};
 
 pub(crate) async fn run(h: &EngineHandler, req: CreateContainerReq) -> Result<ContainerCreated> {
     validate_static(&req, &h.policy.allowed_binds)?;
     require_image_local(h, &req.image).await?;
     require_named_volumes_exist(h, &req.volumes).await?;
 
-    let body = build::body(&req);
+    let body = create_build::body(&req);
     let path = format!("/containers/create{}", create_query(req.name.as_deref()));
-    let resp: wire::CreateResp = h
+    let resp: CreateResp = h
         .engine
         .conn()
         .await?
@@ -92,7 +90,7 @@ async fn require_image_local(h: &EngineHandler, reference: &str) -> Result<()> {
 /// Every named (non-host-path, non-managed-tmpfs) mount source must
 /// resolve to a volume that already exists. The static pass already
 /// rejected empty sources and validated host paths.
-async fn require_named_volumes_exist(h: &EngineHandler, mounts: &[crate::proto::VolumeMount]) -> Result<()> {
+async fn require_named_volumes_exist(h: &EngineHandler, mounts: &[VolumeMount]) -> Result<()> {
     let needed: Vec<&str> = mounts
         .iter()
         .filter(|v| !is_host_path(&v.source))

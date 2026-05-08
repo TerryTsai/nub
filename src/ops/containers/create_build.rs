@@ -1,14 +1,14 @@
-//! Translate `CreateContainerReq` into the engine wire body.
+//! Translate `proto::CreateContainerReq` into the `POST /containers/create`
+//! engine wire body. Pure projection — no validation, no fetching.
 
 use std::collections::HashMap;
 
+use super::create::is_host_path;
+use super::wire::create::{
+    Body, DeviceWire, EmptyObj, HealthcheckWire, HostConfig, PortBindingWire, RestartPolicyWire, UlimitWire,
+};
 use crate::proto::{
     CreateContainerReq, DeviceMapping, HealthcheckSpec, PortPublish, RestartPolicySpec, UlimitSpec, VolumeMount,
-};
-
-use super::is_host_path;
-use super::wire::{
-    Body, DeviceWire, EmptyObj, HealthcheckWire, HostConfig, PortBindingWire, RestartPolicyWire, UlimitWire,
 };
 
 pub(super) fn body(req: &CreateContainerReq) -> Body {

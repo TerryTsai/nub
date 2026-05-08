@@ -1,4 +1,5 @@
-//! Engine wire types for `/containers/create`. PascalCase JSON via serde.
+//! Engine wire shapes for `POST /containers/create`. Body is a flat
+//! struct with a nested `HostConfig`; response is `{Id, Warnings}`.
 
 use std::collections::HashMap;
 
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct CreateResp {
+pub(in crate::ops::containers) struct CreateResp {
     #[serde(rename = "Id")]
     pub id: String,
     #[serde(default, rename = "Warnings")]
@@ -15,7 +16,7 @@ pub(super) struct CreateResp {
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct Body {
+pub(in crate::ops::containers) struct Body {
     pub image: String,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub cmd: Vec<String>,
@@ -40,11 +41,11 @@ pub(super) struct Body {
 }
 
 #[derive(Serialize, Default)]
-pub(super) struct EmptyObj {}
+pub(in crate::ops::containers) struct EmptyObj {}
 
 #[derive(Serialize, Default)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct HostConfig {
+pub(in crate::ops::containers) struct HostConfig {
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub binds: Vec<String>,
     #[serde(skip_serializing_if = "HashMap::is_empty")]
@@ -82,14 +83,14 @@ pub(super) struct HostConfig {
 
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct PortBindingWire {
+pub(in crate::ops::containers) struct PortBindingWire {
     pub host_ip: String,
     pub host_port: String,
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct RestartPolicyWire {
+pub(in crate::ops::containers) struct RestartPolicyWire {
     pub name: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub maximum_retry_count: Option<i64>,
@@ -97,7 +98,7 @@ pub(super) struct RestartPolicyWire {
 
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct HealthcheckWire {
+pub(in crate::ops::containers) struct HealthcheckWire {
     pub test: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub interval: Option<i64>,
@@ -111,7 +112,7 @@ pub(super) struct HealthcheckWire {
 
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct DeviceWire {
+pub(in crate::ops::containers) struct DeviceWire {
     pub path_on_host: String,
     pub path_in_container: String,
     pub cgroup_permissions: String,
@@ -119,7 +120,7 @@ pub(super) struct DeviceWire {
 
 #[derive(Serialize)]
 #[serde(rename_all = "PascalCase")]
-pub(super) struct UlimitWire {
+pub(in crate::ops::containers) struct UlimitWire {
     pub name: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub soft: Option<i64>,
