@@ -1,5 +1,7 @@
-//! Engine wire shapes for volume ops. Split out so `mod.rs` stays under
-//! the project's per-file line limit.
+//! Engine wire shapes for volume ops — list/inspect decoders for both
+//! Docker compat and Podman libpod, plus the create-body request and
+//! the helper that walks container mounts to derive `in_use` on
+//! Docker.
 
 use std::collections::HashMap;
 

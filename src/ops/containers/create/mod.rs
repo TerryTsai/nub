@@ -105,7 +105,7 @@ async fn require_named_volumes_exist(h: &EngineHandler, mounts: &[crate::proto::
     if needed.is_empty() {
         return Ok(());
     }
-    let volumes = crate::ops::volumes::list(h).await?;
+    let volumes = crate::ops::volumes::list::run(h).await?;
     let known: HashSet<&str> = volumes.iter().map(|v| v.name.as_str()).collect();
     for name in needed {
         if !known.contains(name) {

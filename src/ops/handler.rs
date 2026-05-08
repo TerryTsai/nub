@@ -88,15 +88,15 @@ impl OpHandler for EngineHandler {
                 build_args,
             } => stream(images::build::run(self, dockerfile_content, tag, build_args)),
 
-            Op::ListVolumes => unary(volumes::list(self).await, OpResult::Volumes),
-            Op::GetVolume { name } => unary(volumes::inspect(self, &name).await, OpResult::VolumeDetail),
+            Op::ListVolumes => unary(volumes::list::run(self).await, OpResult::Volumes),
+            Op::GetVolume { name } => unary(volumes::inspect::run(self, &name).await, OpResult::VolumeDetail),
             Op::CreateVolume {
                 name,
                 driver,
                 labels,
                 options,
-            } => unary(volumes::create(self, name, driver, labels, options).await, ok),
-            Op::DeleteVolume { name } => unary(volumes::remove(self, name).await, ok),
+            } => unary(volumes::create::run(self, name, driver, labels, options).await, ok),
+            Op::DeleteVolume { name } => unary(volumes::remove::run(self, name).await, ok),
 
             Op::ListNetworks => unary(networks::list::run(self).await, OpResult::Networks),
             Op::GetNetwork { id } => unary(networks::inspect::run(self, &id).await, OpResult::NetworkDetail),

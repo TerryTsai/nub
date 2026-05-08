@@ -69,7 +69,7 @@ pub(super) async fn deploy_from_spec(
         if v.external {
             continue;
         }
-        volumes::create(
+        volumes::create::run(
             h,
             volume_name(name, &v.name),
             None,
