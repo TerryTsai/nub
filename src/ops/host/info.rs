@@ -1,16 +1,15 @@
-//! `GET /info` + `GET /version` → `proto::HostInfo`. Combined into one op
-//! since callers always want both fields.
+//! `GET /info` + `GET /version` → `proto::HostInfo`. Combined into one
+//! op since callers always want both.
 
 use anyhow::Result;
-use serde::Deserialize;
 
+use super::wire::{InfoResp, VersionResp};
 use crate::client::{EngineKind, Req};
+use crate::ops::EngineHandler;
 use crate::proto::HostInfo;
 use crate::version::NUB_VERSION;
 
-use super::EngineHandler;
-
-pub(super) async fn run(h: &EngineHandler) -> Result<HostInfo> {
+pub(crate) async fn run(h: &EngineHandler) -> Result<HostInfo> {
     let info: InfoResp = h
         .engine
         .conn()
@@ -49,32 +48,4 @@ fn engine_name(kind: EngineKind, version: &VersionResp) -> String {
             .map(|p| p.name.clone())
             .unwrap_or_else(|| "docker".to_string()),
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct InfoResp {
-    operating_system: String,
-    architecture: String,
-    kernel_version: String,
-    #[serde(rename = "NCPU")]
-    ncpu: u64,
-    mem_total: u64,
-    containers_running: u64,
-    containers: u64,
-    images: u64,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct VersionResp {
-    version: String,
-    #[serde(default)]
-    platform: Option<Platform>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct Platform {
-    name: String,
 }

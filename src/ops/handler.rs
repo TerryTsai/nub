@@ -64,7 +64,7 @@ impl OpHandler for EngineHandler {
             // both `auth::introspect` AND this match.
             Op::Whoami => unreachable!("Whoami handled by auth::introspect"),
 
-            Op::HostInfo => unary(host::run(self).await, OpResult::HostInfo),
+            Op::HostInfo => unary(host::info::run(self).await, OpResult::HostInfo),
 
             Op::ListContainers { all } => unary(containers::list::run(self, all).await, OpResult::Containers),
             Op::GetContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
@@ -106,10 +106,10 @@ impl OpHandler for EngineHandler {
             ),
             Op::DeleteNetwork { id } => unary(networks::remove::run(self, id).await, ok),
 
-            Op::ListDockerfiles => unary(dockerfiles::list(self).await, OpResult::Dockerfiles),
-            Op::GetDockerfile { name } => unary(dockerfiles::read(self, &name).await, OpResult::Dockerfile),
-            Op::PutDockerfile { name, content } => unary(dockerfiles::write(self, &name, &content).await, ok),
-            Op::DeleteDockerfile { name } => unary(dockerfiles::delete(self, &name).await, ok),
+            Op::ListDockerfiles => unary(dockerfiles::list::run(self).await, OpResult::Dockerfiles),
+            Op::GetDockerfile { name } => unary(dockerfiles::get::run(self, &name).await, OpResult::Dockerfile),
+            Op::PutDockerfile { name, content } => unary(dockerfiles::put::run(self, &name, &content).await, ok),
+            Op::DeleteDockerfile { name } => unary(dockerfiles::delete::run(self, &name).await, ok),
 
             Op::CreateStack { name, yaml } => unary(
                 stacks::create::run(self, claims, name, yaml).await,
