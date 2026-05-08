@@ -1,11 +1,9 @@
 //! `docker image inspect` — `GET /images/{id}/json`. Compat shape;
 //! both engines return the same body.
 
-use std::collections::HashMap;
-
 use anyhow::Result;
-use serde::Deserialize;
 
+use super::wire::RawInspect;
 use crate::client::Req;
 use crate::ops::EngineHandler;
 use crate::proto::ImageDetail;
@@ -19,87 +17,29 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<Box<ImageDetail
         .send_unary(Req::get(path).build()?)
         .await?
         .json()?;
-    Ok(Box::new(raw.into_detail()))
+    Ok(Box::new(into_detail(raw)))
 }
 
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawInspect {
-    #[serde(rename = "Id", default)]
-    id: String,
-    #[serde(default)]
-    repo_tags: Option<Vec<String>>,
-    #[serde(default)]
-    repo_digests: Option<Vec<String>>,
-    #[serde(default)]
-    created: String,
-    #[serde(default)]
-    size: i64,
-    #[serde(default)]
-    architecture: String,
-    #[serde(default)]
-    os: String,
-    #[serde(default)]
-    author: String,
-    #[serde(default)]
-    comment: String,
-    #[serde(default)]
-    config: RawConfig,
-    #[serde(default)]
-    root_fs: RawRootFs,
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawConfig {
-    // Docker emits explicit `null` for empty container slices and maps in
-    // image inspect responses. `Option<...>` + `unwrap_or_default` accepts
-    // both `null` and missing without serde griping.
-    #[serde(default)]
-    cmd: Option<Vec<String>>,
-    #[serde(default)]
-    entrypoint: Option<Vec<String>>,
-    #[serde(default)]
-    env: Option<Vec<String>>,
-    #[serde(default)]
-    working_dir: String,
-    #[serde(default)]
-    user: String,
-    #[serde(default)]
-    exposed_ports: Option<HashMap<String, serde_json::Value>>,
-    #[serde(default)]
-    labels: Option<HashMap<String, String>>,
-}
-
-#[derive(Default, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawRootFs {
-    #[serde(default)]
-    layers: Vec<String>,
-}
-
-impl RawInspect {
-    fn into_detail(self) -> ImageDetail {
-        let mut exposed: Vec<String> = self.config.exposed_ports.unwrap_or_default().into_keys().collect();
-        exposed.sort();
-        ImageDetail {
-            id: self.id,
-            repo_tags: self.repo_tags.unwrap_or_default(),
-            repo_digests: self.repo_digests.unwrap_or_default(),
-            created: self.created,
-            size: self.size,
-            architecture: self.architecture,
-            os: self.os,
-            author: self.author,
-            comment: self.comment,
-            cmd: self.config.cmd.unwrap_or_default(),
-            entrypoint: self.config.entrypoint.unwrap_or_default(),
-            env: self.config.env.unwrap_or_default(),
-            working_dir: self.config.working_dir,
-            user: self.config.user,
-            exposed_ports: exposed,
-            labels: self.config.labels.unwrap_or_default(),
-            layers: self.root_fs.layers.len() as u32,
-        }
+fn into_detail(raw: RawInspect) -> ImageDetail {
+    let mut exposed: Vec<String> = raw.config.exposed_ports.unwrap_or_default().into_keys().collect();
+    exposed.sort();
+    ImageDetail {
+        id: raw.id,
+        repo_tags: raw.repo_tags.unwrap_or_default(),
+        repo_digests: raw.repo_digests.unwrap_or_default(),
+        created: raw.created,
+        size: raw.size,
+        architecture: raw.architecture,
+        os: raw.os,
+        author: raw.author,
+        comment: raw.comment,
+        cmd: raw.config.cmd.unwrap_or_default(),
+        entrypoint: raw.config.entrypoint.unwrap_or_default(),
+        env: raw.config.env.unwrap_or_default(),
+        working_dir: raw.config.working_dir,
+        user: raw.config.user,
+        exposed_ports: exposed,
+        labels: raw.config.labels.unwrap_or_default(),
+        layers: raw.root_fs.layers.len() as u32,
     }
 }

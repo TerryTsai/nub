@@ -16,14 +16,13 @@ use std::collections::HashMap;
 use bytes::Bytes;
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
-use serde::Deserialize;
 use tokio::sync::mpsc;
 
+use super::tar;
+use super::wire::BuildInfo;
 use crate::client::{Engine, LineStream, Query, Req};
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
-
-use super::tar;
 
 pub(crate) fn run(
     h: &EngineHandler,
@@ -90,20 +89,4 @@ fn build_query(tag: &str, build_args: &HashMap<String, String>) -> Result<String
         q.push("buildargs", &json);
     }
     Ok(q.finish())
-}
-
-#[derive(Deserialize)]
-struct BuildInfo {
-    #[serde(default)]
-    stream: Option<String>,
-    #[serde(default)]
-    error: Option<String>,
-    #[serde(default)]
-    aux: Option<BuildAux>,
-}
-
-#[derive(Deserialize)]
-struct BuildAux {
-    #[serde(default, rename = "ID")]
-    id: Option<String>,
 }

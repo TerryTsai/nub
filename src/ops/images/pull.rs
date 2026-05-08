@@ -4,9 +4,9 @@
 use anyhow::{anyhow, Result};
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
-use serde::Deserialize;
 use tokio::sync::mpsc;
 
+use super::wire::CreateImageInfo;
 use crate::client::{Engine, LineStream, Query, Req};
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
@@ -76,24 +76,4 @@ fn parse_line(line: &[u8]) -> Result<StreamChunk, String> {
         current,
         total,
     })
-}
-
-#[derive(Deserialize)]
-struct CreateImageInfo {
-    #[serde(default)]
-    id: Option<String>,
-    #[serde(default)]
-    status: Option<String>,
-    #[serde(default, rename = "error")]
-    error: Option<String>,
-    #[serde(default, rename = "progressDetail")]
-    progress_detail: Option<ProgressDetail>,
-}
-
-#[derive(Deserialize)]
-struct ProgressDetail {
-    #[serde(default)]
-    current: u64,
-    #[serde(default)]
-    total: u64,
 }
