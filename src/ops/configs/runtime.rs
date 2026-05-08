@@ -4,14 +4,14 @@
 //! mounted read-only into containers at the requested target path.
 //!
 //! Path posture (tmpfs choice, file modes) lives on the shared helpers
-//! in `ops::util`.
+//! in `ops::tmpfs`.
 
 use std::path::Path;
 
 use anyhow::{Context, Result};
 
 use crate::compose::{ServiceConfigRef, StackSpec};
-use crate::ops::util;
+use crate::ops::tmpfs;
 use crate::proto::VolumeMount;
 
 const KIND: &str = "configs";
@@ -19,7 +19,7 @@ const KIND: &str = "configs";
 /// True if `path` lives under the configs tmpfs root. Used by the bind
 /// validator to allow nub-managed mounts without growing `allowed_binds`.
 pub fn is_managed_path(path: &Path) -> bool {
-    path.starts_with(util::tmpfs_root(KIND))
+    path.starts_with(tmpfs::tmpfs_root(KIND))
 }
 
 /// Write each service-referenced config to the per-service tmpfs dir
@@ -33,11 +33,11 @@ pub async fn materialize_for_service(
     if refs.is_empty() {
         return Ok(Vec::new());
     }
-    let dir = util::service_dir(KIND, stack, service);
+    let dir = tmpfs::service_dir(KIND, stack, service);
     tokio::fs::create_dir_all(&dir)
         .await
         .with_context(|| format!("creating {}", dir.display()))?;
-    util::ensure_dir_traversable(&dir).await.ok();
+    tmpfs::ensure_dir_traversable(&dir).await.ok();
 
     let mut mounts = Vec::with_capacity(refs.len());
     for r in refs {
@@ -48,7 +48,7 @@ pub async fn materialize_for_service(
             .map(|c| c.content.clone())
             .ok_or_else(|| anyhow::anyhow!("config `{}` referenced by service `{service}` not declared", r.source))?;
         let host_path = dir.join(&r.source);
-        util::write_world_readable(&host_path, content.as_bytes()).await?;
+        tmpfs::write_world_readable(&host_path, content.as_bytes()).await?;
         mounts.push(VolumeMount {
             source: host_path.display().to_string(),
             target: r.target.clone(),
@@ -60,5 +60,5 @@ pub async fn materialize_for_service(
 
 /// Best-effort cleanup of a stack's whole tmpfs subtree.
 pub async fn cleanup_stack(stack: &str) {
-    util::cleanup_stack_dir(KIND, stack).await;
+    tmpfs::cleanup_stack_dir(KIND, stack).await;
 }

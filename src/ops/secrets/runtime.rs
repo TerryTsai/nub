@@ -4,7 +4,7 @@
 //! the container spec.
 //!
 //! Path posture (tmpfs choice, file modes, threat model) lives on the
-//! shared helpers in `ops::util`. See docs/security.md.
+//! shared helpers in `ops::tmpfs`. See docs/security.md.
 //!
 //! Lifecycle: materialized at deploy/redeploy, cleaned up by
 //! `cleanup_stack` when a stack is torn down, re-materialized on
@@ -16,7 +16,7 @@ use std::path::Path;
 use anyhow::{Context, Result};
 
 use crate::compose::{ServiceSecretRef, StackSpec};
-use crate::ops::util;
+use crate::ops::tmpfs;
 use crate::proto::VolumeMount;
 
 use super::{crypto, store};
@@ -26,7 +26,7 @@ const KIND: &str = "secrets";
 /// True if `path` lives under the secrets tmpfs root. Used by the bind
 /// validator to allow nub-managed mounts without growing `allowed_binds`.
 pub fn is_managed_path(path: &Path) -> bool {
-    path.starts_with(util::tmpfs_root(KIND))
+    path.starts_with(tmpfs::tmpfs_root(KIND))
 }
 
 /// Decrypt every secret referenced by `refs` and write the plaintext
@@ -42,11 +42,11 @@ pub async fn materialize_for_service(
     if refs.is_empty() {
         return Ok(Vec::new());
     }
-    let dir = util::service_dir(KIND, stack, service);
+    let dir = tmpfs::service_dir(KIND, stack, service);
     tokio::fs::create_dir_all(&dir)
         .await
         .with_context(|| format!("creating {}", dir.display()))?;
-    util::ensure_dir_traversable(&dir).await.ok();
+    tmpfs::ensure_dir_traversable(&dir).await.ok();
 
     let identity = crypto::load_or_generate_identity(secrets_root).await?;
     let mut mounts = Vec::with_capacity(refs.len());
@@ -62,7 +62,7 @@ pub async fn materialize_for_service(
             .with_context(|| format!("reading nub secret `{lookup}` for service `{service}`"))?;
         let plain = crypto::decrypt(&identity, &blob).with_context(|| format!("decrypting secret `{lookup}`"))?;
         let host_path = dir.join(&r.source);
-        util::write_world_readable(&host_path, &plain).await?;
+        tmpfs::write_world_readable(&host_path, &plain).await?;
         mounts.push(VolumeMount {
             source: host_path.display().to_string(),
             target: r.target.clone(),
@@ -74,5 +74,5 @@ pub async fn materialize_for_service(
 
 /// Best-effort cleanup of a stack's whole tmpfs subtree.
 pub async fn cleanup_stack(stack: &str) {
-    util::cleanup_stack_dir(KIND, stack).await;
+    tmpfs::cleanup_stack_dir(KIND, stack).await;
 }

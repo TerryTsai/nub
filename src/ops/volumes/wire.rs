@@ -109,9 +109,9 @@ pub(super) struct RawInspect {
     pub created_at: String,
     #[serde(default)]
     pub scope: String,
-    #[serde(default, deserialize_with = "crate::ops::util::null_to_default")]
+    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
     pub labels: HashMap<String, String>,
-    #[serde(default, deserialize_with = "crate::ops::util::null_to_default")]
+    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
     pub options: HashMap<String, String>,
     #[serde(default)]
     pub usage_data: Option<RawUsage>,

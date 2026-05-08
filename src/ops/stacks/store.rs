@@ -7,7 +7,7 @@ use anyhow::{anyhow, Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::ops::util::iso8601_mtime;
+use crate::ops::time::iso8601_mtime;
 
 /// Validate a user-supplied stack name. lowercase, `[a-z0-9_-]`, max 63
 /// chars (Docker label limit). Reject path-traversal characters loudly

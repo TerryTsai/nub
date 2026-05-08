@@ -9,7 +9,8 @@ use anyhow::{anyhow, bail, Context, Result};
 use tokio::fs;
 use tokio::io::AsyncReadExt as _;
 
-use crate::ops::util::{iso8601_mtime, valid_fs_name};
+use crate::ops::names::valid_fs_name;
+use crate::ops::time::iso8601_mtime;
 use crate::ops::EngineHandler;
 use crate::proto::{DockerfileContent, DockerfileSummary};
 

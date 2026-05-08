@@ -8,7 +8,8 @@ use std::path::{Path, PathBuf};
 use anyhow::{anyhow, bail, Context, Result};
 use tokio::fs;
 
-use crate::ops::util::{iso8601_mtime, valid_fs_name};
+use crate::ops::names::valid_fs_name;
+use crate::ops::time::iso8601_mtime;
 use crate::proto::SecretSummary;
 
 /// Hard cap on a single secret's encrypted blob. 64 KiB covers any
