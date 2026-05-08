@@ -6,6 +6,7 @@ mod config;
 mod ops;
 mod proto;
 mod server;
+mod version;
 
 use anyhow::{Context, Result};
 use clap::Parser;

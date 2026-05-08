@@ -25,7 +25,7 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
-const VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), env!("NUB_VERSION_SUFFIX"));
+use crate::version::NUB_VERSION;
 
 const ABOUT: &str = "A control plane for one container host.";
 
@@ -98,7 +98,7 @@ For tab completion: nub completions zsh > ~/.zfunc/_nub
     name = "nub",
     about = ABOUT,
     long_about = LONG_ABOUT,
-    version = VERSION,
+    version = NUB_VERSION,
     help_template = HELP_TEMPLATE,
     before_help = COMMANDS,
     after_help = EXAMPLES,

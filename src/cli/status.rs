@@ -11,7 +11,7 @@ use crate::config::{self, Config};
 use super::connect;
 
 pub fn run() -> Result<()> {
-    println!("nub {}", super::VERSION);
+    println!("nub {}", crate::version::NUB_VERSION);
 
     let cfg_path = locate_config();
     if let Some(p) = &cfg_path {

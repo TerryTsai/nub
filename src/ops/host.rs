@@ -6,10 +6,9 @@ use serde::Deserialize;
 
 use crate::client::{EngineKind, Req};
 use crate::proto::HostInfo;
+use crate::version::NUB_VERSION;
 
 use super::EngineHandler;
-
-const NUB_VERSION: &str = concat!(env!("CARGO_PKG_VERSION"), env!("NUB_VERSION_SUFFIX"));
 
 pub(super) async fn run(h: &EngineHandler) -> Result<HostInfo> {
     let info: InfoResp = h
