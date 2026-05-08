@@ -11,8 +11,6 @@ use hyper::body::Incoming;
 
 use super::Error;
 
-// ---- LineStream: split an Incoming body on '\n' --------------------------
-
 /// Yields one byte slice per line (without the trailing `\n`). At EOF, any
 /// trailing partial line is yielded last.
 pub struct LineStream {
@@ -81,15 +79,11 @@ impl LineStream {
     }
 }
 
-// ---- Multiplexer: docker's 8-byte log/exec frame format ------------------
-//
-// Frame: byte 0 = stream type (1=stdout, 2=stderr), bytes 1-3 = padding,
-// bytes 4-7 = BE u32 payload length, then payload bytes.
-//
-// TTY containers don't use multiplexing — the bytes are raw terminal output.
-// Logs auto-detect via the first byte (TTY content rarely starts with 0/1/2);
-// exec knows up front from its `tty` flag.
-
+/// Docker's 8-byte log/exec frame: byte 0 = stream type (1=stdout, 2=stderr),
+/// bytes 1-3 = padding, bytes 4-7 = BE u32 payload length, then payload bytes.
+///
+/// TTY containers don't multiplex — output is raw terminal bytes. Logs
+/// auto-detect via the first byte; exec knows up front from `tty`.
 #[derive(Debug, Clone)]
 pub struct MuxFrame {
     pub stderr: bool,
@@ -170,8 +164,6 @@ impl Multiplexer {
         })
     }
 }
-
-// ---- short_id helper -----------------------------------------------------
 
 /// Trim docker/podman ids to the conventional 12-char short form, stripping
 /// any `sha256:` prefix.
