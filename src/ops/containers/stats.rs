@@ -6,10 +6,10 @@ use std::collections::HashMap;
 
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
-use serde::Deserialize;
 use tokio::sync::mpsc;
 
-use crate::client::{LineStream, Query, Req};
+use super::wire::stats::{RawCpu, RawNet, RawStats};
+use crate::client::{Engine, LineStream, Query, Req};
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
 
@@ -18,7 +18,7 @@ pub(crate) fn run(h: &EngineHandler, id: String) -> BoxStream<'static, StreamChu
     spawn_chunked(move |tx| pump(engine, id, tx))
 }
 
-async fn pump(engine: crate::client::Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
+async fn pump(engine: Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let path = format!("/containers/{id}/stats{}", stats_query());
     let res = conn
@@ -85,52 +85,4 @@ fn sum_net(nets: Option<&HashMap<String, RawNet>>) -> (u64, u64) {
         })
     })
     .unwrap_or((0, 0))
-}
-
-// ---- Wire types ----------------------------------------------------------
-
-#[derive(Deserialize)]
-struct RawStats {
-    #[serde(default)]
-    cpu_stats: RawCpu,
-    #[serde(default)]
-    precpu_stats: RawCpu,
-    #[serde(default)]
-    memory_stats: RawMem,
-    #[serde(default)]
-    networks: Option<HashMap<String, RawNet>>,
-}
-
-#[derive(Default, Deserialize)]
-struct RawCpu {
-    #[serde(default)]
-    cpu_usage: RawCpuUsage,
-    #[serde(default)]
-    system_cpu_usage: u64,
-    #[serde(default)]
-    online_cpus: u64,
-}
-
-#[derive(Default, Deserialize)]
-struct RawCpuUsage {
-    #[serde(default)]
-    total_usage: u64,
-    #[serde(default)]
-    percpu_usage: Option<Vec<u64>>,
-}
-
-#[derive(Default, Deserialize)]
-struct RawMem {
-    #[serde(default)]
-    usage: u64,
-    #[serde(default)]
-    limit: u64,
-}
-
-#[derive(Default, Deserialize)]
-struct RawNet {
-    #[serde(default)]
-    rx_bytes: u64,
-    #[serde(default)]
-    tx_bytes: u64,
 }

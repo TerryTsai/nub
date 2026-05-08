@@ -3,19 +3,16 @@
 //! pumping mirrors `containers::logs`; we just fan out across N
 //! containers and rewrite chunks before forwarding.
 
-use std::collections::HashMap;
-
 use futures::stream::BoxStream;
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
-use serde::Deserialize;
 use tokio::sync::mpsc;
 
+use super::labels::STACK_LABEL;
+use super::wire::RawListItem;
 use crate::client::{Engine, EngineKind, Multiplexer, MultiplexerMode, Query, Req};
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
-
-use super::labels::STACK_LABEL;
 
 pub(crate) fn run(h: &EngineHandler, name: String, follow: bool, tail: Option<u32>) -> BoxStream<'static, StreamChunk> {
     let engine = h.engine.clone();
@@ -106,17 +103,6 @@ async fn forward_frames(mut body: Incoming, prefix: String, tx: &mpsc::Sender<St
         };
         let _ = tx.send(chunk).await;
     }
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct RawListItem {
-    #[serde(rename = "Id")]
-    id: String,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    names: Vec<String>,
-    #[serde(default, deserialize_with = "crate::ops::serde_helpers::null_to_default")]
-    labels: HashMap<String, String>,
 }
 
 async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(String, String)>, String> {

@@ -21,3 +21,4 @@ pub mod update;
 mod discover;
 mod labels;
 mod store;
+mod wire;

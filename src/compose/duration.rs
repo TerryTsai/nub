@@ -2,7 +2,7 @@
 //! unit). Split out from transform.rs so that file stays under the
 //! 250-line cap.
 
-use super::spec::ParseError;
+use super::types::ParseError;
 
 /// Compose-style duration: `1h30m`, `500ms`, `10s`. Bare numbers are
 /// interpreted as seconds, matching compose's behavior.

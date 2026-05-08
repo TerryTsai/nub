@@ -9,7 +9,7 @@ use crate::proto::{CreateContainerReq, HealthcheckSpec, PortPublish, RestartPoli
 use super::configs as configs_xform;
 use super::duration::parse_ns;
 use super::secrets::{transform_service_refs, transform_top_level};
-use super::spec::{ParseError, ServiceSpec, StackSpec, VolumeSpec};
+use super::types::{ParseError, ServiceSpec, StackSpec, VolumeSpec};
 use super::wire::{Compose, HealthcheckYaml, MapOrList, ServiceYaml, StringOrList};
 
 pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {

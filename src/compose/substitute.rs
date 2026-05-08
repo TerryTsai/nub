@@ -121,3 +121,49 @@ fn resolve_braced(inner: &str, env: &HashMap<String, String>) -> Result<String, 
         message: "is not set".into(),
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn env_pairs(pairs: &[(&str, &str)]) -> HashMap<String, String> {
+        pairs.iter().map(|(k, v)| ((*k).into(), (*v).into())).collect()
+    }
+
+    #[test]
+    fn bare_var() {
+        let env = env_pairs(&[("FOO", "bar")]);
+        assert_eq!(substitute("hello $FOO baz", &env).unwrap(), "hello bar baz");
+    }
+
+    #[test]
+    fn braced_var() {
+        let env = env_pairs(&[("FOO", "bar")]);
+        assert_eq!(substitute("x=${FOO}y", &env).unwrap(), "x=bary");
+    }
+
+    #[test]
+    fn default_when_unset() {
+        let env = HashMap::new();
+        assert_eq!(substitute("x=${MISSING:-fallback}", &env).unwrap(), "x=fallback");
+    }
+
+    #[test]
+    fn default_uses_value_when_set() {
+        let env = env_pairs(&[("FOO", "real")]);
+        assert_eq!(substitute("x=${FOO:-fallback}", &env).unwrap(), "x=real");
+    }
+
+    #[test]
+    fn dollar_escape() {
+        let env = HashMap::new();
+        assert_eq!(substitute("price: $$5", &env).unwrap(), "price: $5");
+    }
+
+    #[test]
+    fn undefined_errors() {
+        let env = HashMap::new();
+        let err = substitute("$NOPE", &env).unwrap_err();
+        assert!(err.to_string().contains("NOPE"));
+    }
+}

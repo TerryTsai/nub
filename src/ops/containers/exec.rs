@@ -6,10 +6,10 @@
 use futures::stream::BoxStream;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
-use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt, ReadHalf, WriteHalf};
 use tokio::sync::mpsc;
 
+use super::wire::exec::{CreateExecBody, CreateExecResp, StartExecBody};
 use crate::client::{upgrade, Engine, Multiplexer, MultiplexerMode, MuxFrame, Req};
 use crate::ops::{log_chunk, spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
@@ -142,30 +142,4 @@ async fn drain_into_tx(mux: &mut Multiplexer, tx: &mpsc::Sender<StreamChunk>) ->
 
 fn to_chunk(frame: &MuxFrame) -> StreamChunk {
     log_chunk(frame.stderr, &frame.data)
-}
-
-// ---- Wire types ----------------------------------------------------------
-
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
-struct CreateExecBody {
-    attach_stdin: bool,
-    attach_stdout: bool,
-    attach_stderr: bool,
-    tty: bool,
-    cmd: Vec<String>,
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "PascalCase")]
-struct CreateExecResp {
-    #[serde(rename = "Id")]
-    id: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "PascalCase")]
-struct StartExecBody {
-    detach: bool,
-    tty: bool,
 }
