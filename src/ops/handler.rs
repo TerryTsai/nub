@@ -128,10 +128,13 @@ impl OpHandler for EngineHandler {
             Op::PullStack { name } => unary(stacks::pull::run(self, claims, name).await, OpResult::StackCreated),
             Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
 
-            Op::ListSecrets => unary(secrets::list(&self.policy.secrets_root).await, OpResult::Secrets),
-            Op::PutSecret { name, value } => unary(secrets::put(&self.policy.secrets_root, &name, &value).await, ok),
-            Op::DeleteSecret { name } => unary(secrets::delete(&self.policy.secrets_root, &name).await, ok),
-            Op::GetSecret { name } => unary(secrets::get(&self.policy.secrets_root, &name).await, OpResult::Secret),
+            Op::ListSecrets => unary(secrets::list::run(&self.policy.secrets_root).await, OpResult::Secrets),
+            Op::PutSecret { name, value } => unary(
+                secrets::put::run(&self.policy.secrets_root, &name, &value).await,
+                ok,
+            ),
+            Op::DeleteSecret { name } => unary(secrets::delete::run(&self.policy.secrets_root, &name).await, ok),
+            Op::GetSecret { name } => unary(secrets::get::run(&self.policy.secrets_root, &name).await, OpResult::Secret),
         }
     }
 }

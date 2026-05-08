@@ -76,7 +76,7 @@ mod tests {
         // which the rehydrate fn does. Concretely, we just want to
         // verify rehydrate doesn't error and that the underlying
         // materialize call sees the right inputs.
-        ops_secrets::put(secrets.path(), "db_password", "hunter2")
+        ops_secrets::put::run(secrets.path(), "db_password", "hunter2")
             .await
             .unwrap();
 

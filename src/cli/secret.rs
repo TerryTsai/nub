@@ -34,13 +34,13 @@ async fn put(root: &std::path::Path, name: String, from_file: Option<String>) ->
         None => read_stdin_value()?,
     };
     let value = value.strip_suffix('\n').unwrap_or(&value).to_string();
-    secrets::put(root, &name, &value).await?;
+    secrets::put::run(root, &name, &value).await?;
     println!("stored {name}");
     Ok(())
 }
 
 async fn list(root: &std::path::Path) -> Result<()> {
-    let items = secrets::list(root).await?;
+    let items = secrets::list::run(root).await?;
     if items.is_empty() {
         println!("(no secrets)");
         return Ok(());
@@ -53,13 +53,13 @@ async fn list(root: &std::path::Path) -> Result<()> {
 }
 
 async fn rm(root: &std::path::Path, name: String) -> Result<()> {
-    secrets::delete(root, &name).await?;
+    secrets::delete::run(root, &name).await?;
     println!("removed {name}");
     Ok(())
 }
 
 async fn get(root: &std::path::Path, name: String) -> Result<()> {
-    let v = secrets::get(root, &name).await?;
+    let v = secrets::get::run(root, &name).await?;
     print!("{}", v.value);
     if !v.value.ends_with('\n') {
         println!();
