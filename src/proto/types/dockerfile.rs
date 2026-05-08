@@ -1,3 +1,5 @@
+//! Dockerfile-store wire types — listings and inline content.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

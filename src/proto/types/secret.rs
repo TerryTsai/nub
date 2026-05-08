@@ -1,3 +1,6 @@
+//! Secret wire types — listings (no values) and the privileged
+//! plaintext-reveal shape.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

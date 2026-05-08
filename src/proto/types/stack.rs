@@ -1,6 +1,10 @@
-use super::container::ContainerSummary;
+//! Stack wire types — list summaries, inspect detail (with embedded
+//! container summaries), and post-create response.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use super::container::ContainerSummary;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct StackSummary {

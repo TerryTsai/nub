@@ -1,3 +1,6 @@
+//! Per-frame stream chunks — log/exec output, stats samples, pull/build
+//! progress, and stream-end markers.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

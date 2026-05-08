@@ -1,3 +1,6 @@
+//! Network wire types — list summaries, inspect detail, IPAM, and
+//! attached-container references.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

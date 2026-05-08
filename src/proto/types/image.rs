@@ -1,3 +1,5 @@
+//! Image wire types — list summaries and inspect detail.
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 

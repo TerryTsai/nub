@@ -1,3 +1,6 @@
+//! Host introspection wire types — `host_info` snapshot and `whoami`
+//! reflection.
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]

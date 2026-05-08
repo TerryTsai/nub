@@ -1,11 +1,10 @@
-//! Wire-format names for `Op`. Split out so the central `op.rs` stays
-//! under the project's per-file line limit.
+//! Wire-name mapping for `Op`. Each variant maps to its `op` tag in
+//! JSON; used for logging and structured errors.
 
 use super::Op;
 
 impl Op {
-    /// Wire-format name (matches the `op` discriminator). Used for
-    /// logging and structured errors.
+    /// Wire-format name (matches the `op` discriminator).
     pub fn name(&self) -> &'static str {
         match self {
             Op::HostInfo => "host_info",
