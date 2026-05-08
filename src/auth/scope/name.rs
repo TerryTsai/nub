@@ -1,5 +1,5 @@
-//! Wire-string mapping for `Scope`. Split out so the central enum file
-//! stays under the project's per-file line limit.
+//! Wire-string mapping for `Scope` — `<resource>:<action>` form used in
+//! JWT `scope` claims and `--scope` CLI args.
 
 use super::Scope;
 
