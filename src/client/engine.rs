@@ -19,6 +19,15 @@ pub enum EngineKind {
     Podman,
 }
 
+impl std::fmt::Display for EngineKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Docker => f.write_str("docker"),
+            Self::Podman => f.write_str("podman"),
+        }
+    }
+}
+
 /// Connection handle. Cheap to clone — holds only configuration. Each call
 /// opens a fresh socket; no pooling.
 #[derive(Debug, Clone)]

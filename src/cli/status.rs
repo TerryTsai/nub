@@ -3,7 +3,7 @@
 //! socket, and `systemctl is-active`.
 
 use anyhow::Result;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Command;
 
 use crate::config::{self, Config};
@@ -13,8 +13,7 @@ use super::connect;
 pub fn run() -> Result<()> {
     println!("nub {}", crate::version::NUB_VERSION);
 
-    let cfg_path = locate_config();
-    if let Some(p) = &cfg_path {
+    if let Some(p) = config::locate_path() {
         println!("  config        {} (loaded)", p.display());
     } else {
         println!("  config        (none — using defaults)");
@@ -32,10 +31,6 @@ pub fn run() -> Result<()> {
     Ok(())
 }
 
-fn locate_config() -> Option<PathBuf> {
-    config::locate_path()
-}
-
 fn print_engine() {
     let runtime = match tokio::runtime::Builder::new_current_thread().enable_all().build() {
         Ok(rt) => rt,
@@ -45,24 +40,9 @@ fn print_engine() {
         }
     };
     match runtime.block_on(crate::client::Engine::connect()) {
-        Ok(eng) => {
-            println!("  engine        {} ({})", engine_kind(&eng), engine_addr(&eng));
-        }
-        Err(e) => {
-            println!("  engine        unreachable ({e})");
-        }
+        Ok(eng) => println!("  engine        {} ({})", eng.kind(), eng.address_display()),
+        Err(e) => println!("  engine        unreachable ({e})"),
     }
-}
-
-fn engine_kind(eng: &crate::client::Engine) -> &'static str {
-    match eng.kind() {
-        crate::client::EngineKind::Docker => "docker",
-        crate::client::EngineKind::Podman => "podman",
-    }
-}
-
-fn engine_addr(eng: &crate::client::Engine) -> String {
-    eng.address_display()
 }
 
 fn print_systemd() {
