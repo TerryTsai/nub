@@ -1,12 +1,11 @@
-//! `OpHandler` trait and the engine-backed `EngineHandler` dispatch.
-//! Each `Op` variant routes to one per-verb function in an `ops/<family>`
+//! `EngineHandler` — Op dispatch against a live engine connection. Each
+//! `Op` variant routes to one per-verb function in an `ops/<family>`
 //! module; helpers below wrap the result into a `HandlerOutput` so both
 //! transports (HTTP unary, WebSocket streamed) share one envelope.
 
 use std::future::Future;
 
 use anyhow::Result;
-use async_trait::async_trait;
 use futures::stream::BoxStream;
 use tokio::sync::mpsc;
 
@@ -21,15 +20,10 @@ pub enum HandlerOutput {
     Stream(BoxStream<'static, StreamChunk>),
 }
 
-#[async_trait]
-pub trait OpHandler: Send + Sync + 'static {
-    async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput;
-}
-
-/// Shared handle to a boxed `OpHandler` — passed by both transports
-/// (HTTP unary, WebSocket framed) and shared between the spawned tasks
-/// inside the WebSocket pump.
-pub type Shared = std::sync::Arc<dyn OpHandler>;
+/// Shared handle to the engine-backed dispatch — passed by both
+/// transports (HTTP unary, WebSocket framed) and shared between the
+/// spawned tasks inside the WebSocket pump.
+pub type Shared = std::sync::Arc<EngineHandler>;
 
 /// A pre-closed receiver. Use for transports that don't carry client→server
 /// stream chunks (e.g. unary HTTP /api/op).
@@ -50,12 +44,9 @@ impl EngineHandler {
             policy,
         })
     }
-}
 
-#[async_trait]
-impl OpHandler for EngineHandler {
-    #[allow(clippy::too_many_lines)]
-    async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
+    #[allow(clippy::too_many_lines, clippy::cognitive_complexity)]
+    pub async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
         let secrets_root = &self.policy.secrets_root;
         match op {
             // Introspection ops are answered by `auth::introspect` before

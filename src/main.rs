@@ -140,7 +140,7 @@ fn resolve_tls(cfg: &config::Config) -> Result<Option<Arc<rustls::ServerConfig>>
 }
 
 async fn build_app(policy: ops::Policy, id: String, issuer: Arc<Issuer>) -> Result<axum::Router> {
-    let handler: Arc<dyn ops::OpHandler> = Arc::new(ops::EngineHandler::connect(policy).await?);
+    let handler: ops::Shared = Arc::new(ops::EngineHandler::connect(policy).await?);
 
     let auth = Arc::new(AuthState { issuer, audience: id });
     let mut app = server::router(handler, auth);

@@ -19,7 +19,7 @@ mod time;
 mod tmpfs;
 mod volumes;
 
-pub use handler::{closed_input, EngineHandler, HandlerOutput, OpHandler, Shared};
+pub use handler::{closed_input, EngineHandler, HandlerOutput, Shared};
 pub use policy::Policy;
 
 pub(crate) use handler::{log_chunk, spawn_chunked};
