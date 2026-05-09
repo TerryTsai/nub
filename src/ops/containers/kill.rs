@@ -15,7 +15,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String, signal: Option<String>) -
     h.engine
         .conn()
         .await?
-        .send_unary(Req::post(path).build()?)
+        .send_unary(Req::post(path))
         .await?
         .ok()?;
     Ok(())

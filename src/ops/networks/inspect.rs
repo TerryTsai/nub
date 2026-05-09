@@ -23,7 +23,7 @@ async fn compat(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     let ipam = raw
@@ -66,7 +66,7 @@ async fn libpod(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     let ipam = raw

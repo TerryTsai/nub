@@ -12,7 +12,7 @@ pub(crate) async fn run(h: &EngineHandler) -> Result<Vec<ImageSummary>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/images/json").build()?)
+        .send_unary(Req::get("/images/json"))
         .await?
         .json()?;
     Ok(raw.into_iter().map(into_summary).collect())

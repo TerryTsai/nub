@@ -58,8 +58,6 @@ async fn create_exec(engine: &Engine, container_id: &str, cmd: &[String], tty: b
         .send_unary(
             Req::post(format!("/containers/{container_id}/exec"))
                 .json(&body)
-                .map_err(|e| e.to_string())?
-                .build()
                 .map_err(|e| e.to_string())?,
         )
         .await
@@ -74,9 +72,7 @@ async fn start_exec(engine: &Engine, exec_id: &str, tty: bool) -> Result<TokioIo
     let req = Req::post(format!("/exec/{exec_id}/start"))
         .json(&body)
         .map_err(|e| e.to_string())?
-        .upgrade("tcp")
-        .build()
-        .map_err(|e| e.to_string())?;
+        .upgrade("tcp");
     let res = engine
         .conn()
         .await

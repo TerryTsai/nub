@@ -14,7 +14,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<Box<ImageDetail
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     Ok(Box::new(into_detail(raw)))

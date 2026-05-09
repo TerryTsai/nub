@@ -9,12 +9,13 @@ use http_body_util::{BodyExt, Empty};
 use hyper::body::Incoming;
 use hyper::client::conn::http1;
 use hyper::upgrade::Upgraded;
-use hyper::{Request, Response, StatusCode};
+use hyper::{Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use serde::de::DeserializeOwned;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::net::{TcpStream, UnixStream};
 
+use super::req::Req;
 use super::Error;
 
 #[derive(Debug, Clone)]
@@ -78,15 +79,15 @@ impl Conn {
         }
     }
 
-    pub(crate) async fn send_unary(&mut self, req: Request<Body>) -> Result<UnaryResponse, Error> {
-        let res = self.sender.send_request(req).await.map_err(hyper_err)?;
+    pub(crate) async fn send_unary(&mut self, req: Req) -> Result<UnaryResponse, Error> {
+        let res = self.sender.send_request(req.build()?).await.map_err(hyper_err)?;
         let status = res.status();
         let body = res.into_body().collect().await.map_err(hyper_err)?.to_bytes();
         Ok(UnaryResponse { status, body })
     }
 
-    pub(crate) async fn send_streaming(&mut self, req: Request<Body>) -> Result<Response<Incoming>, Error> {
-        self.sender.send_request(req).await.map_err(hyper_err)
+    pub(crate) async fn send_streaming(&mut self, req: Req) -> Result<Response<Incoming>, Error> {
+        self.sender.send_request(req.build()?).await.map_err(hyper_err)
     }
 }
 

@@ -43,10 +43,7 @@ async fn pump(
 ) -> Result<(), String> {
     let body = tar::one_file(b"Dockerfile", dockerfile_content.as_bytes());
     let path = format!("/build{}", build_query(&tag, &build_args)?);
-    let req = Req::post(path)
-        .bytes("application/x-tar", Bytes::from(body))
-        .build()
-        .map_err(|e| e.to_string())?;
+    let req = Req::post(path).bytes("application/x-tar", Bytes::from(body));
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let res = conn.send_streaming(req).await.map_err(|e| e.to_string())?;
     if !res.status().is_success() {

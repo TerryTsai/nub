@@ -12,7 +12,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
     h.engine
         .conn()
         .await?
-        .send_unary(Req::delete(path).build()?)
+        .send_unary(Req::delete(path))
         .await?
         .ok()?;
     Ok(())
@@ -22,7 +22,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
 /// teardown, where the network may already have been pruned.
 pub(crate) async fn run_idempotent(h: &EngineHandler, id: &str) -> Result<()> {
     let path = format!("/networks/{id}");
-    let resp = h.engine.conn().await?.send_unary(Req::delete(path).build()?).await?;
+    let resp = h.engine.conn().await?.send_unary(Req::delete(path)).await?;
     if resp.status.as_u16() == 404 {
         return Ok(());
     }

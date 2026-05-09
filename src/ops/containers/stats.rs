@@ -22,7 +22,7 @@ async fn pump(engine: Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Resu
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let path = format!("/containers/{id}/stats{}", stats_query());
     let res = conn
-        .send_streaming(Req::get(path).build().map_err(|e| e.to_string())?)
+        .send_streaming(Req::get(path))
         .await
         .map_err(|e| e.to_string())?;
     if !res.status().is_success() {

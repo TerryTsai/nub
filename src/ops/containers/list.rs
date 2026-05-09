@@ -16,7 +16,7 @@ pub(crate) async fn run(h: &EngineHandler, all: bool) -> Result<Vec<ContainerSum
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     Ok(raw.into_iter().map(RawListItem::into_summary).collect())

@@ -12,7 +12,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
     h.engine
         .conn()
         .await?
-        .send_unary(Req::delete(path).build()?)
+        .send_unary(Req::delete(path))
         .await?
         .ok()?;
     Ok(())

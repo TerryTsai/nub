@@ -56,11 +56,7 @@ async fn forward_one(
         Err(_) => return,
     };
     let path = logs_path(&id, follow, tail);
-    let req = match Req::get(path).build() {
-        Ok(r) => r,
-        Err(_) => return,
-    };
-    let res = match conn.send_streaming(req).await {
+    let res = match conn.send_streaming(Req::get(path)).await {
         Ok(r) => r,
         Err(_) => return,
     };
@@ -114,7 +110,7 @@ async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(Stri
         .conn()
         .await
         .map_err(|e| e.to_string())?
-        .send_unary(Req::get(path.to_string()).build().map_err(|e| e.to_string())?)
+        .send_unary(Req::get(path.to_string()))
         .await
         .map_err(|e| e.to_string())?;
     let raw: Vec<RawListItem> = bytes.json().map_err(|e| e.to_string())?;

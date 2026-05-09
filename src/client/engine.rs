@@ -121,10 +121,7 @@ async fn detect_kind(address: &Address) -> EngineKind {
     let Ok(mut conn) = Conn::connect(address).await else {
         return EngineKind::Docker;
     };
-    let Ok(req) = Req::get("/libpod/_ping").build() else {
-        return EngineKind::Docker;
-    };
-    match conn.send_unary(req).await {
+    match conn.send_unary(Req::get("/libpod/_ping")).await {
         Ok(r) if r.status.is_success() => EngineKind::Podman,
         _ => EngineKind::Docker,
     }

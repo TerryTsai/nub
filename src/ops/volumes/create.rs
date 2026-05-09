@@ -26,7 +26,7 @@ pub(crate) async fn run(
     h.engine
         .conn()
         .await?
-        .send_unary(Req::post("/volumes/create").json(&body)?.build()?)
+        .send_unary(Req::post("/volumes/create").json(&body)?)
         .await?
         .ok()?;
     Ok(())

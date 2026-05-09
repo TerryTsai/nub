@@ -14,14 +14,14 @@ pub(crate) async fn run(h: &EngineHandler) -> Result<HostInfo> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/info").build()?)
+        .send_unary(Req::get("/info"))
         .await?
         .json()?;
     let version: VersionResp = h
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/version").build()?)
+        .send_unary(Req::get("/version"))
         .await?
         .json()?;
     Ok(HostInfo {

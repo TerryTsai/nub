@@ -14,7 +14,7 @@ pub(crate) async fn run(h: &EngineHandler, name: &str) -> Result<Box<VolumeDetai
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     Ok(Box::new(VolumeDetail {

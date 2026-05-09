@@ -28,7 +28,7 @@ pub(crate) async fn run(h: &EngineHandler, req: CreateContainerReq) -> Result<Co
         .engine
         .conn()
         .await?
-        .send_unary(Req::post(path).json(&body)?.build()?)
+        .send_unary(Req::post(path).json(&body)?)
         .await?
         .json()?;
 
@@ -79,7 +79,7 @@ fn validate_static(req: &CreateContainerReq, allowed_binds: &[PathBuf]) -> Resul
 /// Caller must `images:pull` first.
 async fn require_image_local(h: &EngineHandler, reference: &str) -> Result<()> {
     let path = format!("/images/{reference}/json");
-    let res = h.engine.conn().await?.send_unary(Req::get(path).build()?).await?;
+    let res = h.engine.conn().await?.send_unary(Req::get(path)).await?;
     if res.status.as_u16() == 404 {
         return Err(anyhow!("image '{reference}' not local — pull it first (images:pull)",));
     }

@@ -35,7 +35,7 @@ async fn pump(engine: Engine, reference: String, tx: mpsc::Sender<StreamChunk>) 
     let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
     let path = format!("/images/create{}", create_query(&reference));
     let res = conn
-        .send_streaming(Req::post(path).build().map_err(|e| e.to_string())?)
+        .send_streaming(Req::post(path))
         .await
         .map_err(|e| e.to_string())?;
     if !res.status().is_success() {

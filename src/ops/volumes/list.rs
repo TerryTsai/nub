@@ -24,7 +24,7 @@ async fn list_libpod(h: &EngineHandler) -> Result<Vec<VolumeSummary>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/v4.0.0/libpod/volumes/json").build()?)
+        .send_unary(Req::get("/v4.0.0/libpod/volumes/json"))
         .await?
         .json()?;
     Ok(raw.into_iter().map(RawLibpodVolume::into_summary).collect())
@@ -46,7 +46,7 @@ async fn fetch_compat(h: &EngineHandler) -> Result<CompatList> {
     Ok(h.engine
         .conn()
         .await?
-        .send_unary(Req::get("/volumes").build()?)
+        .send_unary(Req::get("/volumes"))
         .await?
         .json()?)
 }
@@ -61,7 +61,7 @@ async fn probe_attached_volumes(h: &EngineHandler) -> Result<HashSet<String>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     let mut out = HashSet::new();

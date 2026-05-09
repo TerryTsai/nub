@@ -10,7 +10,7 @@ pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
     h.engine
         .conn()
         .await?
-        .send_unary(Req::post(format!("/containers/{id}/start")).build()?)
+        .send_unary(Req::post(format!("/containers/{id}/start")))
         .await?
         .ok()?;
     Ok(())

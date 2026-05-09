@@ -32,7 +32,7 @@ async fn list_compat(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/networks").build()?)
+        .send_unary(Req::get("/networks"))
         .await?
         .json()?;
     Ok(raw.into_iter().map(CompatList::into_summary).collect())
@@ -43,7 +43,7 @@ async fn list_libpod(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get("/v4.0.0/libpod/networks/json").build()?)
+        .send_unary(Req::get("/v4.0.0/libpod/networks/json"))
         .await?
         .json()?;
     Ok(raw.into_iter().map(LibpodList::into_summary).collect())
@@ -60,7 +60,7 @@ async fn probe_attached(h: &EngineHandler) -> Result<HashSet<String>> {
         .engine
         .conn()
         .await?
-        .send_unary(Req::get(path).build()?)
+        .send_unary(Req::get(path))
         .await?
         .json()?;
     let mut out = HashSet::new();
