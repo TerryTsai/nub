@@ -48,7 +48,7 @@ async fn serve(args: Args) -> Result<()> {
     println!("admin token: {admin}");
     #[cfg(feature = "embed-ui")]
     {
-        let url = cli::connect::url_for_banner(&listen, tls.is_some(), &admin);
+        let url = cli::connect::connect_url(&listen, tls.is_some(), &admin);
         println!("connect:     {url}");
         cli::connect::render_qr(&url);
     }

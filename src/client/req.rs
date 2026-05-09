@@ -2,7 +2,7 @@
 //! JSON body and a few extra headers (host, connection, upgrade).
 
 use bytes::Bytes;
-use hyper::header::{HeaderName, HeaderValue, CONNECTION, CONTENT_TYPE, HOST, UPGRADE};
+use hyper::header::{HeaderValue, CONNECTION, CONTENT_TYPE, HOST, UPGRADE};
 use hyper::{Method, Request};
 use serde::Serialize;
 
@@ -14,7 +14,6 @@ pub(crate) struct Req {
     path: String,
     body: Body,
     content_type: Option<&'static str>,
-    extra_headers: Vec<(HeaderName, HeaderValue)>,
     upgrade: Option<&'static str>,
 }
 
@@ -37,7 +36,6 @@ impl Req {
             path: path.into(),
             body: Body::Empty,
             content_type: None,
-            extra_headers: Vec::new(),
             upgrade: None,
         }
     }
@@ -55,12 +53,6 @@ impl Req {
         self
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn header(mut self, name: HeaderName, value: HeaderValue) -> Self {
-        self.extra_headers.push((name, value));
-        self
-    }
-
     /// Mark as an HTTP upgrade. Used by exec to flip the connection into a
     /// raw bidirectional byte stream after a 101 response. Switches the
     /// `Connection` header from `close` to `upgrade` (servers reject both).
@@ -70,8 +62,7 @@ impl Req {
     }
 
     pub(crate) fn build(self) -> Result<Request<Body>, Error> {
-        let mut builder = Request::builder().method(self.method).uri(self.path);
-        builder = builder.header(HOST, "localhost");
+        let mut builder = Request::builder().method(self.method).uri(self.path).header(HOST, "localhost");
         if let Some(protocol) = self.upgrade {
             builder = builder.header(CONNECTION, "upgrade").header(UPGRADE, HeaderValue::from_static(protocol));
         } else {
@@ -80,9 +71,6 @@ impl Req {
         }
         if let Some(ct) = self.content_type {
             builder = builder.header(CONTENT_TYPE, ct);
-        }
-        for (name, value) in self.extra_headers {
-            builder = builder.header(name, value);
         }
         builder.body(self.body).map_err(|e| Error::Decode(format!("{e}")))
     }

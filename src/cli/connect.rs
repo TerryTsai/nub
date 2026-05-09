@@ -37,19 +37,15 @@ pub(super) fn url_from_disk() -> Result<String> {
         bail!("admin token at {} is empty", admin_path.display());
     }
     let cfg = Config::load(None)?.unwrap_or_default();
-    Ok(build_url(&cfg, &admin))
-}
-
-fn build_url(cfg: &Config, token: &str) -> String {
-    let listen = cfg.listen.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
+    let listen = cfg.listen.unwrap_or_else(|| "0.0.0.0:8080".into());
     let tls = cfg.tls_cert.is_some() && cfg.tls_key.is_some();
-    let scheme = if tls { "https" } else { "http" };
-    format!("{scheme}://{}/add#t={token}", display_authority(&listen))
+    Ok(connect_url(&listen, tls, &admin))
 }
 
-/// Compose the URL the boot banner shows. Used by main.rs.
-#[cfg(feature = "embed-ui")]
-pub fn url_for_banner(listen: &str, tls: bool, token: &str) -> String {
+/// Compose the URL the boot banner shows. Used by main.rs and by the
+/// `nub url` / `nub qr` flows above (after they resolve listen + tls
+/// from the persisted config).
+pub fn connect_url(listen: &str, tls: bool, token: &str) -> String {
     let scheme = if tls { "https" } else { "http" };
     format!("{scheme}://{}/add#t={token}", display_authority(listen))
 }
