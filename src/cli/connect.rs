@@ -87,11 +87,7 @@ pub fn render_qr(url: &str) {
     use qrcode::{EcLevel, QrCode};
     match QrCode::with_error_correction_level(url.as_bytes(), EcLevel::L) {
         Ok(code) => {
-            let image = code
-                .render::<Dense1x2>()
-                .dark_color(Dense1x2::Light)
-                .light_color(Dense1x2::Dark)
-                .build();
+            let image = code.render::<Dense1x2>().dark_color(Dense1x2::Light).light_color(Dense1x2::Dark).build();
             println!("\n{image}");
         }
         Err(e) => tracing::warn!("could not render connect QR: {e}"),

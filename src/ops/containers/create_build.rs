@@ -57,10 +57,7 @@ fn build_port_bindings(ports: &[PortPublish]) -> HashMap<String, Vec<PortBinding
     for p in ports {
         let cp = normalize_container_port(&p.container);
         let (host_ip, host_port) = parse_host(&p.host);
-        bindings
-            .entry(cp)
-            .or_default()
-            .push(PortBindingWire { host_ip, host_port });
+        bindings.entry(cp).or_default().push(PortBindingWire { host_ip, host_port });
     }
     bindings
 }

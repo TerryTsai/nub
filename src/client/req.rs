@@ -73,9 +73,7 @@ impl Req {
         let mut builder = Request::builder().method(self.method).uri(self.path);
         builder = builder.header(HOST, "localhost");
         if let Some(protocol) = self.upgrade {
-            builder = builder
-                .header(CONNECTION, "upgrade")
-                .header(UPGRADE, HeaderValue::from_static(protocol));
+            builder = builder.header(CONNECTION, "upgrade").header(UPGRADE, HeaderValue::from_static(protocol));
         } else {
             // Per-call sockets — close the connection after the response.
             builder = builder.header(CONNECTION, "close");

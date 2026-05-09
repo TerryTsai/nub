@@ -16,10 +16,7 @@ pub fn validate_name(name: &str) -> Result<()> {
     if name.is_empty() || name.len() > 63 {
         return Err(anyhow!("stack name must be 1..=63 chars"));
     }
-    if !name
-        .chars()
-        .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_')
-    {
+    if !name.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_') {
         return Err(anyhow!("stack name must be lowercase alphanumeric, `-`, or `_`"));
     }
     Ok(())

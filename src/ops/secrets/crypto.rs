@@ -21,9 +21,7 @@ use super::store;
 pub async fn load_or_generate_identity(root: &Path) -> Result<x25519::Identity> {
     let path = store::identity_path(root);
     if path.exists() {
-        let s = fs::read_to_string(&path)
-            .await
-            .with_context(|| format!("reading {}", path.display()))?;
+        let s = fs::read_to_string(&path).await.with_context(|| format!("reading {}", path.display()))?;
         return s
             .trim()
             .parse::<x25519::Identity>()
@@ -75,9 +73,8 @@ pub fn decrypt(identity: &x25519::Identity, blob: &[u8]) -> Result<Vec<u8>> {
         age::Decryptor::Recipients(d) => d,
         age::Decryptor::Passphrase(_) => bail!("unexpected passphrase-encrypted blob"),
     };
-    let mut reader = decryptor
-        .decrypt(std::iter::once(identity as &dyn age::Identity))
-        .context("starting age decryption")?;
+    let mut reader =
+        decryptor.decrypt(std::iter::once(identity as &dyn age::Identity)).context("starting age decryption")?;
     let mut out = Vec::new();
     reader.read_to_end(&mut out).context("reading age plaintext")?;
     Ok(out)

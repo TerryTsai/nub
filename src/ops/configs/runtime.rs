@@ -34,19 +34,15 @@ pub async fn materialize_for_service(
         return Ok(Vec::new());
     }
     let dir = tmpfs::service_dir(KIND, stack, service);
-    tokio::fs::create_dir_all(&dir)
-        .await
-        .with_context(|| format!("creating {}", dir.display()))?;
+    tokio::fs::create_dir_all(&dir).await.with_context(|| format!("creating {}", dir.display()))?;
     tmpfs::ensure_dir_traversable(&dir).await.ok();
 
     let mut mounts = Vec::with_capacity(refs.len());
     for r in refs {
-        let content = stack_spec
-            .configs
-            .iter()
-            .find(|c| c.name == r.source)
-            .map(|c| c.content.clone())
-            .ok_or_else(|| anyhow::anyhow!("config `{}` referenced by service `{service}` not declared", r.source))?;
+        let content =
+            stack_spec.configs.iter().find(|c| c.name == r.source).map(|c| c.content.clone()).ok_or_else(|| {
+                anyhow::anyhow!("config `{}` referenced by service `{service}` not declared", r.source)
+            })?;
         let host_path = dir.join(&r.source);
         tmpfs::write_world_readable(&host_path, content.as_bytes()).await?;
         mounts.push(VolumeMount {

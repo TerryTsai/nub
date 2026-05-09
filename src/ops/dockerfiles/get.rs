@@ -11,22 +11,16 @@ use crate::proto::DockerfileContent;
 
 pub(crate) async fn run(h: &EngineHandler, name: &str) -> Result<DockerfileContent> {
     let path = entry_path(&h.policy.dockerfiles_root, name)?;
-    let lmeta = fs::symlink_metadata(&path)
-        .await
-        .with_context(|| format!("stat {}", path.display()))?;
+    let lmeta = fs::symlink_metadata(&path).await.with_context(|| format!("stat {}", path.display()))?;
     if lmeta.file_type().is_symlink() {
         bail!("refusing to read a symlink at {}", path.display());
     }
     if lmeta.len() > MAX_BYTES {
         bail!("dockerfile {name} is larger than {} KiB", MAX_BYTES / 1024);
     }
-    let mut f = fs::File::open(&path)
-        .await
-        .with_context(|| format!("opening {}", path.display()))?;
+    let mut f = fs::File::open(&path).await.with_context(|| format!("opening {}", path.display()))?;
     let mut content = String::with_capacity(lmeta.len() as usize);
-    f.read_to_string(&mut content)
-        .await
-        .with_context(|| format!("reading {}", path.display()))?;
+    f.read_to_string(&mut content).await.with_context(|| format!("reading {}", path.display()))?;
     Ok(DockerfileContent {
         name: name.to_string(),
         content,

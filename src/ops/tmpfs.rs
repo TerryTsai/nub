@@ -55,8 +55,7 @@ pub(super) async fn write_world_readable(path: &Path, content: &[u8]) -> anyhow:
             .mode(0o444)
             .open(&path_owned)
             .with_context(|| format!("creating {}", path_owned.display()))?;
-        f.write_all(&content_owned)
-            .with_context(|| format!("writing {}", path_owned.display()))?;
+        f.write_all(&content_owned).with_context(|| format!("writing {}", path_owned.display()))?;
         Ok(())
     })
     .await

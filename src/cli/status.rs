@@ -115,8 +115,5 @@ fn count_stacks(root: &Path) -> usize {
         return 0;
     }
     let Ok(entries) = std::fs::read_dir(root) else { return 0 };
-    entries
-        .flatten()
-        .filter(|e| e.path().join("compose.yml").exists())
-        .count()
+    entries.flatten().filter(|e| e.path().join("compose.yml").exists()).count()
 }

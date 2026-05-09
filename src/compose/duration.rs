@@ -34,9 +34,7 @@ pub(super) fn parse_ns(s: &str) -> Result<i64, ParseError> {
 }
 
 fn consume_unit(num: &str, unit: &str) -> Result<i64, ParseError> {
-    let n: i64 = num
-        .parse()
-        .map_err(|_| ParseError(format!("bad duration component `{num}{unit}`")))?;
+    let n: i64 = num.parse().map_err(|_| ParseError(format!("bad duration component `{num}{unit}`")))?;
     let mult: i64 = match unit {
         "ns" => 1,
         "us" | "µs" => 1_000,

@@ -119,10 +119,8 @@ fn make_tempdir() -> Result<PathBuf> {
 
 fn download_and_extract(url: &str, dir: &Path) -> Result<()> {
     let archive = dir.join("nub.tar.gz");
-    let status = Command::new("curl")
-        .args(["-fsSL", "-o", archive.to_str().unwrap(), url])
-        .status()
-        .context("running curl")?;
+    let status =
+        Command::new("curl").args(["-fsSL", "-o", archive.to_str().unwrap(), url]).status().context("running curl")?;
     if !status.success() {
         return Err(anyhow!("download failed (curl exit {:?})", status.code()));
     }
@@ -155,9 +153,7 @@ fn set_executable(p: &Path) -> Result<()> {
 /// Probe writability before downloading anything — saves the user from
 /// "downloaded 5MB then permission denied at the last step."
 fn check_writable_dir(binary: &Path) -> Result<()> {
-    let parent = binary
-        .parent()
-        .ok_or_else(|| anyhow!("can't find parent of {}", binary.display()))?;
+    let parent = binary.parent().ok_or_else(|| anyhow!("can't find parent of {}", binary.display()))?;
     let probe = parent.join(format!(".nub-update-probe-{}", std::process::id()));
     match std::fs::File::create(&probe) {
         Ok(_) => {

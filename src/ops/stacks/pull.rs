@@ -24,12 +24,8 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String) -> Res
     }
     let yaml = store::read_yaml(&h.policy.stacks_root, &name)?;
     let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
-    let unique_images: HashSet<&str> = spec
-        .services
-        .iter()
-        .map(|s| s.container.image.as_str())
-        .filter(|i| !i.is_empty())
-        .collect();
+    let unique_images: HashSet<&str> =
+        spec.services.iter().map(|s| s.container.image.as_str()).filter(|i| !i.is_empty()).collect();
     if !unique_images.is_empty() && !claims.allows_scope(Scope::ImagesPull) {
         bail!("missing scope: {}", Scope::ImagesPull);
     }

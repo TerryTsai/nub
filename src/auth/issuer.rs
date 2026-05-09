@@ -55,9 +55,7 @@ impl Issuer {
 
     /// Build a verify-only issuer from a base64url-encoded raw public key.
     pub fn from_public_key_b64(b64: &str) -> Result<Self> {
-        let raw = URL_SAFE_NO_PAD
-            .decode(b64.trim())
-            .with_context(|| "decoding base64 public key")?;
+        let raw = URL_SAFE_NO_PAD.decode(b64.trim()).with_context(|| "decoding base64 public key")?;
         if raw.len() != 32 {
             return Err(anyhow!("expected 32-byte ed25519 public key, got {}", raw.len()));
         }

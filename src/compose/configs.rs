@@ -68,10 +68,7 @@ fn resolve_ref(r: ServiceConfigYaml) -> (String, String) {
             (name, target)
         }
         ServiceConfigYaml::Long(long) => {
-            let target = long
-                .target
-                .map(resolve_target)
-                .unwrap_or_else(|| default_target(&long.source));
+            let target = long.target.map(resolve_target).unwrap_or_else(|| default_target(&long.source));
             (long.source, target)
         }
     }

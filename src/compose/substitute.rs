@@ -60,11 +60,8 @@ fn consume_braced(
     out: &mut String,
 ) -> Result<usize, SubstituteError> {
     let body_start = start + 2;
-    let end = bytes[body_start..]
-        .iter()
-        .position(|&b| b == b'}')
-        .map(|p| body_start + p)
-        .ok_or_else(|| SubstituteError {
+    let end =
+        bytes[body_start..].iter().position(|&b| b == b'}').map(|p| body_start + p).ok_or_else(|| SubstituteError {
             var: String::from_utf8_lossy(&bytes[start..]).into_owned(),
             message: "missing closing brace".into(),
         })?;

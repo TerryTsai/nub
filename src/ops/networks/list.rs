@@ -33,13 +33,8 @@ async fn list_compat(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 }
 
 async fn list_libpod(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
-    let raw: Vec<LibpodList> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get("/v4.0.0/libpod/networks/json"))
-        .await?
-        .json()?;
+    let raw: Vec<LibpodList> =
+        h.engine.conn().await?.send_unary(Req::get("/v4.0.0/libpod/networks/json")).await?.json()?;
     Ok(raw.into_iter().map(LibpodList::into_summary).collect())
 }
 

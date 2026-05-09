@@ -115,10 +115,7 @@ fn enable_now(scope: Scope) -> Result<()> {
     if scope == Scope::User {
         cmd.arg("--user");
     }
-    let status = cmd
-        .args(["enable", "--now", "nub"])
-        .status()
-        .context("running systemctl enable --now nub")?;
+    let status = cmd.args(["enable", "--now", "nub"]).status().context("running systemctl enable --now nub")?;
     if !status.success() {
         return Err(anyhow!("systemctl enable --now nub failed (exit {:?})", status.code()));
     }

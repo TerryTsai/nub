@@ -25,10 +25,7 @@ fn main() -> Result<()> {
     let cmd = args.cmd.take().expect("clap requires a subcommand");
     if matches!(cmd, Cmd::Run) {
         init_tracing()?;
-        return tokio::runtime::Builder::new_multi_thread()
-            .enable_all()
-            .build()?
-            .block_on(serve(args));
+        return tokio::runtime::Builder::new_multi_thread().enable_all().build()?.block_on(serve(args));
     }
     // Other CLI subcommands skip tracing init so server-level INFO lines
     // (engine connect, etc.) don't leak into command output.

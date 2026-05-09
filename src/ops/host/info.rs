@@ -30,10 +30,6 @@ pub(crate) async fn run(h: &EngineHandler) -> Result<HostInfo> {
 fn engine_name(kind: EngineKind, version: &VersionResp) -> String {
     match kind {
         EngineKind::Podman => "podman".to_string(),
-        EngineKind::Docker => version
-            .platform
-            .as_ref()
-            .map(|p| p.name.clone())
-            .unwrap_or_else(|| "docker".to_string()),
+        EngineKind::Docker => version.platform.as_ref().map_or_else(|| "docker".to_string(), |p| p.name.clone()),
     }
 }

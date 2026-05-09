@@ -15,9 +15,7 @@ pub(super) fn valid_fs_name(name: &str) -> bool {
     if name == "." || name == ".." {
         return false;
     }
-    name.as_bytes()
-        .iter()
-        .all(|&b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
+    name.as_bytes().iter().all(|&b| b.is_ascii_alphanumeric() || b == b'.' || b == b'_' || b == b'-')
 }
 
 #[cfg(test)]

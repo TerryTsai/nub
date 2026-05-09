@@ -53,10 +53,7 @@ fn write_octal(slot: &mut [u8], value: u64, len: usize) {
 }
 
 fn current_mtime() -> u64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0)
+    SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0)
 }
 
 #[cfg(test)]

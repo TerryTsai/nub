@@ -60,10 +60,7 @@ fn resolve_ref(r: ServiceSecretYaml) -> (String, String) {
             (name, target)
         }
         ServiceSecretYaml::Long(long) => {
-            let target = long
-                .target
-                .map(resolve_target)
-                .unwrap_or_else(|| default_target(&long.source));
+            let target = long.target.map(resolve_target).unwrap_or_else(|| default_target(&long.source));
             (long.source, target)
         }
     }

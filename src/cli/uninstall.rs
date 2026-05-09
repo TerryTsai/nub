@@ -14,14 +14,8 @@ pub fn run(yes: bool) -> Result<()> {
     let user_unit = crate::config::xdg_config_home().join("systemd/user/nub.service");
     let system_unit = PathBuf::from("/etc/systemd/system/nub.service");
 
-    let dirs: Vec<&Path> = [cfg.as_path(), data.as_path()]
-        .into_iter()
-        .filter(|p| p.exists())
-        .collect();
-    let units: Vec<&Path> = [user_unit.as_path(), system_unit.as_path()]
-        .into_iter()
-        .filter(|p| p.exists())
-        .collect();
+    let dirs: Vec<&Path> = [cfg.as_path(), data.as_path()].into_iter().filter(|p| p.exists()).collect();
+    let units: Vec<&Path> = [user_unit.as_path(), system_unit.as_path()].into_iter().filter(|p| p.exists()).collect();
 
     if dirs.is_empty() && units.is_empty() {
         println!("nothing to remove (no nub config, data, or systemd unit found)");
@@ -75,9 +69,7 @@ fn teardown_unit(path: &Path) {
     let is_system = path.starts_with("/etc/systemd/system");
     let scope = if is_system { "--system" } else { "--user" };
     // disable --now stops + disables in one shot.
-    let _ = Command::new("systemctl")
-        .args([scope, "disable", "--now", "nub"])
-        .status();
+    let _ = Command::new("systemctl").args([scope, "disable", "--now", "nub"]).status();
 }
 
 fn reload_daemon() {

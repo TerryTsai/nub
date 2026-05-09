@@ -61,9 +61,8 @@ pub async fn serve(listener: TcpListener, app: Router, tls: Arc<ServerConfig>) -
                 }
             };
             let svc = TowerToHyperService::new(app);
-            if let Err(e) = Builder::new(TokioExecutor::new())
-                .serve_connection_with_upgrades(TokioIo::new(stream), svc)
-                .await
+            if let Err(e) =
+                Builder::new(TokioExecutor::new()).serve_connection_with_upgrades(TokioIo::new(stream), svc).await
             {
                 tracing::debug!("conn {peer} closed: {e}");
             }

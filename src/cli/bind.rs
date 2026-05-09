@@ -40,9 +40,7 @@ fn list() -> Result<()> {
         return Ok(());
     };
     let raw = fs::read_to_string(&config_path).with_context(|| format!("reading {}", config_path.display()))?;
-    let doc: toml_edit::DocumentMut = raw
-        .parse()
-        .with_context(|| format!("parsing {}", config_path.display()))?;
+    let doc: toml_edit::DocumentMut = raw.parse().with_context(|| format!("parsing {}", config_path.display()))?;
     let current = read_array(&doc);
     if current.is_empty() {
         println!("(allowlist empty — bind mounts are denied)");

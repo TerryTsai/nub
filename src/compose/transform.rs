@@ -49,9 +49,7 @@ fn transform_service(
     declared_secrets: &HashSet<String>,
     declared_configs: &HashSet<String>,
 ) -> Result<ServiceSpec, ParseError> {
-    let image = svc
-        .image
-        .ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
+    let image = svc.image.ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
     let container = CreateContainerReq {
         image,
         name: svc.container_name,
@@ -152,8 +150,7 @@ fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>
             let max_retries = v
                 .strip_prefix("on-failure:")
                 .map(|n| {
-                    n.parse::<i64>()
-                        .map_err(|e| ParseError(format!("service `{svc}`: bad on-failure count: {e}")))
+                    n.parse::<i64>().map_err(|e| ParseError(format!("service `{svc}`: bad on-failure count: {e}")))
                 })
                 .transpose()?;
             RestartPolicySpec::OnFailure { max_retries }

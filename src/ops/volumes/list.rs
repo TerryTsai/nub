@@ -20,13 +20,8 @@ pub(crate) async fn run(h: &EngineHandler) -> Result<Vec<VolumeSummary>> {
 }
 
 async fn list_libpod(h: &EngineHandler) -> Result<Vec<VolumeSummary>> {
-    let raw: Vec<RawLibpodVolume> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get("/v4.0.0/libpod/volumes/json"))
-        .await?
-        .json()?;
+    let raw: Vec<RawLibpodVolume> =
+        h.engine.conn().await?.send_unary(Req::get("/v4.0.0/libpod/volumes/json")).await?.json()?;
     Ok(raw.into_iter().map(RawLibpodVolume::into_summary).collect())
 }
 
@@ -49,13 +44,8 @@ async fn fetch_compat(h: &EngineHandler) -> Result<CompatList> {
 /// Walk container mounts (compat shape) and collect the named volumes.
 /// Used only on Docker — Podman libpod has MountCount in the volume list.
 async fn probe_attached_volumes(h: &EngineHandler) -> Result<HashSet<String>> {
-    let raw: Vec<ContainerWithMounts> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get("/containers/json?all=true"))
-        .await?
-        .json()?;
+    let raw: Vec<ContainerWithMounts> =
+        h.engine.conn().await?.send_unary(Req::get("/containers/json?all=true")).await?.json()?;
     let mut out = HashSet::new();
     for c in raw {
         for m in c.mounts {

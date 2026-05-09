@@ -43,11 +43,8 @@ pub fn validate_token(tok: &str) -> Result<(), ParseScopeError> {
 /// Validate a whole space- or comma-separated scope string. Returns
 /// the list of unknown tokens if any are bad.
 pub fn validate_string(s: &str) -> Result<(), Vec<String>> {
-    let bad: Vec<String> = s
-        .split_ascii_whitespace()
-        .filter(|t| validate_token(t).is_err())
-        .map(str::to_string)
-        .collect();
+    let bad: Vec<String> =
+        s.split_ascii_whitespace().filter(|t| validate_token(t).is_err()).map(str::to_string).collect();
     if bad.is_empty() {
         Ok(())
     } else {

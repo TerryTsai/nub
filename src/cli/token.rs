@@ -93,11 +93,8 @@ fn resolve_scope(scope_arg: Option<String>, preset_arg: Option<String>) -> Resul
     if let Some(raw) = scope_arg {
         // Accept comma OR whitespace as separators for human convenience;
         // normalize to single spaces in the JWT.
-        let normalized: String = raw
-            .split(|c: char| c.is_whitespace() || c == ',')
-            .filter(|t| !t.is_empty())
-            .collect::<Vec<_>>()
-            .join(" ");
+        let normalized: String =
+            raw.split(|c: char| c.is_whitespace() || c == ',').filter(|t| !t.is_empty()).collect::<Vec<_>>().join(" ");
         if normalized.is_empty() {
             bail!("--scope was empty");
         }

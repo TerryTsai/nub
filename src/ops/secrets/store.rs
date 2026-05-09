@@ -30,9 +30,7 @@ pub fn identity_path(root: &Path) -> PathBuf {
 
 pub async fn read_blob(root: &Path, name: &str) -> Result<Vec<u8>> {
     let path = entry_path(root, name)?;
-    let lmeta = fs::symlink_metadata(&path)
-        .await
-        .with_context(|| format!("stat {}", path.display()))?;
+    let lmeta = fs::symlink_metadata(&path).await.with_context(|| format!("stat {}", path.display()))?;
     if lmeta.file_type().is_symlink() {
         bail!("refusing to read a symlink at {}", path.display());
     }
@@ -57,9 +55,7 @@ pub async fn write_blob(root: &Path, name: &str, blob: &[u8]) -> Result<()> {
     let tmp = dir.join(format!(".{name}.age.tmp"));
     fs::write(&tmp, blob).await.with_context(|| format!("writing {}", tmp.display()))?;
     set_perms_0600(&tmp).await.ok();
-    fs::rename(&tmp, &path)
-        .await
-        .with_context(|| format!("renaming {} -> {}", tmp.display(), path.display()))?;
+    fs::rename(&tmp, &path).await.with_context(|| format!("renaming {} -> {}", tmp.display(), path.display()))?;
     Ok(())
 }
 

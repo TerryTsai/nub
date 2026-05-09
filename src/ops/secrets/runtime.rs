@@ -43,9 +43,7 @@ pub async fn materialize_for_service(
         return Ok(Vec::new());
     }
     let dir = tmpfs::service_dir(KIND, stack, service);
-    tokio::fs::create_dir_all(&dir)
-        .await
-        .with_context(|| format!("creating {}", dir.display()))?;
+    tokio::fs::create_dir_all(&dir).await.with_context(|| format!("creating {}", dir.display()))?;
     tmpfs::ensure_dir_traversable(&dir).await.ok();
 
     let identity = crypto::load_or_generate_identity(secrets_root).await?;
@@ -55,8 +53,7 @@ pub async fn materialize_for_service(
             .secrets
             .iter()
             .find(|s| s.name == r.source)
-            .map(|s| s.lookup.clone())
-            .unwrap_or_else(|| r.source.clone());
+            .map_or_else(|| r.source.clone(), |s| s.lookup.clone());
         let blob = store::read_blob(secrets_root, &lookup)
             .await
             .with_context(|| format!("reading nub secret `{lookup}` for service `{service}`"))?;

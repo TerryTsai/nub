@@ -23,11 +23,6 @@ pub(crate) async fn run(
         labels,
         driver_opts: options,
     };
-    h.engine
-        .conn()
-        .await?
-        .send_unary(Req::post("/volumes/create").json(&body)?)
-        .await?
-        .ok()?;
+    h.engine.conn().await?.send_unary(Req::post("/volumes/create").json(&body)?).await?.ok()?;
     Ok(())
 }

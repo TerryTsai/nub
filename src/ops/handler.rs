@@ -74,11 +74,9 @@ impl OpHandler for EngineHandler {
             Op::RestartContainer { id, timeout } => unit(containers::restart::run(self, id, timeout).await),
             Op::KillContainer { id, signal } => unit(containers::kill::run(self, id, signal).await),
             Op::RemoveContainer { id, force } => unit(containers::remove::run(self, id, force).await),
-            Op::CreateContainer(req) => unary(
-                containers::create::run(self, *req)
-                    .await
-                    .map(OpResult::ContainerCreated),
-            ),
+            Op::CreateContainer(req) => {
+                unary(containers::create::run(self, *req).await.map(OpResult::ContainerCreated))
+            }
             Op::StreamLogs { id, follow, tail } => stream(containers::logs::run(self, id, follow, tail)),
             Op::StreamStats { id } => stream(containers::stats::run(self, id)),
             Op::Exec { id, cmd, tty } => stream(containers::exec::run(self, id, cmd, tty, input)),
@@ -115,24 +113,18 @@ impl OpHandler for EngineHandler {
             Op::PutDockerfile { name, content } => unit(dockerfiles::put::run(self, &name, &content).await),
             Op::DeleteDockerfile { name } => unit(dockerfiles::delete::run(self, &name).await),
 
-            Op::CreateStack { name, yaml } => unary(
-                stacks::create::run(self, claims, name, yaml)
-                    .await
-                    .map(OpResult::StackCreated),
-            ),
+            Op::CreateStack { name, yaml } => {
+                unary(stacks::create::run(self, claims, name, yaml).await.map(OpResult::StackCreated))
+            }
             Op::ListStacks => unary(stacks::list::run(self).await.map(OpResult::Stacks)),
             Op::GetStack { name } => unary(stacks::get::run(self, name).await.map(OpResult::StackDetail)),
             Op::DeleteStack { name } => unit(stacks::delete::run(self, claims, name).await),
-            Op::RedeployStack { name } => unary(
-                stacks::redeploy::run(self, claims, name)
-                    .await
-                    .map(OpResult::StackCreated),
-            ),
-            Op::UpdateStack { name, yaml } => unary(
-                stacks::update::run(self, claims, name, yaml)
-                    .await
-                    .map(OpResult::StackCreated),
-            ),
+            Op::RedeployStack { name } => {
+                unary(stacks::redeploy::run(self, claims, name).await.map(OpResult::StackCreated))
+            }
+            Op::UpdateStack { name, yaml } => {
+                unary(stacks::update::run(self, claims, name, yaml).await.map(OpResult::StackCreated))
+            }
             Op::PullStack { name } => unary(stacks::pull::run(self, claims, name).await.map(OpResult::StackCreated)),
             Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
 

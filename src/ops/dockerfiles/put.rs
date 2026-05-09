@@ -24,11 +24,7 @@ pub(crate) async fn run(h: &EngineHandler, name: &str, content: &str) -> Result<
     let dir = path.parent().ok_or_else(|| anyhow!("invalid dockerfile path"))?;
     fs::create_dir_all(dir).await.ok();
     let tmp = dir.join(format!(".{name}.tmp"));
-    fs::write(&tmp, content)
-        .await
-        .with_context(|| format!("writing {}", tmp.display()))?;
-    fs::rename(&tmp, &path)
-        .await
-        .with_context(|| format!("renaming {} -> {}", tmp.display(), path.display()))?;
+    fs::write(&tmp, content).await.with_context(|| format!("writing {}", tmp.display()))?;
+    fs::rename(&tmp, &path).await.with_context(|| format!("renaming {} -> {}", tmp.display(), path.display()))?;
     Ok(())
 }

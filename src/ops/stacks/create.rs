@@ -81,12 +81,8 @@ pub(super) async fn deploy_from_spec(
 
     // CreateContainer rejects non-local images. Pull each unique service
     // image up front so the per-service create call has its image present.
-    let unique_images: HashSet<&str> = spec
-        .services
-        .iter()
-        .map(|s| s.container.image.as_str())
-        .filter(|i| !i.is_empty())
-        .collect();
+    let unique_images: HashSet<&str> =
+        spec.services.iter().map(|s| s.container.image.as_str()).filter(|i| !i.is_empty()).collect();
     if !unique_images.is_empty() && !claims.allows_scope(Scope::ImagesPull) {
         bail!("missing scope: {}", Scope::ImagesPull);
     }
@@ -150,12 +146,8 @@ fn build_request(
     if req.network.is_none() {
         req.network = Some(network_name(stack));
     }
-    req.volumes = req
-        .volumes
-        .into_iter()
-        .map(|v| rewrite_volume(stack, v, declared_volumes))
-        .chain(extra_mounts)
-        .collect();
+    req.volumes =
+        req.volumes.into_iter().map(|v| rewrite_volume(stack, v, declared_volumes)).chain(extra_mounts).collect();
     merge_labels(&mut req.labels, stack, &svc.name);
     req
 }
