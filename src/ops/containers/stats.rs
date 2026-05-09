@@ -4,12 +4,13 @@
 
 use std::collections::HashMap;
 
+use anyhow::{bail, Result};
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
 use tokio::sync::mpsc;
 
 use super::wire::stats::{RawCpu, RawNet, RawStats};
-use crate::client::{Engine, LineStream, Query, Req};
+use crate::client::{Engine, LineStream, Req};
 use crate::ops::{spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
 
@@ -18,37 +19,27 @@ pub(crate) fn run(h: &EngineHandler, id: String) -> BoxStream<'static, StreamChu
     spawn_chunked(move |tx| pump(engine, id, tx))
 }
 
-async fn pump(engine: Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
-    let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
-    let path = format!("/containers/{id}/stats{}", stats_query());
-    let res = conn
-        .send_streaming(Req::get(path))
-        .await
-        .map_err(|e| e.to_string())?;
+async fn pump(engine: Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<()> {
+    let path = format!("/containers/{id}/stats?stream=true");
+    let res = engine.conn().await?.send_streaming(Req::get(path)).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
-        let body = res.into_body().collect().await.map_err(|e| e.to_string())?.to_bytes();
-        return Err(format!("engine returned {status}: {}", String::from_utf8_lossy(&body)));
+        let body = res.into_body().collect().await?.to_bytes();
+        bail!("engine returned {status}: {}", String::from_utf8_lossy(&body));
     }
 
     let mut lines = LineStream::new(res.into_body());
     while let Some(line) = lines.next().await {
-        let line = line.map_err(|e| e.to_string())?;
+        let line = line?;
         if line.iter().all(u8::is_ascii_whitespace) {
             continue;
         }
-        let raw: RawStats = serde_json::from_slice(&line).map_err(|e| e.to_string())?;
+        let raw: RawStats = serde_json::from_slice(&line)?;
         if tx.send(to_chunk(&raw)).await.is_err() {
             return Ok(());
         }
     }
     Ok(())
-}
-
-fn stats_query() -> String {
-    let mut q = Query::new();
-    q.push_bool("stream", true);
-    q.finish()
 }
 
 fn to_chunk(s: &RawStats) -> StreamChunk {

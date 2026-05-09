@@ -10,13 +10,7 @@ use crate::proto::ImageDetail;
 
 pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<Box<ImageDetail>> {
     let path = format!("/images/{id}/json");
-    let raw: RawInspect = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: RawInspect = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     Ok(Box::new(into_detail(raw)))
 }
 

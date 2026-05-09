@@ -31,22 +31,18 @@ pub(crate) async fn run_unary(h: &EngineHandler, reference: &str) -> Result<()> 
     Ok(())
 }
 
-async fn pump(engine: Engine, reference: String, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
-    let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
+async fn pump(engine: Engine, reference: String, tx: mpsc::Sender<StreamChunk>) -> Result<()> {
     let path = format!("/images/create{}", create_query(&reference));
-    let res = conn
-        .send_streaming(Req::post(path))
-        .await
-        .map_err(|e| e.to_string())?;
+    let res = engine.conn().await?.send_streaming(Req::post(path)).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
-        let body = res.into_body().collect().await.map_err(|e| e.to_string())?.to_bytes();
-        return Err(format!("engine returned {status}: {}", String::from_utf8_lossy(&body)));
+        let body = res.into_body().collect().await?.to_bytes();
+        anyhow::bail!("engine returned {status}: {}", String::from_utf8_lossy(&body));
     }
 
     let mut lines = LineStream::new(res.into_body());
     while let Some(line) = lines.next().await {
-        let line = line.map_err(|e| e.to_string())?;
+        let line = line?;
         if line.iter().all(u8::is_ascii_whitespace) {
             continue;
         }
@@ -64,10 +60,10 @@ fn create_query(reference: &str) -> String {
     q.finish()
 }
 
-fn parse_line(line: &[u8]) -> Result<StreamChunk, String> {
-    let info: CreateImageInfo = serde_json::from_slice(line).map_err(|e| e.to_string())?;
+fn parse_line(line: &[u8]) -> Result<StreamChunk> {
+    let info: CreateImageInfo = serde_json::from_slice(line)?;
     if let Some(err) = info.error {
-        return Err(err);
+        anyhow::bail!("{err}");
     }
     let (current, total) = info.progress_detail.map(|d| (d.current, d.total)).unwrap_or((0, 0));
     Ok(StreamChunk::PullProgress {

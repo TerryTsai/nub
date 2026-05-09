@@ -161,14 +161,14 @@ fn ok(_: ()) -> OpResult {
 pub(crate) fn spawn_chunked<F, Fut>(produce: F) -> BoxStream<'static, StreamChunk>
 where
     F: FnOnce(mpsc::Sender<StreamChunk>) -> Fut + Send + 'static,
-    Fut: Future<Output = std::result::Result<(), String>> + Send + 'static,
+    Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
 {
     let (tx, rx) = mpsc::channel::<StreamChunk>(32);
     let inner = tx.clone();
     tokio::spawn(async move {
         let (ok, err) = match produce(inner).await {
             Ok(()) => (true, None),
-            Err(e) => (false, Some(e)),
+            Err(e) => (false, Some(e.to_string())),
         };
         let _ = tx.send(StreamChunk::End { ok, err }).await;
     });

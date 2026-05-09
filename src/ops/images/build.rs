@@ -13,6 +13,7 @@
 
 use std::collections::HashMap;
 
+use anyhow::{bail, Result};
 use bytes::Bytes;
 use futures::stream::{BoxStream, StreamExt};
 use http_body_util::BodyExt as _;
@@ -40,26 +41,25 @@ async fn pump(
     tag: String,
     build_args: HashMap<String, String>,
     tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
+) -> Result<()> {
     let body = tar::one_file(b"Dockerfile", dockerfile_content.as_bytes());
     let path = format!("/build{}", build_query(&tag, &build_args)?);
     let req = Req::post(path).bytes("application/x-tar", Bytes::from(body));
-    let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
-    let res = conn.send_streaming(req).await.map_err(|e| e.to_string())?;
+    let res = engine.conn().await?.send_streaming(req).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
-        let body = res.into_body().collect().await.map_err(|e| e.to_string())?.to_bytes();
-        return Err(format!("engine returned {status}: {}", String::from_utf8_lossy(&body)));
+        let body = res.into_body().collect().await?.to_bytes();
+        bail!("engine returned {status}: {}", String::from_utf8_lossy(&body));
     }
     let mut lines = LineStream::new(res.into_body());
     while let Some(line) = lines.next().await {
-        let line = line.map_err(|e| e.to_string())?;
+        let line = line?;
         if line.iter().all(u8::is_ascii_whitespace) {
             continue;
         }
-        let info: BuildInfo = serde_json::from_slice(&line).map_err(|e| e.to_string())?;
+        let info: BuildInfo = serde_json::from_slice(&line)?;
         if let Some(err) = info.error {
-            return Err(err);
+            bail!("{err}");
         }
         let chunk = StreamChunk::BuildProgress {
             stream: info.stream.unwrap_or_default(),
@@ -72,7 +72,7 @@ async fn pump(
     Ok(())
 }
 
-fn build_query(tag: &str, build_args: &HashMap<String, String>) -> Result<String, String> {
+fn build_query(tag: &str, build_args: &HashMap<String, String>) -> Result<String> {
     let mut q = Query::new();
     q.push("dockerfile", "Dockerfile");
     // Force engine to use only locally-present base images. A missing FROM
@@ -82,7 +82,7 @@ fn build_query(tag: &str, build_args: &HashMap<String, String>) -> Result<String
         q.push("t", tag);
     }
     if !build_args.is_empty() {
-        let json = serde_json::to_string(build_args).map_err(|e| e.to_string())?;
+        let json = serde_json::to_string(build_args)?;
         q.push("buildargs", &json);
     }
     Ok(q.finish())

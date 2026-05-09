@@ -19,13 +19,7 @@ pub(crate) async fn run(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail
 
 async fn compat(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     let path = format!("/networks/{id}");
-    let raw: CompatInspect = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: CompatInspect = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     let ipam = raw
         .ipam
         .unwrap_or_default()
@@ -62,13 +56,7 @@ async fn compat(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
 
 async fn libpod(h: &EngineHandler, id: &str) -> Result<Box<NetworkDetail>> {
     let path = format!("/v4.0.0/libpod/networks/{id}/json");
-    let raw: LibpodInspect = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: LibpodInspect = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     let ipam = raw
         .subnets
         .into_iter()

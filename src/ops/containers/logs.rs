@@ -3,13 +3,14 @@
 //! for non-TTY containers and raw for TTY containers; we sniff the first
 //! byte to decide.
 
+use anyhow::{bail, Result};
 use bytes::Bytes;
 use futures::stream::BoxStream;
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
 use tokio::sync::mpsc;
 
-use crate::client::{Multiplexer, MultiplexerMode, MuxFrame, Query, Req};
+use crate::client::{Engine, Multiplexer, MultiplexerMode, MuxFrame, Query, Req};
 use crate::ops::{log_chunk, spawn_chunked, EngineHandler};
 use crate::proto::StreamChunk;
 
@@ -19,19 +20,21 @@ pub(crate) fn run(h: &EngineHandler, id: String, follow: bool, tail: Option<u32>
 }
 
 async fn pump(
-    engine: crate::client::Engine,
+    engine: Engine,
     id: String,
     follow: bool,
     tail: Option<u32>,
     tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
-    let mut conn = engine.conn().await.map_err(|e| e.to_string())?;
-    let res = conn
+) -> Result<()> {
+    let res = engine
+        .conn()
+        .await?
         .send_streaming(Req::get(logs_path(&id, follow, tail)))
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
     if !res.status().is_success() {
-        return Err(status_error(res).await);
+        let status = res.status().as_u16();
+        let body = collect_body(res.into_body()).await;
+        bail!("engine returned {status}: {}", String::from_utf8_lossy(&body));
     }
     forward_frames(res.into_body(), tx).await
 }
@@ -46,10 +49,10 @@ fn logs_path(id: &str, follow: bool, tail: Option<u32>) -> String {
     format!("/containers/{id}/logs{}", q.finish())
 }
 
-async fn forward_frames(mut body: Incoming, tx: mpsc::Sender<StreamChunk>) -> Result<(), String> {
+async fn forward_frames(mut body: Incoming, tx: mpsc::Sender<StreamChunk>) -> Result<()> {
     let mut mux = Multiplexer::new(MultiplexerMode::Detect);
     while let Some(frame) = body.frame().await {
-        let frame = frame.map_err(|e| e.to_string())?;
+        let frame = frame?;
         if let Ok(data) = frame.into_data() {
             mux.push(&data);
             if !drain_into_tx(&mut mux, &tx).await {
@@ -76,13 +79,6 @@ fn to_chunk(frame: &MuxFrame) -> StreamChunk {
     log_chunk(frame.stderr, &frame.data)
 }
 
-async fn status_error(res: hyper::Response<Incoming>) -> String {
-    let status = res.status().as_u16();
-    let body = collect_body(res.into_body()).await;
-    format!("engine returned {status}: {}", String::from_utf8_lossy(&body))
-}
-
 async fn collect_body(body: Incoming) -> Bytes {
-    use http_body_util::BodyExt;
     body.collect().await.map(|c| c.to_bytes()).unwrap_or_default()
 }

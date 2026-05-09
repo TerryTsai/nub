@@ -8,11 +8,6 @@ use crate::ops::EngineHandler;
 
 pub(crate) async fn run(h: &EngineHandler, name: String) -> Result<()> {
     let path = format!("/volumes/{name}");
-    h.engine
-        .conn()
-        .await?
-        .send_unary(Req::delete(path))
-        .await?
-        .ok()?;
+    h.engine.conn().await?.send_unary(Req::delete(path)).await?.ok()?;
     Ok(())
 }

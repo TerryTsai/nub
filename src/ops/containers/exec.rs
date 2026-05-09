@@ -3,6 +3,7 @@
 //! to a bidirectional byte stream. Output multiplexes stdout/stderr the same
 //! way as logs.
 
+use anyhow::Result;
 use futures::stream::BoxStream;
 use hyper::upgrade::Upgraded;
 use hyper_util::rt::TokioIo;
@@ -32,7 +33,7 @@ async fn pump(
     tty: bool,
     in_rx: mpsc::Receiver<StreamChunk>,
     out_tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
+) -> Result<()> {
     let exec_id = create_exec(&engine, &id, &cmd, tty).await?;
     let upgraded = start_exec(&engine, &exec_id, tty).await?;
     let (reader, writer) = tokio::io::split(upgraded);
@@ -43,7 +44,7 @@ async fn pump(
     result
 }
 
-async fn create_exec(engine: &Engine, container_id: &str, cmd: &[String], tty: bool) -> Result<String, String> {
+async fn create_exec(engine: &Engine, container_id: &str, cmd: &[String], tty: bool) -> Result<String> {
     let body = CreateExecBody {
         attach_stdin: true,
         attach_stdout: true,
@@ -53,34 +54,18 @@ async fn create_exec(engine: &Engine, container_id: &str, cmd: &[String], tty: b
     };
     let resp: CreateExecResp = engine
         .conn()
-        .await
-        .map_err(|e| e.to_string())?
-        .send_unary(
-            Req::post(format!("/containers/{container_id}/exec"))
-                .json(&body)
-                .map_err(|e| e.to_string())?,
-        )
-        .await
-        .map_err(|e| e.to_string())?
-        .json()
-        .map_err(|e| e.to_string())?;
+        .await?
+        .send_unary(Req::post(format!("/containers/{container_id}/exec")).json(&body)?)
+        .await?
+        .json()?;
     Ok(resp.id)
 }
 
-async fn start_exec(engine: &Engine, exec_id: &str, tty: bool) -> Result<TokioIo<Upgraded>, String> {
+async fn start_exec(engine: &Engine, exec_id: &str, tty: bool) -> Result<TokioIo<Upgraded>> {
     let body = StartExecBody { detach: false, tty };
-    let req = Req::post(format!("/exec/{exec_id}/start"))
-        .json(&body)
-        .map_err(|e| e.to_string())?
-        .upgrade("tcp");
-    let res = engine
-        .conn()
-        .await
-        .map_err(|e| e.to_string())?
-        .send_streaming(req)
-        .await
-        .map_err(|e| e.to_string())?;
-    upgrade(res).await.map_err(|e| e.to_string())
+    let req = Req::post(format!("/exec/{exec_id}/start")).json(&body)?.upgrade("tcp");
+    let res = engine.conn().await?.send_streaming(req).await?;
+    Ok(upgrade(res).await?)
 }
 
 async fn forward_stdin(mut writer: WriteHalf<TokioIo<Upgraded>>, mut in_rx: mpsc::Receiver<StreamChunk>) {
@@ -104,7 +89,7 @@ async fn forward_output(
     mut reader: ReadHalf<TokioIo<Upgraded>>,
     tty: bool,
     tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
+) -> Result<()> {
     let mut mux = Multiplexer::new(if tty {
         MultiplexerMode::Tty
     } else {
@@ -112,7 +97,7 @@ async fn forward_output(
     });
     let mut tmp = [0u8; 4096];
     loop {
-        let n = reader.read(&mut tmp).await.map_err(|e| e.to_string())?;
+        let n = reader.read(&mut tmp).await?;
         if n == 0 {
             break;
         }

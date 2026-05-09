@@ -28,13 +28,7 @@ async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 }
 
 async fn list_compat(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
-    let raw: Vec<CompatList> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get("/networks"))
-        .await?
-        .json()?;
+    let raw: Vec<CompatList> = h.engine.conn().await?.send_unary(Req::get("/networks")).await?.json()?;
     Ok(raw.into_iter().map(CompatList::into_summary).collect())
 }
 
@@ -56,13 +50,7 @@ async fn probe_attached(h: &EngineHandler) -> Result<HashSet<String>> {
     let mut q = Query::new();
     q.push_bool("all", true);
     let path = format!("{}{}", containers_path(h.engine.kind()), q.finish());
-    let raw: Vec<ContainerNets> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: Vec<ContainerNets> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     let mut out = HashSet::new();
     for c in raw {
         for n in c.networks {

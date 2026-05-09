@@ -43,12 +43,7 @@ async fn list_compat(h: &EngineHandler) -> Result<Vec<VolumeSummary>> {
 }
 
 async fn fetch_compat(h: &EngineHandler) -> Result<CompatList> {
-    Ok(h.engine
-        .conn()
-        .await?
-        .send_unary(Req::get("/volumes"))
-        .await?
-        .json()?)
+    Ok(h.engine.conn().await?.send_unary(Req::get("/volumes")).await?.json()?)
 }
 
 /// Walk container mounts (compat shape) and collect the named volumes.
@@ -57,13 +52,7 @@ async fn probe_attached_volumes(h: &EngineHandler) -> Result<HashSet<String>> {
     let mut q = Query::new();
     q.push_bool("all", true);
     let path = format!("/containers/json{}", q.finish());
-    let raw: Vec<ContainerWithMounts> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: Vec<ContainerWithMounts> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     let mut out = HashSet::new();
     for c in raw {
         for m in c.mounts {

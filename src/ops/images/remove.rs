@@ -9,11 +9,6 @@ use crate::ops::EngineHandler;
 
 pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
     let path = format!("/images/{id}");
-    h.engine
-        .conn()
-        .await?
-        .send_unary(Req::delete(path))
-        .await?
-        .ok()?;
+    h.engine.conn().await?.send_unary(Req::delete(path)).await?.ok()?;
     Ok(())
 }

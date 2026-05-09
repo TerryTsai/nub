@@ -12,13 +12,7 @@ use crate::proto::ContainerSummary;
 
 pub(crate) async fn run(h: &EngineHandler, all: bool) -> Result<Vec<ContainerSummary>> {
     let path = format!("{}{}", list_path(h.engine.kind()), query(all));
-    let raw: Vec<RawListItem> = h
-        .engine
-        .conn()
-        .await?
-        .send_unary(Req::get(path))
-        .await?
-        .json()?;
+    let raw: Vec<RawListItem> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     Ok(raw.into_iter().map(RawListItem::into_summary).collect())
 }
 

@@ -12,11 +12,6 @@ pub(crate) async fn run(h: &EngineHandler, id: String, signal: Option<String>) -
         q.push("signal", s);
     }
     let path = format!("/containers/{id}/kill{}", q.finish());
-    h.engine
-        .conn()
-        .await?
-        .send_unary(Req::post(path))
-        .await?
-        .ok()?;
+    h.engine.conn().await?.send_unary(Req::post(path)).await?.ok()?;
     Ok(())
 }

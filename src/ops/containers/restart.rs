@@ -12,11 +12,6 @@ pub(crate) async fn run(h: &EngineHandler, id: String, timeout: Option<i64>) -> 
         q.push("t", &t.to_string());
     }
     let path = format!("/containers/{id}/restart{}", q.finish());
-    h.engine
-        .conn()
-        .await?
-        .send_unary(Req::post(path))
-        .await?
-        .ok()?;
+    h.engine.conn().await?.send_unary(Req::post(path)).await?.ok()?;
     Ok(())
 }

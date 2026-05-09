@@ -3,6 +3,7 @@
 //! pumping mirrors `containers::logs`; we just fan out across N
 //! containers and rewrite chunks before forwarding.
 
+use anyhow::{bail, Result};
 use futures::stream::BoxStream;
 use http_body_util::BodyExt as _;
 use hyper::body::Incoming;
@@ -25,10 +26,10 @@ async fn pump(
     follow: bool,
     tail: Option<u32>,
     tx: mpsc::Sender<StreamChunk>,
-) -> Result<(), String> {
+) -> Result<()> {
     let members = list_stack_containers(&engine, &stack).await?;
     if members.is_empty() {
-        return Err(format!("stack `{stack}` has no containers"));
+        bail!("stack `{stack}` has no containers");
     }
     let mut handles = Vec::with_capacity(members.len());
     for (id, name) in members {
@@ -101,19 +102,17 @@ async fn forward_frames(mut body: Incoming, prefix: String, tx: &mpsc::Sender<St
     }
 }
 
-async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(String, String)>, String> {
+async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(String, String)>> {
     let path = match engine.kind() {
         EngineKind::Podman => "/v4.0.0/libpod/containers/json?all=true",
         EngineKind::Docker => "/containers/json?all=true",
     };
-    let bytes = engine
+    let raw: Vec<RawListItem> = engine
         .conn()
-        .await
-        .map_err(|e| e.to_string())?
+        .await?
         .send_unary(Req::get(path.to_string()))
-        .await
-        .map_err(|e| e.to_string())?;
-    let raw: Vec<RawListItem> = bytes.json().map_err(|e| e.to_string())?;
+        .await?
+        .json()?;
     Ok(raw
         .into_iter()
         .filter(|i| i.labels.get(STACK_LABEL).map(String::as_str) == Some(stack))
