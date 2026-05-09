@@ -4,7 +4,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{bail, Result};
+use anyhow::{ensure, Result};
 
 use crate::ops::names::valid_fs_name;
 
@@ -13,8 +13,6 @@ use crate::ops::names::valid_fs_name;
 pub(super) const MAX_BYTES: u64 = 256 * 1024;
 
 pub(super) fn entry_path(root: &Path, name: &str) -> Result<PathBuf> {
-    if !valid_fs_name(name) {
-        bail!("invalid dockerfile name: {name:?}");
-    }
+    ensure!(valid_fs_name(name), "invalid dockerfile name: {name:?}");
     Ok(root.join(name))
 }

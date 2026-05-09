@@ -3,7 +3,7 @@
 //! round-trip. Requires nub restart for the change to take effect
 //! (Policy is read once at boot).
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use clap::Subcommand;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -100,9 +100,7 @@ fn remove(path: String) -> Result<()> {
 
 fn resolve(p: &str) -> Result<PathBuf> {
     let path = Path::new(p);
-    if !path.exists() {
-        bail!("path `{p}` does not exist");
-    }
+    ensure!(path.exists(), "path `{p}` does not exist");
     path.canonicalize().with_context(|| format!("canonicalizing {p}"))
 }
 

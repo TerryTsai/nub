@@ -5,7 +5,7 @@
 
 use std::path::{Path, PathBuf};
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, bail, ensure, Context, Result};
 use tokio::fs;
 
 use crate::ops::names::valid_fs_name;
@@ -16,9 +16,7 @@ const MAX_BYTES: u64 = 64 * 1024;
 
 /// On-disk filename for a named secret.
 pub fn entry_path(root: &Path, name: &str) -> Result<PathBuf> {
-    if !valid_fs_name(name) {
-        bail!("invalid secret name: {name:?}");
-    }
+    ensure!(valid_fs_name(name), "invalid secret name: {name:?}");
     Ok(root.join(format!("{name}.age")))
 }
 

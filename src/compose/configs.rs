@@ -8,7 +8,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, ensure, Result};
 
 use super::types::{ConfigSpec, ServiceConfigRef};
 use super::wire::{ConfigYaml, ServiceConfigYaml};
@@ -51,9 +51,10 @@ pub(super) fn transform_service_refs(
     refs.into_iter()
         .map(|r| {
             let (source, target) = resolve_ref(r);
-            if !declared.contains(&source) {
-                bail!("service `{svc}` references config `{source}` which isn't declared at top level");
-            }
+            ensure!(
+                declared.contains(&source),
+                "service `{svc}` references config `{source}` which isn't declared at top level"
+            );
             Ok(ServiceConfigRef { source, target })
         })
         .collect()

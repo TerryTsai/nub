@@ -168,9 +168,10 @@ fn read_yaml(file: &str) -> Result<String> {
 
 fn confirm(prompt: &str) -> Result<bool> {
     let stdin = std::io::stdin();
-    if !stdin.is_terminal() {
-        anyhow::bail!("refusing to prompt on a non-terminal stdin; pass --yes to skip");
-    }
+    anyhow::ensure!(
+        stdin.is_terminal(),
+        "refusing to prompt on a non-terminal stdin; pass --yes to skip"
+    );
     eprint!("{prompt} [y/N]: ");
     std::io::stderr().flush().ok();
     let mut line = String::new();

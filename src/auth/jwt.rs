@@ -5,7 +5,7 @@
 //! Rolled by hand instead of pulling a JWT crate — the format is small
 //! and the validation rules are easy to keep correct in 80 lines.
 
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{anyhow, ensure, Context, Result};
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use base64::Engine as _;
 use serde::{Deserialize, Serialize};
@@ -90,16 +90,12 @@ pub fn encode(claims: &Claims, signer: &Issuer) -> Result<String> {
 /// claims on success.
 pub fn verify(token: &str, verifier: &Issuer, audience: &str) -> Result<Claims> {
     let parts: Vec<&str> = token.split('.').collect();
-    if parts.len() != 3 {
-        bail!("malformed JWT");
-    }
+    ensure!(parts.len() == 3, "malformed JWT");
     // Header — only `alg` matters for nub. We refuse anything other than
     // EdDSA to dodge the alg-confusion footgun.
     let header_bytes = URL_SAFE_NO_PAD.decode(parts[0]).context("decoding header")?;
     let header: Header = serde_json::from_slice(&header_bytes).context("parsing header")?;
-    if header.alg != "EdDSA" {
-        bail!("unsupported alg: {}", header.alg);
-    }
+    ensure!(header.alg == "EdDSA", "unsupported alg: {}", header.alg);
     let signing_input = format!("{}.{}", parts[0], parts[1]);
     let sig = URL_SAFE_NO_PAD.decode(parts[2]).context("decoding signature")?;
     verifier.verify(signing_input.as_bytes(), &sig)?;

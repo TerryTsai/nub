@@ -5,7 +5,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, ensure, Result};
 
 use super::types::{SecretSpec, ServiceSecretRef};
 use super::wire::{SecretYaml, ServiceSecretYaml};
@@ -25,9 +25,10 @@ pub(super) fn transform_top_level(raw: HashMap<String, SecretYaml>) -> Result<Ve
                  Run `nub secret put {name}` and use `external: true`."
             );
         }
-        if !decl.external {
-            bail!("secret `{name}`: must declare `external: true` (nub-managed sources only).");
-        }
+        ensure!(
+            decl.external,
+            "secret `{name}`: must declare `external: true` (nub-managed sources only)."
+        );
         let lookup = decl.name.unwrap_or_else(|| name.clone());
         out.push(SecretSpec { name, lookup });
     }
@@ -43,9 +44,10 @@ pub(super) fn transform_service_refs(
     refs.into_iter()
         .map(|r| {
             let (source, target) = resolve_ref(r);
-            if !declared.contains(&source) {
-                bail!("service `{svc}` references secret `{source}` which isn't declared at top level");
-            }
+            ensure!(
+                declared.contains(&source),
+                "service `{svc}` references secret `{source}` which isn't declared at top level"
+            );
             Ok(ServiceSecretRef { source, target })
         })
         .collect()

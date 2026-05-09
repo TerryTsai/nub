@@ -3,7 +3,7 @@
 //! 270-char JWT out of journalctl. Also home of the helpers the boot
 //! banner uses to render the same URL and QR — single source of truth.
 
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, ensure, Context, Result};
 
 use crate::config::{self, Config};
 
@@ -24,12 +24,11 @@ pub fn print_qr() -> Result<()> {
 /// error if nub has never been run on this host (admin.jwt absent).
 pub(super) fn url_from_disk() -> Result<String> {
     let admin_path = config::default_admin_jwt();
-    if !admin_path.exists() {
-        bail!(
-            "no admin token at {}; run `nub` once to generate it",
-            admin_path.display()
-        );
-    }
+    ensure!(
+        admin_path.exists(),
+        "no admin token at {}; run `nub` once to generate it",
+        admin_path.display()
+    );
     let admin = std::fs::read_to_string(&admin_path)
         .with_context(|| format!("reading {}", admin_path.display()))?
         .trim()
