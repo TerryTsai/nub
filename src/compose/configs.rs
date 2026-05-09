@@ -8,35 +8,35 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::types::{ConfigSpec, ParseError, ServiceConfigRef};
+use anyhow::{anyhow, bail, Result};
+
+use super::types::{ConfigSpec, ServiceConfigRef};
 use super::wire::{ConfigYaml, ServiceConfigYaml};
 
-pub(super) fn transform_top_level(raw: HashMap<String, ConfigYaml>) -> Result<Vec<ConfigSpec>, ParseError> {
+pub(super) fn transform_top_level(raw: HashMap<String, ConfigYaml>) -> Result<Vec<ConfigSpec>> {
     let mut out = Vec::with_capacity(raw.len());
     for (name, decl) in raw {
         if decl.file.is_some() {
-            return Err(ParseError(format!(
+            bail!(
                 "config `{name}`: `file:` source not supported by nub. \
                  Inline the value with `content:` instead."
-            )));
+            );
         }
         if decl.external {
-            return Err(ParseError(format!(
+            bail!(
                 "config `{name}`: `external: true` not supported by nub. \
                  Inline the value with `content:` instead."
-            )));
+            );
         }
         if decl.environment.is_some() {
-            return Err(ParseError(format!(
+            bail!(
                 "config `{name}`: `environment:` source not supported by nub. \
                  Inline the value with `content:` instead."
-            )));
+            );
         }
-        let content = decl.content.ok_or_else(|| {
-            ParseError(format!(
-                "config `{name}`: must declare a `content:` source (the only supported form)."
-            ))
-        })?;
+        let content = decl
+            .content
+            .ok_or_else(|| anyhow!("config `{name}`: must declare a `content:` source (the only supported form)."))?;
         out.push(ConfigSpec { name, content });
     }
     out.sort_by(|a, b| a.name.cmp(&b.name));
@@ -47,14 +47,12 @@ pub(super) fn transform_service_refs(
     svc: &str,
     refs: Vec<ServiceConfigYaml>,
     declared: &HashSet<String>,
-) -> Result<Vec<ServiceConfigRef>, ParseError> {
+) -> Result<Vec<ServiceConfigRef>> {
     refs.into_iter()
         .map(|r| {
             let (source, target) = resolve_ref(r);
             if !declared.contains(&source) {
-                return Err(ParseError(format!(
-                    "service `{svc}` references config `{source}` which isn't declared at top level"
-                )));
+                bail!("service `{svc}` references config `{source}` which isn't declared at top level");
             }
             Ok(ServiceConfigRef { source, target })
         })

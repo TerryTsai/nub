@@ -5,28 +5,28 @@
 
 use std::collections::{HashMap, HashSet};
 
-use super::types::{ParseError, SecretSpec, ServiceSecretRef};
+use anyhow::{bail, Result};
+
+use super::types::{SecretSpec, ServiceSecretRef};
 use super::wire::{SecretYaml, ServiceSecretYaml};
 
-pub(super) fn transform_top_level(raw: HashMap<String, SecretYaml>) -> Result<Vec<SecretSpec>, ParseError> {
+pub(super) fn transform_top_level(raw: HashMap<String, SecretYaml>) -> Result<Vec<SecretSpec>> {
     let mut out = Vec::with_capacity(raw.len());
     for (name, decl) in raw {
         if decl.file.is_some() {
-            return Err(ParseError(format!(
+            bail!(
                 "secret `{name}`: `file:` source not supported by nub. \
                  Run `nub secret put {name}` and use `external: true` to reference it."
-            )));
+            );
         }
         if decl.environment.is_some() {
-            return Err(ParseError(format!(
+            bail!(
                 "secret `{name}`: `environment:` source not supported by nub. \
                  Run `nub secret put {name}` and use `external: true`."
-            )));
+            );
         }
         if !decl.external {
-            return Err(ParseError(format!(
-                "secret `{name}`: must declare `external: true` (nub-managed sources only)."
-            )));
+            bail!("secret `{name}`: must declare `external: true` (nub-managed sources only).");
         }
         let lookup = decl.name.unwrap_or_else(|| name.clone());
         out.push(SecretSpec { name, lookup });
@@ -39,14 +39,12 @@ pub(super) fn transform_service_refs(
     svc: &str,
     refs: Vec<ServiceSecretYaml>,
     declared: &HashSet<String>,
-) -> Result<Vec<ServiceSecretRef>, ParseError> {
+) -> Result<Vec<ServiceSecretRef>> {
     refs.into_iter()
         .map(|r| {
             let (source, target) = resolve_ref(r);
             if !declared.contains(&source) {
-                return Err(ParseError(format!(
-                    "service `{svc}` references secret `{source}` which isn't declared at top level"
-                )));
+                bail!("service `{svc}` references secret `{source}` which isn't declared at top level");
             }
             Ok(ServiceSecretRef { source, target })
         })

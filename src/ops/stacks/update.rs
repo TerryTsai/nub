@@ -2,7 +2,7 @@
 //! redeploy. Pre-parses the new YAML so a bad paste fails before we
 //! tear anything down.
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::auth::Claims;
 use crate::compose;
@@ -16,11 +16,11 @@ use super::store;
 pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: String) -> Result<StackCreated> {
     store::validate_name(&name)?;
     if !store::exists(&h.policy.stacks_root, &name) {
-        return Err(anyhow!("stack `{name}` not found"));
+        bail!("stack `{name}` not found");
     }
-    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).context("compose")?;
     if spec.services.is_empty() {
-        return Err(anyhow!("stack `{name}` has no services"));
+        bail!("stack `{name}` has no services");
     }
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
     delete::teardown_resources(h, claims, &name).await?;

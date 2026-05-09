@@ -6,7 +6,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{anyhow, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::auth::scope::Scope;
 use crate::auth::Claims;
@@ -26,11 +26,11 @@ use super::store;
 pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: String) -> Result<StackCreated> {
     store::validate_name(&name)?;
     if store::exists(&h.policy.stacks_root, &name) {
-        return Err(anyhow!("stack `{name}` already exists; use redeploy or update"));
+        bail!("stack `{name}` already exists; use redeploy or update");
     }
-    let spec = compose::parse_no_env(&yaml).map_err(|e| anyhow!("compose: {e}"))?;
+    let spec = compose::parse_no_env(&yaml).context("compose")?;
     if spec.services.is_empty() {
-        return Err(anyhow!("stack `{name}` has no services"));
+        bail!("stack `{name}` has no services");
     }
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
     deploy_from_spec(h, claims, &name, spec).await.map(|ids| StackCreated {

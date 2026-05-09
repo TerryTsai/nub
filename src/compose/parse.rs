@@ -3,21 +3,23 @@
 
 use std::collections::HashMap;
 
+use anyhow::{Context, Result};
+
 use super::substitute;
 use super::transform;
-use super::types::{ParseError, StackSpec};
+use super::types::StackSpec;
 use super::wire;
 
-pub fn parse(yaml: &str, env: &HashMap<String, String>) -> Result<StackSpec, ParseError> {
-    let substituted = substitute::substitute(yaml, env).map_err(|e| ParseError(e.to_string()))?;
-    let raw: wire::Compose = serde_yaml::from_str(&substituted).map_err(|e| ParseError(format!("yaml: {e}")))?;
+pub fn parse(yaml: &str, env: &HashMap<String, String>) -> Result<StackSpec> {
+    let substituted = substitute::substitute(yaml, env)?;
+    let raw: wire::Compose = serde_yaml::from_str(&substituted).context("yaml")?;
     transform::transform(raw)
 }
 
 /// Parse without env substitution. Stack ops never run YAML through a
 /// shell-style env, so this is the form every internal caller wants;
 /// `parse` stays available for any future call site that does.
-pub fn parse_no_env(yaml: &str) -> Result<StackSpec, ParseError> {
+pub fn parse_no_env(yaml: &str) -> Result<StackSpec> {
     parse(yaml, &HashMap::new())
 }
 
@@ -37,8 +39,8 @@ mod tests {
     #[test]
     fn parse_missing_image_errors() {
         let yaml = "services:\n  app: {}\n";
-        let err = parse(yaml, &HashMap::new()).unwrap_err();
-        assert!(err.0.contains("image"));
+        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        assert!(err.contains("image"));
     }
 
     #[test]

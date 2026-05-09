@@ -5,19 +5,9 @@
 
 use std::collections::HashMap;
 
-#[derive(Debug)]
-pub(super) struct SubstituteError {
-    pub var: String,
-    pub message: String,
-}
+use anyhow::{anyhow, Result};
 
-impl std::fmt::Display for SubstituteError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "${{{}}}: {}", self.var, self.message)
-    }
-}
-
-pub(super) fn substitute(input: &str, env: &HashMap<String, String>) -> Result<String, SubstituteError> {
+pub(super) fn substitute(input: &str, env: &HashMap<String, String>) -> Result<String> {
     let mut out = String::with_capacity(input.len());
     let bytes = input.as_bytes();
     let mut i = 0;
@@ -27,18 +17,12 @@ pub(super) fn substitute(input: &str, env: &HashMap<String, String>) -> Result<S
             i += 1;
             continue;
         }
-        let consumed = consume_dollar(bytes, i, env, &mut out)?;
-        i = consumed;
+        i = consume_dollar(bytes, i, env, &mut out)?;
     }
     Ok(out)
 }
 
-fn consume_dollar(
-    bytes: &[u8],
-    start: usize,
-    env: &HashMap<String, String>,
-    out: &mut String,
-) -> Result<usize, SubstituteError> {
+fn consume_dollar(bytes: &[u8], start: usize, env: &HashMap<String, String>, out: &mut String) -> Result<usize> {
     if start + 1 >= bytes.len() {
         out.push('$');
         return Ok(start + 1);
@@ -53,30 +37,20 @@ fn consume_dollar(
     }
 }
 
-fn consume_braced(
-    bytes: &[u8],
-    start: usize,
-    env: &HashMap<String, String>,
-    out: &mut String,
-) -> Result<usize, SubstituteError> {
+fn consume_braced(bytes: &[u8], start: usize, env: &HashMap<String, String>, out: &mut String) -> Result<usize> {
     let body_start = start + 2;
-    let end =
-        bytes[body_start..].iter().position(|&b| b == b'}').map(|p| body_start + p).ok_or_else(|| SubstituteError {
-            var: String::from_utf8_lossy(&bytes[start..]).into_owned(),
-            message: "missing closing brace".into(),
-        })?;
+    let end = bytes[body_start..].iter().position(|&b| b == b'}').map(|p| body_start + p).ok_or_else(|| {
+        anyhow!(
+            "${{{}}}: missing closing brace",
+            String::from_utf8_lossy(&bytes[start..])
+        )
+    })?;
     let inner = std::str::from_utf8(&bytes[body_start..end]).unwrap_or("");
-    let value = resolve_braced(inner, env)?;
-    out.push_str(&value);
+    out.push_str(&resolve_braced(inner, env)?);
     Ok(end + 1)
 }
 
-fn consume_bare(
-    bytes: &[u8],
-    start: usize,
-    env: &HashMap<String, String>,
-    out: &mut String,
-) -> Result<usize, SubstituteError> {
+fn consume_bare(bytes: &[u8], start: usize, env: &HashMap<String, String>, out: &mut String) -> Result<usize> {
     let name_start = start + 1;
     let end = identifier_end(bytes, name_start);
     if end == name_start {
@@ -86,12 +60,7 @@ fn consume_bare(
     let name = std::str::from_utf8(&bytes[name_start..end]).unwrap_or("");
     match env.get(name) {
         Some(v) => out.push_str(v),
-        None => {
-            return Err(SubstituteError {
-                var: name.into(),
-                message: "is not set".into(),
-            })
-        }
+        None => return Err(anyhow!("${{{name}}}: is not set")),
     }
     Ok(end)
 }
@@ -104,7 +73,7 @@ fn identifier_end(bytes: &[u8], start: usize) -> usize {
     i
 }
 
-fn resolve_braced(inner: &str, env: &HashMap<String, String>) -> Result<String, SubstituteError> {
+fn resolve_braced(inner: &str, env: &HashMap<String, String>) -> Result<String> {
     if let Some(idx) = inner.find(":-") {
         let (name, default) = (&inner[..idx], &inner[idx + 2..]);
         return Ok(env.get(name).cloned().unwrap_or_else(|| default.into()));
@@ -113,10 +82,7 @@ fn resolve_braced(inner: &str, env: &HashMap<String, String>) -> Result<String, 
         let (name, default) = (&inner[..idx], &inner[idx + 1..]);
         return Ok(env.get(name).cloned().unwrap_or_else(|| default.into()));
     }
-    env.get(inner).cloned().ok_or_else(|| SubstituteError {
-        var: inner.into(),
-        message: "is not set".into(),
-    })
+    env.get(inner).cloned().ok_or_else(|| anyhow!("${{{inner}}}: is not set"))
 }
 
 #[cfg(test)]

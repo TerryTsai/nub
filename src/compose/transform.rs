@@ -4,15 +4,17 @@
 
 use std::collections::{HashMap, HashSet};
 
+use anyhow::{anyhow, bail, Result};
+
 use crate::proto::{CreateContainerReq, HealthcheckSpec, PortPublish, RestartPolicySpec, VolumeMount};
 
 use super::configs as configs_xform;
 use super::duration::parse_ns;
 use super::secrets::{transform_service_refs, transform_top_level};
-use super::types::{ParseError, ServiceSpec, StackSpec, VolumeSpec};
+use super::types::{ServiceSpec, StackSpec, VolumeSpec};
 use super::wire::{Compose, HealthcheckYaml, MapOrList, ServiceYaml, StringOrList};
 
-pub(super) fn transform(raw: Compose) -> Result<StackSpec, ParseError> {
+pub(super) fn transform(raw: Compose) -> Result<StackSpec> {
     let secrets = transform_top_level(raw.secrets)?;
     let secret_names: HashSet<String> = secrets.iter().map(|s| s.name.clone()).collect();
     let configs = configs_xform::transform_top_level(raw.configs)?;
@@ -48,8 +50,8 @@ fn transform_service(
     svc: ServiceYaml,
     declared_secrets: &HashSet<String>,
     declared_configs: &HashSet<String>,
-) -> Result<ServiceSpec, ParseError> {
-    let image = svc.image.ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
+) -> Result<ServiceSpec> {
+    let image = svc.image.ok_or_else(|| anyhow!("service `{name}` has no `image`"))?;
     let container = CreateContainerReq {
         image,
         name: svc.container_name,
@@ -89,11 +91,11 @@ fn opt<T, U: Default>(o: Option<T>, f: impl FnOnce(T) -> U) -> U {
     o.map(f).unwrap_or_default()
 }
 
-fn parse_ports(items: &[String], svc: &str) -> Result<Vec<PortPublish>, ParseError> {
+fn parse_ports(items: &[String], svc: &str) -> Result<Vec<PortPublish>> {
     items.iter().map(|s| parse_port(s, svc)).collect()
 }
 
-fn parse_port(s: &str, svc: &str) -> Result<PortPublish, ParseError> {
+fn parse_port(s: &str, svc: &str) -> Result<PortPublish> {
     let parts: Vec<&str> = s.split(':').collect();
     match parts.as_slice() {
         [container] => Ok(PortPublish {
@@ -108,15 +110,15 @@ fn parse_port(s: &str, svc: &str) -> Result<PortPublish, ParseError> {
             container: (*container).into(),
             host: format!("{ip}:{host}"),
         }),
-        _ => Err(ParseError(format!("service `{svc}`: bad port `{s}`"))),
+        _ => bail!("service `{svc}`: bad port `{s}`"),
     }
 }
 
-fn parse_volumes(items: &[String], svc: &str) -> Result<Vec<VolumeMount>, ParseError> {
+fn parse_volumes(items: &[String], svc: &str) -> Result<Vec<VolumeMount>> {
     items.iter().map(|s| parse_volume(s, svc)).collect()
 }
 
-fn parse_volume(s: &str, svc: &str) -> Result<VolumeMount, ParseError> {
+fn parse_volume(s: &str, svc: &str) -> Result<VolumeMount> {
     let parts: Vec<&str> = s.split(':').collect();
     match parts.as_slice() {
         [target] => Ok(VolumeMount {
@@ -134,11 +136,11 @@ fn parse_volume(s: &str, svc: &str) -> Result<VolumeMount, ParseError> {
             target: (*target).into(),
             read_only: *mode == "ro",
         }),
-        _ => Err(ParseError(format!("service `{svc}`: bad volume `{s}`"))),
+        _ => bail!("service `{svc}`: bad volume `{s}`"),
     }
 }
 
-fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>, ParseError> {
+fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>> {
     let Some(value) = s else {
         return Ok(None);
     };
@@ -149,18 +151,16 @@ fn parse_restart(s: Option<&str>, svc: &str) -> Result<Option<RestartPolicySpec>
         v if v == "on-failure" || v.starts_with("on-failure:") => {
             let max_retries = v
                 .strip_prefix("on-failure:")
-                .map(|n| {
-                    n.parse::<i64>().map_err(|e| ParseError(format!("service `{svc}`: bad on-failure count: {e}")))
-                })
+                .map(|n| n.parse::<i64>().map_err(|e| anyhow!("service `{svc}`: bad on-failure count: {e}")))
                 .transpose()?;
             RestartPolicySpec::OnFailure { max_retries }
         }
-        other => return Err(ParseError(format!("service `{svc}`: unknown restart policy `{other}`"))),
+        other => bail!("service `{svc}`: unknown restart policy `{other}`"),
     };
     Ok(Some(policy))
 }
 
-fn transform_healthcheck(hc: HealthcheckYaml) -> Result<HealthcheckSpec, ParseError> {
+fn transform_healthcheck(hc: HealthcheckYaml) -> Result<HealthcheckSpec> {
     if hc.disable {
         return Ok(HealthcheckSpec {
             test: vec!["NONE".into()],
