@@ -3,7 +3,7 @@
 //! directory. Named volumes are preserved so data survives a delete; the
 //! user can prune volumes through the existing volume ops if they want.
 
-use anyhow::{bail, Result};
+use anyhow::Result;
 
 use crate::auth::scope::Scope;
 use crate::auth::Claims;
@@ -33,12 +33,8 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String) -> Res
 pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name: &str) -> Result<()> {
     let stack_containers = list_stack_containers(h, name).await?;
     if !stack_containers.is_empty() {
-        if !claims.allows_scope(Scope::ContainersStop) {
-            bail!("missing scope: {}", Scope::ContainersStop);
-        }
-        if !claims.allows_scope(Scope::ContainersRemove) {
-            bail!("missing scope: {}", Scope::ContainersRemove);
-        }
+        claims.require(Scope::ContainersStop)?;
+        claims.require(Scope::ContainersRemove)?;
     }
     for c in &stack_containers {
         let _ = containers::stop::run(h, c.id.clone(), Some(10)).await;
@@ -46,9 +42,7 @@ pub(super) async fn teardown_resources(h: &EngineHandler, claims: &Claims, name:
     for c in stack_containers {
         let _ = containers::remove::run(h, c.id.clone(), true).await;
     }
-    if !claims.allows_scope(Scope::NetworksDelete) {
-        bail!("missing scope: {}", Scope::NetworksDelete);
-    }
+    claims.require(Scope::NetworksDelete)?;
     networks::remove::run_idempotent(h, &network_name(name)).await?;
     secrets::runtime::cleanup_stack(name).await;
     configs::runtime::cleanup_stack(name).await;

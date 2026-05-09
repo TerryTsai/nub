@@ -44,6 +44,15 @@ impl Claims {
         scope::granted_allows(&self.scope, needed)
     }
 
+    /// `Ok(())` if the token authorizes `needed`, otherwise an
+    /// anyhow error of the form `missing scope: <scope>`. Used by
+    /// stack ops that compose multiple sub-ops and gate each one
+    /// against the caller's claims before invoking it.
+    pub fn require(&self, needed: Scope) -> anyhow::Result<()> {
+        anyhow::ensure!(self.allows_scope(needed), "missing scope: {needed}");
+        Ok(())
+    }
+
     /// Scope claim split into individual tokens (for whoami responses).
     pub fn scopes(&self) -> Vec<String> {
         self.scope.split_ascii_whitespace().map(str::to_string).collect()
