@@ -44,7 +44,7 @@ fn list_stacks_or_warn(stacks_root: &Path) -> Vec<String> {
 async fn rehydrate_one(stacks_root: &Path, secrets_root: &Path, name: &str) -> anyhow::Result<()> {
     use anyhow::Context as _;
     let yaml = store::read_yaml(stacks_root, name)?;
-    let spec = compose::parse_no_env(&yaml).context("compose")?;
+    let spec = compose::parse(&yaml).context("compose")?;
     if spec.secrets.is_empty() && spec.configs.is_empty() {
         return Ok(());
     }

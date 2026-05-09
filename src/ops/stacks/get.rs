@@ -18,7 +18,7 @@ pub(crate) async fn run(h: &EngineHandler, name: String) -> Result<Box<StackDeta
     let yaml = store::read_yaml(&h.policy.stacks_root, &name)?;
     let modified_at = store::modified_at(&h.policy.stacks_root, &name);
     let containers = list_stack_containers(h, &name).await?;
-    let parsed = compose::parse_no_env(&yaml).ok();
+    let parsed = compose::parse(&yaml).ok();
     let (unsupported, service_unsupported) = match parsed {
         Some(spec) => {
             let svc_map: HashMap<String, Vec<String>> = spec

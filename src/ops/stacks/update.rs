@@ -16,7 +16,7 @@ use super::store;
 pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: String) -> Result<StackCreated> {
     store::validate_name(&name)?;
     ensure!(store::exists(&h.policy.stacks_root, &name), "stack `{name}` not found");
-    let spec = compose::parse_no_env(&yaml).context("compose")?;
+    let spec = compose::parse(&yaml).context("compose")?;
     ensure!(!spec.services.is_empty(), "stack `{name}` has no services");
     store::write_yaml(&h.policy.stacks_root, &name, &yaml)?;
     delete::teardown_resources(h, claims, &name).await?;

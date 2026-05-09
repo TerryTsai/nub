@@ -110,7 +110,7 @@ configs:
   site_html:
     content: <h1>hello</h1>
 "#;
-        let spec = parse(yaml, &HashMap::new()).unwrap();
+        let spec = parse(yaml).unwrap();
         assert_eq!(spec.configs.len(), 2);
         let names: Vec<_> = spec.configs.iter().map(|c| c.name.as_str()).collect();
         assert_eq!(names, ["nginx_conf", "site_html"]);
@@ -136,7 +136,7 @@ configs:
   cfg:
     file: ./cfg
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("cfg"), "got: {err}");
         assert!(err.contains("content:"), "got: {err}");
     }
@@ -151,7 +151,7 @@ configs:
   cfg:
     external: true
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("external"), "got: {err}");
         assert!(err.contains("content:"), "got: {err}");
     }
@@ -166,7 +166,7 @@ configs:
   cfg:
     environment: SOME_VAR
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("environment"), "got: {err}");
     }
 
@@ -179,7 +179,7 @@ services:
 configs:
   cfg: {}
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("content:"), "got: {err}");
     }
 
@@ -195,7 +195,7 @@ configs:
   declared:
     content: value
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("rogue"), "got: {err}");
         assert!(err.contains("isn't declared"), "got: {err}");
     }
@@ -215,7 +215,7 @@ configs:
   cfg:
     content: x
 "#;
-        let spec = parse(yaml, &HashMap::new()).unwrap();
+        let spec = parse(yaml).unwrap();
         assert_eq!(spec.services[0].configs[0].target, "/app.conf");
     }
 }

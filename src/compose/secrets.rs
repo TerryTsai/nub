@@ -101,7 +101,7 @@ secrets:
   db_password:
     external: true
 "#;
-        let spec = parse(yaml, &HashMap::new()).unwrap();
+        let spec = parse(yaml).unwrap();
         assert_eq!(spec.secrets.len(), 2);
         let names: Vec<_> = spec.secrets.iter().map(|s| s.name.as_str()).collect();
         assert_eq!(names, ["api_key", "db_password"]);
@@ -124,7 +124,7 @@ secrets:
   api_key:
     file: ./key
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("api_key"), "got: {err}");
         assert!(err.contains("nub secret put"), "got: {err}");
     }
@@ -138,7 +138,7 @@ services:
 secrets:
   api_key: {}
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("external: true"), "got: {err}");
     }
 
@@ -154,7 +154,7 @@ secrets:
   declared:
     external: true
 "#;
-        let err = parse(yaml, &HashMap::new()).unwrap_err().to_string();
+        let err = parse(yaml).unwrap_err().to_string();
         assert!(err.contains("rogue"), "got: {err}");
         assert!(err.contains("isn't declared"), "got: {err}");
     }
@@ -172,7 +172,7 @@ secrets:
   db_password:
     external: true
 "#;
-        let spec = parse(yaml, &HashMap::new()).unwrap();
+        let spec = parse(yaml).unwrap();
         let r = &spec.services[0].secrets[0];
         assert_eq!(r.target, "/run/secrets/db_pw");
     }
@@ -190,7 +190,7 @@ secrets:
     external: true
     name: prod_api_key
 "#;
-        let spec = parse(yaml, &HashMap::new()).unwrap();
+        let spec = parse(yaml).unwrap();
         assert_eq!(spec.secrets[0].name, "api_key");
         assert_eq!(spec.secrets[0].lookup, "prod_api_key");
     }

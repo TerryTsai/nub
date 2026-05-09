@@ -28,7 +28,7 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String, yaml: 
     if store::exists(&h.policy.stacks_root, &name) {
         bail!("stack `{name}` already exists; use redeploy or update");
     }
-    let spec = compose::parse_no_env(&yaml).context("compose")?;
+    let spec = compose::parse(&yaml).context("compose")?;
     if spec.services.is_empty() {
         bail!("stack `{name}` has no services");
     }

@@ -17,7 +17,7 @@ pub(crate) async fn run(h: &EngineHandler, claims: &Claims, name: String) -> Res
     store::validate_name(&name)?;
     ensure!(store::exists(&h.policy.stacks_root, &name), "stack `{name}` not found");
     let yaml = store::read_yaml(&h.policy.stacks_root, &name)?;
-    let spec = compose::parse_no_env(&yaml).context("compose")?;
+    let spec = compose::parse(&yaml).context("compose")?;
     delete::teardown_resources(h, claims, &name).await?;
     let ids = create::deploy_from_spec(h, claims, &name, spec).await?;
     Ok(StackCreated {

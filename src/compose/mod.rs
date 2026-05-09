@@ -13,5 +13,5 @@ mod transform;
 mod types;
 mod wire;
 
-pub use parse::parse_no_env;
+pub use parse::parse;
 pub use types::{ServiceConfigRef, ServiceSecretRef, ServiceSpec, StackSpec};
