@@ -52,7 +52,7 @@ pub fn connect_url(listen: &str, tls: bool, token: &str) -> String {
 
 /// Substitute hostname for unspecified listen addresses so the printed URL
 /// is usable on the LAN. Specific addresses pass through unchanged.
-pub fn display_authority(listen: &str) -> String {
+fn display_authority(listen: &str) -> String {
     let (host, port) = listen.rsplit_once(':').unwrap_or((listen, ""));
     let host = match host.trim_matches(['[', ']']) {
         "0.0.0.0" | "::" | "" => super::hostname(),

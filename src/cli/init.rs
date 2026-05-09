@@ -1,7 +1,7 @@
 //! `nub init` — generate a starter config file. Never updated by nub
 //! after the initial write; the operator owns it.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{bail, Context, Result};
 use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
@@ -36,10 +36,7 @@ pub fn run(path: Option<String>, force: bool) -> Result<()> {
 
     let target = path.map(PathBuf::from).unwrap_or_else(default_path);
     if target.exists() && !force {
-        return Err(anyhow!(
-            "{} already exists; pass --force to overwrite",
-            target.display()
-        ));
+        bail!("{} already exists; pass --force to overwrite", target.display());
     }
     if let Some(parent) = target.parent() {
         fs::create_dir_all(parent).with_context(|| format!("creating {}", parent.display()))?;
@@ -50,6 +47,6 @@ pub fn run(path: Option<String>, force: bool) -> Result<()> {
 }
 
 /// Default config path: `$XDG_CONFIG_HOME/nub/nub.toml`.
-pub fn default_path() -> PathBuf {
+fn default_path() -> PathBuf {
     crate::config::xdg_config_home().join("nub/nub.toml")
 }
