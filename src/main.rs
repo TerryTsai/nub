@@ -152,18 +152,10 @@ async fn build_app(policy: ops::Policy, id: String, issuer: Arc<Issuer>) -> Resu
 
 fn resolve_config(args: &Args) -> Result<config::Config> {
     let mut cfg = config::Config::load(args.config.as_deref())?.unwrap_or_default();
-    if let Some(v) = &args.id {
-        cfg.id = Some(v.clone());
-    }
-    if let Some(v) = &args.listen {
-        cfg.listen = Some(v.clone());
-    }
-    if let Some(v) = &args.tls_cert {
-        cfg.tls_cert = Some(v.clone());
-    }
-    if let Some(v) = &args.tls_key {
-        cfg.tls_key = Some(v.clone());
-    }
+    cfg.id = args.id.clone().or(cfg.id);
+    cfg.listen = args.listen.clone().or(cfg.listen);
+    cfg.tls_cert = args.tls_cert.clone().or(cfg.tls_cert);
+    cfg.tls_key = args.tls_key.clone().or(cfg.tls_key);
     Ok(cfg)
 }
 

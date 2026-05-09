@@ -2,7 +2,7 @@
 //! and start. `ExecStart` is set to the binary's `current_exe()` so the
 //! unit always points at the nub that emitted it.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use clap::Subcommand;
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -117,7 +117,7 @@ fn enable_now(scope: Scope) -> Result<()> {
     }
     let status = cmd.args(["enable", "--now", "nub"]).status().context("running systemctl enable --now nub")?;
     if !status.success() {
-        return Err(anyhow!("systemctl enable --now nub failed (exit {:?})", status.code()));
+        bail!("systemctl enable --now nub failed (exit {:?})", status.code());
     }
     Ok(())
 }

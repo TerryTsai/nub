@@ -3,7 +3,7 @@
 //! 270-char JWT out of journalctl. Also home of the helpers the boot
 //! banner uses to render the same URL and QR — single source of truth.
 
-use anyhow::{anyhow, Context, Result};
+use anyhow::{bail, Context, Result};
 
 use crate::config::{self, Config};
 
@@ -25,34 +25,27 @@ pub fn print_qr() -> Result<()> {
 pub(super) fn url_from_disk() -> Result<String> {
     let admin_path = config::default_admin_jwt();
     if !admin_path.exists() {
-        return Err(anyhow!(
+        bail!(
             "no admin token at {}; run `nub` once to generate it",
             admin_path.display()
-        ));
+        );
     }
     let admin = std::fs::read_to_string(&admin_path)
         .with_context(|| format!("reading {}", admin_path.display()))?
         .trim()
         .to_string();
     if admin.is_empty() {
-        return Err(anyhow!("admin token at {} is empty", admin_path.display()));
+        bail!("admin token at {} is empty", admin_path.display());
     }
-    let cfg = locate_config()?.unwrap_or_default();
+    let cfg = Config::load(None)?.unwrap_or_default();
     Ok(build_url(&cfg, &admin))
-}
-
-fn locate_config() -> Result<Option<Config>> {
-    Config::load(None)
 }
 
 fn build_url(cfg: &Config, token: &str) -> String {
     let listen = cfg.listen.clone().unwrap_or_else(|| "0.0.0.0:8080".into());
-    let scheme = if tls_enabled(cfg) { "https" } else { "http" };
+    let tls = cfg.tls_cert.is_some() && cfg.tls_key.is_some();
+    let scheme = if tls { "https" } else { "http" };
     format!("{scheme}://{}/add#t={token}", display_authority(&listen))
-}
-
-fn tls_enabled(cfg: &Config) -> bool {
-    cfg.tls_cert.is_some() && cfg.tls_key.is_some()
 }
 
 /// Compose the URL the boot banner shows. Used by main.rs.
