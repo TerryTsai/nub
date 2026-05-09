@@ -2,10 +2,16 @@
 
 use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
+use tokio::fs;
 
-use super::store;
+use super::store::entry_path;
 
 pub async fn run(root: &Path, name: &str) -> Result<()> {
-    store::delete(root, name).await
+    let path = entry_path(root, name)?;
+    match fs::remove_file(&path).await {
+        Ok(()) => Ok(()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+        Err(e) => Err(e).with_context(|| format!("removing {}", path.display())),
+    }
 }

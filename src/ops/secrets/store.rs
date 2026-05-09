@@ -9,8 +9,6 @@ use anyhow::{anyhow, bail, Context, Result};
 use tokio::fs;
 
 use crate::ops::names::valid_fs_name;
-use crate::ops::time::iso8601_mtime;
-use crate::proto::SecretSummary;
 
 /// Hard cap on a single secret's encrypted blob. 64 KiB covers any
 /// realistic credential and stops accidental file-uploads.
@@ -30,37 +28,6 @@ pub fn identity_path(root: &Path) -> PathBuf {
     root.join(".identity")
 }
 
-pub async fn list(root: &Path) -> Result<Vec<SecretSummary>> {
-    let mut entries = match fs::read_dir(root).await {
-        Ok(e) => e,
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
-        Err(e) => return Err(e).with_context(|| format!("reading {}", root.display())),
-    };
-    let mut out = Vec::new();
-    while let Some(entry) = entries.next_entry().await? {
-        let Some(name) = strip_age_suffix(&entry.file_name()) else {
-            continue;
-        };
-        if !valid_fs_name(&name) {
-            continue;
-        }
-        let meta = match entry.metadata().await {
-            Ok(m) => m,
-            Err(_) => continue,
-        };
-        if meta.file_type().is_symlink() || !meta.file_type().is_file() {
-            continue;
-        }
-        out.push(SecretSummary {
-            name,
-            size: meta.len(),
-            modified_at: iso8601_mtime(meta.modified().ok()),
-        });
-    }
-    out.sort_by(|a, b| a.name.cmp(&b.name));
-    Ok(out)
-}
-
 pub async fn read_blob(root: &Path, name: &str) -> Result<Vec<u8>> {
     let path = entry_path(root, name)?;
     let lmeta = fs::symlink_metadata(&path)
@@ -72,9 +39,7 @@ pub async fn read_blob(root: &Path, name: &str) -> Result<Vec<u8>> {
     if lmeta.len() > MAX_BYTES {
         bail!("secret {name} is larger than {} KiB", MAX_BYTES / 1024);
     }
-    fs::read(&path)
-        .await
-        .with_context(|| format!("reading {}", path.display()))
+    fs::read(&path).await.with_context(|| format!("reading {}", path.display()))
 }
 
 pub async fn write_blob(root: &Path, name: &str, blob: &[u8]) -> Result<()> {
@@ -90,23 +55,12 @@ pub async fn write_blob(root: &Path, name: &str, blob: &[u8]) -> Result<()> {
     let dir = path.parent().ok_or_else(|| anyhow!("invalid secret path"))?;
     fs::create_dir_all(dir).await.ok();
     let tmp = dir.join(format!(".{name}.age.tmp"));
-    fs::write(&tmp, blob)
-        .await
-        .with_context(|| format!("writing {}", tmp.display()))?;
+    fs::write(&tmp, blob).await.with_context(|| format!("writing {}", tmp.display()))?;
     set_perms_0600(&tmp).await.ok();
     fs::rename(&tmp, &path)
         .await
         .with_context(|| format!("renaming {} -> {}", tmp.display(), path.display()))?;
     Ok(())
-}
-
-pub async fn delete(root: &Path, name: &str) -> Result<()> {
-    let path = entry_path(root, name)?;
-    match fs::remove_file(&path).await {
-        Ok(()) => Ok(()),
-        Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(e).with_context(|| format!("removing {}", path.display())),
-    }
 }
 
 #[cfg(unix)]
@@ -121,11 +75,4 @@ async fn set_perms_0600(path: &Path) -> Result<()> {
 #[cfg(not(unix))]
 async fn set_perms_0600(_path: &Path) -> Result<()> {
     Ok(())
-}
-
-/// Strip the `.age` suffix from an `OsString`, returning the base name.
-fn strip_age_suffix(file: &std::ffi::OsString) -> Option<String> {
-    let s = file.to_str()?;
-    let stripped = s.strip_suffix(".age")?;
-    Some(stripped.to_string())
 }
