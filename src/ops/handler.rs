@@ -56,6 +56,7 @@ impl EngineHandler {
 impl OpHandler for EngineHandler {
     #[allow(clippy::too_many_lines)]
     async fn handle(&self, op: Op, claims: &Claims, input: mpsc::Receiver<StreamChunk>) -> HandlerOutput {
+        let secrets_root = &self.policy.secrets_root;
         match op {
             // Introspection ops are answered by `auth::introspect` before
             // dispatch ever sees them. Reaching this arm means a transport
@@ -64,23 +65,27 @@ impl OpHandler for EngineHandler {
             // both `auth::introspect` AND this match.
             Op::Whoami => unreachable!("Whoami handled by auth::introspect"),
 
-            Op::HostInfo => unary(host::info::run(self).await, OpResult::HostInfo),
+            Op::HostInfo => unary(host::info::run(self).await.map(OpResult::HostInfo)),
 
-            Op::ListContainers { all } => unary(containers::list::run(self, all).await, OpResult::Containers),
-            Op::GetContainer { id } => unary(containers::inspect::run(self, id).await, OpResult::ContainerDetail),
-            Op::StartContainer { id } => unary(containers::start::run(self, id).await, ok),
-            Op::StopContainer { id, timeout } => unary(containers::stop::run(self, id, timeout).await, ok),
-            Op::RestartContainer { id, timeout } => unary(containers::restart::run(self, id, timeout).await, ok),
-            Op::KillContainer { id, signal } => unary(containers::kill::run(self, id, signal).await, ok),
-            Op::RemoveContainer { id, force } => unary(containers::remove::run(self, id, force).await, ok),
-            Op::CreateContainer(req) => unary(containers::create::run(self, *req).await, OpResult::ContainerCreated),
+            Op::ListContainers { all } => unary(containers::list::run(self, all).await.map(OpResult::Containers)),
+            Op::GetContainer { id } => unary(containers::inspect::run(self, id).await.map(OpResult::ContainerDetail)),
+            Op::StartContainer { id } => unit(containers::start::run(self, id).await),
+            Op::StopContainer { id, timeout } => unit(containers::stop::run(self, id, timeout).await),
+            Op::RestartContainer { id, timeout } => unit(containers::restart::run(self, id, timeout).await),
+            Op::KillContainer { id, signal } => unit(containers::kill::run(self, id, signal).await),
+            Op::RemoveContainer { id, force } => unit(containers::remove::run(self, id, force).await),
+            Op::CreateContainer(req) => unary(
+                containers::create::run(self, *req)
+                    .await
+                    .map(OpResult::ContainerCreated),
+            ),
             Op::StreamLogs { id, follow, tail } => stream(containers::logs::run(self, id, follow, tail)),
             Op::StreamStats { id } => stream(containers::stats::run(self, id)),
             Op::Exec { id, cmd, tty } => stream(containers::exec::run(self, id, cmd, tty, input)),
 
-            Op::ListImages => unary(images::list::run(self).await, OpResult::Images),
-            Op::GetImage { id } => unary(images::inspect::run(self, id).await, OpResult::ImageDetail),
-            Op::DeleteImage { id } => unary(images::remove::run(self, id).await, ok),
+            Op::ListImages => unary(images::list::run(self).await.map(OpResult::Images)),
+            Op::GetImage { id } => unary(images::inspect::run(self, id).await.map(OpResult::ImageDetail)),
+            Op::DeleteImage { id } => unit(images::remove::run(self, id).await),
             Op::PullImage { reference } => stream(images::pull::run(self, reference)),
             Op::BuildImage {
                 dockerfile_content,
@@ -88,72 +93,70 @@ impl OpHandler for EngineHandler {
                 build_args,
             } => stream(images::build::run(self, dockerfile_content, tag, build_args)),
 
-            Op::ListVolumes => unary(volumes::list::run(self).await, OpResult::Volumes),
-            Op::GetVolume { name } => unary(volumes::inspect::run(self, &name).await, OpResult::VolumeDetail),
+            Op::ListVolumes => unary(volumes::list::run(self).await.map(OpResult::Volumes)),
+            Op::GetVolume { name } => unary(volumes::inspect::run(self, &name).await.map(OpResult::VolumeDetail)),
             Op::CreateVolume {
                 name,
                 driver,
                 labels,
                 options,
-            } => unary(volumes::create::run(self, name, driver, labels, options).await, ok),
-            Op::DeleteVolume { name } => unary(volumes::remove::run(self, name).await, ok),
+            } => unit(volumes::create::run(self, name, driver, labels, options).await),
+            Op::DeleteVolume { name } => unit(volumes::remove::run(self, name).await),
 
-            Op::ListNetworks => unary(networks::list::run(self).await, OpResult::Networks),
-            Op::GetNetwork { id } => unary(networks::inspect::run(self, &id).await, OpResult::NetworkDetail),
-            Op::CreateNetwork { name, internal } => unary(
-                networks::create::run(self, name, internal, Default::default()).await,
-                ok,
-            ),
-            Op::DeleteNetwork { id } => unary(networks::remove::run(self, id).await, ok),
+            Op::ListNetworks => unary(networks::list::run(self).await.map(OpResult::Networks)),
+            Op::GetNetwork { id } => unary(networks::inspect::run(self, &id).await.map(OpResult::NetworkDetail)),
+            Op::CreateNetwork { name, internal } => {
+                unit(networks::create::run(self, name, internal, Default::default()).await)
+            }
+            Op::DeleteNetwork { id } => unit(networks::remove::run(self, id).await),
 
-            Op::ListDockerfiles => unary(dockerfiles::list::run(self).await, OpResult::Dockerfiles),
-            Op::GetDockerfile { name } => unary(dockerfiles::get::run(self, &name).await, OpResult::Dockerfile),
-            Op::PutDockerfile { name, content } => unary(dockerfiles::put::run(self, &name, &content).await, ok),
-            Op::DeleteDockerfile { name } => unary(dockerfiles::delete::run(self, &name).await, ok),
+            Op::ListDockerfiles => unary(dockerfiles::list::run(self).await.map(OpResult::Dockerfiles)),
+            Op::GetDockerfile { name } => unary(dockerfiles::get::run(self, &name).await.map(OpResult::Dockerfile)),
+            Op::PutDockerfile { name, content } => unit(dockerfiles::put::run(self, &name, &content).await),
+            Op::DeleteDockerfile { name } => unit(dockerfiles::delete::run(self, &name).await),
 
             Op::CreateStack { name, yaml } => unary(
-                stacks::create::run(self, claims, name, yaml).await,
-                OpResult::StackCreated,
+                stacks::create::run(self, claims, name, yaml)
+                    .await
+                    .map(OpResult::StackCreated),
             ),
-            Op::ListStacks => unary(stacks::list::run(self).await, OpResult::Stacks),
-            Op::GetStack { name } => unary(stacks::get::run(self, name).await, OpResult::StackDetail),
-            Op::DeleteStack { name } => unary(stacks::delete::run(self, claims, name).await, ok),
-            Op::RedeployStack { name } => {
-                unary(stacks::redeploy::run(self, claims, name).await, OpResult::StackCreated)
-            }
+            Op::ListStacks => unary(stacks::list::run(self).await.map(OpResult::Stacks)),
+            Op::GetStack { name } => unary(stacks::get::run(self, name).await.map(OpResult::StackDetail)),
+            Op::DeleteStack { name } => unit(stacks::delete::run(self, claims, name).await),
+            Op::RedeployStack { name } => unary(
+                stacks::redeploy::run(self, claims, name)
+                    .await
+                    .map(OpResult::StackCreated),
+            ),
             Op::UpdateStack { name, yaml } => unary(
-                stacks::update::run(self, claims, name, yaml).await,
-                OpResult::StackCreated,
+                stacks::update::run(self, claims, name, yaml)
+                    .await
+                    .map(OpResult::StackCreated),
             ),
-            Op::PullStack { name } => unary(stacks::pull::run(self, claims, name).await, OpResult::StackCreated),
+            Op::PullStack { name } => unary(stacks::pull::run(self, claims, name).await.map(OpResult::StackCreated)),
             Op::StreamStackLogs { name, follow, tail } => stream(stacks::logs::run(self, name, follow, tail)),
 
-            Op::ListSecrets => unary(secrets::list::run(&self.policy.secrets_root).await, OpResult::Secrets),
-            Op::PutSecret { name, value } => {
-                unary(secrets::put::run(&self.policy.secrets_root, &name, &value).await, ok)
-            }
-            Op::DeleteSecret { name } => unary(secrets::delete::run(&self.policy.secrets_root, &name).await, ok),
-            Op::GetSecret { name } => unary(
-                secrets::get::run(&self.policy.secrets_root, &name).await,
-                OpResult::Secret,
-            ),
+            Op::ListSecrets => unary(secrets::list::run(secrets_root).await.map(OpResult::Secrets)),
+            Op::PutSecret { name, value } => unit(secrets::put::run(secrets_root, &name, &value).await),
+            Op::DeleteSecret { name } => unit(secrets::delete::run(secrets_root, &name).await),
+            Op::GetSecret { name } => unary(secrets::get::run(secrets_root, &name).await.map(OpResult::Secret)),
         }
     }
 }
 
-fn unary<T>(r: anyhow::Result<T>, into: impl FnOnce(T) -> OpResult) -> HandlerOutput {
+fn unary(r: Result<OpResult>) -> HandlerOutput {
     HandlerOutput::Unary(match r {
-        Ok(v) => into(v),
+        Ok(v) => v,
         Err(e) => OpResult::Err { message: e.to_string() },
     })
 }
 
-fn stream(s: BoxStream<'static, StreamChunk>) -> HandlerOutput {
-    HandlerOutput::Stream(s)
+fn unit(r: Result<()>) -> HandlerOutput {
+    unary(r.map(|()| OpResult::Ok))
 }
 
-fn ok(_: ()) -> OpResult {
-    OpResult::Ok
+fn stream(s: BoxStream<'static, StreamChunk>) -> HandlerOutput {
+    HandlerOutput::Stream(s)
 }
 
 /// Spawn `produce` and forward its emitted chunks. Appends an `End` chunk
@@ -161,7 +164,7 @@ fn ok(_: ()) -> OpResult {
 pub(crate) fn spawn_chunked<F, Fut>(produce: F) -> BoxStream<'static, StreamChunk>
 where
     F: FnOnce(mpsc::Sender<StreamChunk>) -> Fut + Send + 'static,
-    Fut: Future<Output = anyhow::Result<()>> + Send + 'static,
+    Fut: Future<Output = Result<()>> + Send + 'static,
 {
     let (tx, rx) = mpsc::channel::<StreamChunk>(32);
     let inner = tx.clone();
