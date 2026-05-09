@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use anyhow::Result;
 
 use super::wire::{CompatList, ContainerNets, LibpodList};
-use crate::client::{EngineKind, Query, Req};
+use crate::client::{EngineKind, Req};
 use crate::ops::EngineHandler;
 use crate::proto::NetworkSummary;
 
@@ -47,9 +47,7 @@ async fn list_libpod(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 /// `NetworkSettings.Networks` map) and collect names. Sub-second on both
 /// engines — cheap enough to pair with every list call.
 async fn probe_attached(h: &EngineHandler) -> Result<HashSet<String>> {
-    let mut q = Query::new();
-    q.push_bool("all", true);
-    let path = format!("{}{}", containers_path(h.engine.kind()), q.finish());
+    let path = format!("{}?all=true", containers_path(h.engine.kind()));
     let raw: Vec<ContainerNets> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     let mut out = HashSet::new();
     for c in raw {

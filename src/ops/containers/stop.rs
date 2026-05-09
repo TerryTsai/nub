@@ -4,15 +4,14 @@
 
 use anyhow::Result;
 
-use crate::client::{Query, Req};
+use crate::client::Req;
 use crate::ops::EngineHandler;
 
 pub(crate) async fn run(h: &EngineHandler, id: String, timeout: Option<i64>) -> Result<()> {
-    let mut q = Query::new();
-    if let Some(t) = timeout {
-        q.push("t", &t.to_string());
-    }
-    let path = format!("/containers/{id}/stop{}", q.finish());
+    let path = match timeout {
+        Some(t) => format!("/containers/{id}/stop?t={t}"),
+        None => format!("/containers/{id}/stop"),
+    };
     h.engine.conn().await?.send_unary(Req::post(path)).await?.ok()?;
     Ok(())
 }

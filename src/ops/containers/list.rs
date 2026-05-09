@@ -6,12 +6,12 @@
 use anyhow::Result;
 
 use super::wire::list::RawListItem;
-use crate::client::{EngineKind, Query, Req};
+use crate::client::{EngineKind, Req};
 use crate::ops::EngineHandler;
 use crate::proto::ContainerSummary;
 
 pub(crate) async fn run(h: &EngineHandler, all: bool) -> Result<Vec<ContainerSummary>> {
-    let path = format!("{}{}", list_path(h.engine.kind()), query(all));
+    let path = format!("{}?all={all}", list_path(h.engine.kind()));
     let raw: Vec<RawListItem> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
     Ok(raw.into_iter().map(RawListItem::into_summary).collect())
 }
@@ -23,10 +23,4 @@ fn list_path(kind: EngineKind) -> &'static str {
         EngineKind::Podman => "/v4.0.0/libpod/containers/json",
         EngineKind::Docker => "/containers/json",
     }
-}
-
-fn query(all: bool) -> String {
-    let mut q = Query::new();
-    q.push_bool("all", all);
-    q.finish()
 }

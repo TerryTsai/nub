@@ -8,7 +8,7 @@ use std::collections::HashSet;
 use anyhow::Result;
 
 use super::wire::{CompatList, ContainerWithMounts, RawLibpodVolume};
-use crate::client::{EngineKind, Query, Req};
+use crate::client::{EngineKind, Req};
 use crate::ops::EngineHandler;
 use crate::proto::VolumeSummary;
 
@@ -49,10 +49,13 @@ async fn fetch_compat(h: &EngineHandler) -> Result<CompatList> {
 /// Walk container mounts (compat shape) and collect the named volumes.
 /// Used only on Docker — Podman libpod has MountCount in the volume list.
 async fn probe_attached_volumes(h: &EngineHandler) -> Result<HashSet<String>> {
-    let mut q = Query::new();
-    q.push_bool("all", true);
-    let path = format!("/containers/json{}", q.finish());
-    let raw: Vec<ContainerWithMounts> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
+    let raw: Vec<ContainerWithMounts> = h
+        .engine
+        .conn()
+        .await?
+        .send_unary(Req::get("/containers/json?all=true"))
+        .await?
+        .json()?;
     let mut out = HashSet::new();
     for c in raw {
         for m in c.mounts {

@@ -3,15 +3,14 @@
 
 use anyhow::Result;
 
-use crate::client::{Query, Req};
+use crate::client::Req;
 use crate::ops::EngineHandler;
 
 pub(crate) async fn run(h: &EngineHandler, id: String, signal: Option<String>) -> Result<()> {
-    let mut q = Query::new();
-    if let Some(s) = &signal {
-        q.push("signal", s);
-    }
-    let path = format!("/containers/{id}/kill{}", q.finish());
+    let path = match signal {
+        Some(s) => format!("/containers/{id}/kill?signal={s}"),
+        None => format!("/containers/{id}/kill"),
+    };
     h.engine.conn().await?.send_unary(Req::post(path)).await?.ok()?;
     Ok(())
 }

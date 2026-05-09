@@ -13,7 +13,7 @@ use anyhow::{anyhow, Result};
 
 use super::create_build;
 use super::wire::create::CreateResp;
-use crate::client::{Query, Req};
+use crate::client::Req;
 use crate::ops::EngineHandler;
 use crate::proto::{ContainerCreated, CreateContainerReq, VolumeMount};
 
@@ -23,7 +23,12 @@ pub(crate) async fn run(h: &EngineHandler, req: CreateContainerReq) -> Result<Co
     require_named_volumes_exist(h, &req.volumes).await?;
 
     let body = create_build::body(&req);
-    let path = format!("/containers/create{}", create_query(req.name.as_deref()));
+    // Container names are validated as `[a-zA-Z0-9][a-zA-Z0-9_.-]*` upstream
+    // (engine rejects others), so no percent-encoding needed.
+    let path = match req.name.as_deref() {
+        Some(n) => format!("/containers/create?name={n}"),
+        None => "/containers/create".to_string(),
+    };
     let resp: CreateResp = h
         .engine
         .conn()
@@ -36,14 +41,6 @@ pub(crate) async fn run(h: &EngineHandler, req: CreateContainerReq) -> Result<Co
         id: resp.id,
         warnings: resp.warnings.unwrap_or_default(),
     })
-}
-
-fn create_query(name: Option<&str>) -> String {
-    let mut q = Query::new();
-    if let Some(n) = name {
-        q.push("name", n);
-    }
-    q.finish()
 }
 
 fn validate_static(req: &CreateContainerReq, allowed_binds: &[PathBuf]) -> Result<()> {
