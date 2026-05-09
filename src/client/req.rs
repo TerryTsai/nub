@@ -34,7 +34,7 @@ impl Req {
         Self {
             method,
             path: path.into(),
-            body: Body::Empty,
+            body: Body(Bytes::new()),
             content_type: None,
             upgrade: None,
         }
@@ -42,13 +42,13 @@ impl Req {
 
     pub(crate) fn json<T: Serialize>(mut self, value: &T) -> Result<Self, Error> {
         let bytes = serde_json::to_vec(value).map_err(|e| Error::Decode(format!("{e}")))?;
-        self.body = Body::Bytes(Bytes::from(bytes));
+        self.body = Body(Bytes::from(bytes));
         self.content_type = Some("application/json");
         Ok(self)
     }
 
     pub(crate) fn bytes(mut self, content_type: &'static str, body: Bytes) -> Self {
-        self.body = Body::Bytes(body);
+        self.body = Body(body);
         self.content_type = Some(content_type);
         self
     }

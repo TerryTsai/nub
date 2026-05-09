@@ -5,7 +5,7 @@ use std::io;
 use std::path::PathBuf;
 
 use bytes::Bytes;
-use http_body_util::{BodyExt, Empty};
+use http_body_util::BodyExt;
 use hyper::body::Incoming;
 use hyper::client::conn::http1;
 use hyper::upgrade::Upgraded;
@@ -37,10 +37,9 @@ pub(crate) struct Conn {
     sender: http1::SendRequest<Body>,
 }
 
-pub(crate) enum Body {
-    Empty,
-    Bytes(Bytes),
-}
+/// HTTP body — either empty (`Bytes::new()`) or a single chunk drained
+/// in one poll. Yields one frame, then `None`.
+pub(crate) struct Body(pub(crate) Bytes);
 
 impl http_body::Body for Body {
     type Data = Bytes;
@@ -48,19 +47,13 @@ impl http_body::Body for Body {
 
     fn poll_frame(
         self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
+        _: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Result<http_body::Frame<Self::Data>, Self::Error>>> {
-        let this = self.get_mut();
-        match this {
-            Body::Empty => {
-                let mut b = Empty::<Bytes>::new();
-                std::pin::Pin::new(&mut b).poll_frame(cx)
-            }
-            Body::Bytes(b) if b.is_empty() => std::task::Poll::Ready(None),
-            Body::Bytes(b) => {
-                let frame = http_body::Frame::data(std::mem::take(b));
-                std::task::Poll::Ready(Some(Ok(frame)))
-            }
+        let bytes = std::mem::take(&mut self.get_mut().0);
+        if bytes.is_empty() {
+            std::task::Poll::Ready(None)
+        } else {
+            std::task::Poll::Ready(Some(Ok(http_body::Frame::data(bytes))))
         }
     }
 }
