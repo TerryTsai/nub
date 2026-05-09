@@ -91,7 +91,6 @@ fn default_target(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::compose::parse::parse;
-    use std::collections::HashMap;
 
     #[test]
     fn inline_content_short_and_long_form() {
