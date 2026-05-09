@@ -10,6 +10,6 @@ use crate::proto::ContainerDetail;
 
 pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<Box<ContainerDetail>> {
     let path = format!("/containers/{id}/json");
-    let raw: RawInspect = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
+    let raw: RawInspect = h.engine.unary(Req::get(path)).await?;
     Ok(Box::new(raw.into_detail()))
 }

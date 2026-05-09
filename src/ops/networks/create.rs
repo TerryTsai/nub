@@ -23,6 +23,6 @@ pub(crate) async fn run(
         internal,
         labels,
     };
-    h.engine.conn().await?.send_unary(Req::post("/networks/create").json(&body)?).await?.ok()?;
+    h.engine.unit(Req::post("/networks/create").json(&body)?).await?;
     Ok(())
 }

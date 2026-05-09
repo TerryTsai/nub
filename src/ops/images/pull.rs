@@ -33,7 +33,7 @@ pub(crate) async fn run_unary(h: &EngineHandler, reference: &str) -> Result<()> 
 
 async fn pump(engine: Engine, reference: String, tx: mpsc::Sender<StreamChunk>) -> Result<()> {
     let path = format!("/images/create{}", create_query(&reference));
-    let res = engine.conn().await?.send_streaming(Req::post(path)).await?;
+    let res = engine.streaming(Req::post(path)).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
         let body = res.into_body().collect().await?.to_bytes();

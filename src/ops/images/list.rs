@@ -8,7 +8,7 @@ use crate::ops::EngineHandler;
 use crate::proto::ImageSummary;
 
 pub(crate) async fn run(h: &EngineHandler) -> Result<Vec<ImageSummary>> {
-    let raw: Vec<RawImage> = h.engine.conn().await?.send_unary(Req::get("/images/json")).await?.json()?;
+    let raw: Vec<RawImage> = h.engine.unary(Req::get("/images/json")).await?;
     Ok(raw.into_iter().map(into_summary).collect())
 }
 

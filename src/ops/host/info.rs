@@ -10,8 +10,8 @@ use crate::proto::HostInfo;
 use crate::version::NUB_VERSION;
 
 pub(crate) async fn run(h: &EngineHandler) -> Result<HostInfo> {
-    let info: InfoResp = h.engine.conn().await?.send_unary(Req::get("/info")).await?.json()?;
-    let version: VersionResp = h.engine.conn().await?.send_unary(Req::get("/version")).await?.json()?;
+    let info: InfoResp = h.engine.unary(Req::get("/info")).await?;
+    let version: VersionResp = h.engine.unary(Req::get("/version")).await?;
     Ok(HostInfo {
         nub: NUB_VERSION.to_string(),
         engine: engine_name(h.engine.kind(), &version),

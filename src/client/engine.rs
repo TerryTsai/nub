@@ -4,6 +4,10 @@
 
 use std::path::PathBuf;
 
+use hyper::body::Incoming;
+use hyper::Response;
+use serde::de::DeserializeOwned;
+
 use super::conn::{Address, Conn};
 use super::req::Req;
 
@@ -59,6 +63,26 @@ impl Engine {
     /// Open a fresh connection. Each op holds its own — no pooling.
     pub async fn conn(&self) -> Result<Conn> {
         Conn::connect(&self.address).await
+    }
+
+    /// Send a unary request and decode the response body as JSON. The
+    /// canonical "GET/POST a small JSON document" call shape used by
+    /// every list/inspect/get op.
+    pub async fn unary<T: DeserializeOwned>(&self, req: Req) -> Result<T> {
+        self.conn().await?.send_unary(req).await?.json()
+    }
+
+    /// Send a unary request and discard the body, returning unit on
+    /// 2xx. The canonical "POST/DELETE that has no useful body" shape
+    /// used by every action verb (start, stop, create-volume, …).
+    pub async fn unit(&self, req: Req) -> Result<()> {
+        self.conn().await?.send_unary(req).await?.ok()
+    }
+
+    /// Open a streaming response. Caller drives the body — used by
+    /// every chunked op (logs, stats, exec, pull, build).
+    pub async fn streaming(&self, req: Req) -> Result<Response<Incoming>> {
+        self.conn().await?.send_streaming(req).await
     }
 }
 

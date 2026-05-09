@@ -7,6 +7,6 @@ use crate::client::Req;
 use crate::ops::EngineHandler;
 
 pub(crate) async fn run(h: &EngineHandler, id: String) -> Result<()> {
-    h.engine.conn().await?.send_unary(Req::post(format!("/containers/{id}/start"))).await?.ok()?;
+    h.engine.unit(Req::post(format!("/containers/{id}/start"))).await?;
     Ok(())
 }

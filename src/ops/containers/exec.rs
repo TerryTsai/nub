@@ -52,19 +52,15 @@ async fn create_exec(engine: &Engine, container_id: &str, cmd: &[String], tty: b
         tty,
         cmd: cmd.to_vec(),
     };
-    let resp: CreateExecResp = engine
-        .conn()
-        .await?
-        .send_unary(Req::post(format!("/containers/{container_id}/exec")).json(&body)?)
-        .await?
-        .json()?;
+    let req = Req::post(format!("/containers/{container_id}/exec")).json(&body)?;
+    let resp: CreateExecResp = engine.unary(req).await?;
     Ok(resp.id)
 }
 
 async fn start_exec(engine: &Engine, exec_id: &str, tty: bool) -> Result<TokioIo<Upgraded>> {
     let body = StartExecBody { detach: false, tty };
     let req = Req::post(format!("/exec/{exec_id}/start")).json(&body)?.upgrade("tcp");
-    let res = engine.conn().await?.send_streaming(req).await?;
+    let res = engine.streaming(req).await?;
     Ok(upgrade(res).await?)
 }
 

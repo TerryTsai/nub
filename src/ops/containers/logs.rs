@@ -26,7 +26,7 @@ async fn pump(
     tail: Option<u32>,
     tx: mpsc::Sender<StreamChunk>,
 ) -> Result<()> {
-    let res = engine.conn().await?.send_streaming(Req::get(logs_path(&id, follow, tail))).await?;
+    let res = engine.streaming(Req::get(logs_path(&id, follow, tail))).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
         let body = collect_body(res.into_body()).await;

@@ -29,7 +29,7 @@ pub(crate) async fn run(h: &EngineHandler, req: CreateContainerReq) -> Result<Co
         Some(n) => format!("/containers/create?name={n}"),
         None => "/containers/create".to_string(),
     };
-    let resp: CreateResp = h.engine.conn().await?.send_unary(Req::post(path).json(&body)?).await?.json()?;
+    let resp: CreateResp = h.engine.unary(Req::post(path).json(&body)?).await?;
 
     Ok(ContainerCreated {
         id: resp.id,

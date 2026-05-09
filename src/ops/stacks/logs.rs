@@ -107,7 +107,7 @@ async fn list_stack_containers(engine: &Engine, stack: &str) -> Result<Vec<(Stri
         EngineKind::Podman => "/v4.0.0/libpod/containers/json?all=true",
         EngineKind::Docker => "/containers/json?all=true",
     };
-    let raw: Vec<RawListItem> = engine.conn().await?.send_unary(Req::get(path.to_string())).await?.json()?;
+    let raw: Vec<RawListItem> = engine.unary(Req::get(path.to_string())).await?;
     Ok(raw
         .into_iter()
         .filter(|i| i.labels.get(STACK_LABEL).map(String::as_str) == Some(stack))

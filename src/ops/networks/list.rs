@@ -28,13 +28,12 @@ async fn fetch_list(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 }
 
 async fn list_compat(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
-    let raw: Vec<CompatList> = h.engine.conn().await?.send_unary(Req::get("/networks")).await?.json()?;
+    let raw: Vec<CompatList> = h.engine.unary(Req::get("/networks")).await?;
     Ok(raw.into_iter().map(CompatList::into_summary).collect())
 }
 
 async fn list_libpod(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
-    let raw: Vec<LibpodList> =
-        h.engine.conn().await?.send_unary(Req::get("/v4.0.0/libpod/networks/json")).await?.json()?;
+    let raw: Vec<LibpodList> = h.engine.unary(Req::get("/v4.0.0/libpod/networks/json")).await?;
     Ok(raw.into_iter().map(LibpodList::into_summary).collect())
 }
 
@@ -43,7 +42,7 @@ async fn list_libpod(h: &EngineHandler) -> Result<Vec<NetworkSummary>> {
 /// engines — cheap enough to pair with every list call.
 async fn probe_attached(h: &EngineHandler) -> Result<HashSet<String>> {
     let path = format!("{}?all=true", containers_path(h.engine.kind()));
-    let raw: Vec<ContainerNets> = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
+    let raw: Vec<ContainerNets> = h.engine.unary(Req::get(path)).await?;
     let mut out = HashSet::new();
     for c in raw {
         for n in c.networks {

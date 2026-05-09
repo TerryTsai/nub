@@ -11,6 +11,6 @@ pub(crate) async fn run(h: &EngineHandler, id: String, timeout: Option<i64>) -> 
         Some(t) => format!("/containers/{id}/restart?t={t}"),
         None => format!("/containers/{id}/restart"),
     };
-    h.engine.conn().await?.send_unary(Req::post(path)).await?.ok()?;
+    h.engine.unit(Req::post(path)).await?;
     Ok(())
 }

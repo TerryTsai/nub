@@ -10,7 +10,7 @@ use crate::proto::VolumeDetail;
 
 pub(crate) async fn run(h: &EngineHandler, name: &str) -> Result<Box<VolumeDetail>> {
     let path = format!("/volumes/{name}");
-    let raw: RawInspect = h.engine.conn().await?.send_unary(Req::get(path)).await?.json()?;
+    let raw: RawInspect = h.engine.unary(Req::get(path)).await?;
     Ok(Box::new(VolumeDetail {
         name: raw.name,
         driver: raw.driver,

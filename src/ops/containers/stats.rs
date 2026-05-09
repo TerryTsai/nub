@@ -21,7 +21,7 @@ pub(crate) fn run(h: &EngineHandler, id: String) -> BoxStream<'static, StreamChu
 
 async fn pump(engine: Engine, id: String, tx: mpsc::Sender<StreamChunk>) -> Result<()> {
     let path = format!("/containers/{id}/stats?stream=true");
-    let res = engine.conn().await?.send_streaming(Req::get(path)).await?;
+    let res = engine.streaming(Req::get(path)).await?;
     if !res.status().is_success() {
         let status = res.status().as_u16();
         let body = res.into_body().collect().await?.to_bytes();
