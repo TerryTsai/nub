@@ -85,7 +85,7 @@ pub struct PortMapping {
     pub host_port: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize)]
 pub struct CreateContainerReq {
     pub image: String,
     #[serde(default)]

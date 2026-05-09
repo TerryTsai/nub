@@ -52,46 +52,43 @@ fn transform_service(
     let image = svc
         .image
         .ok_or_else(|| ParseError(format!("service `{name}` has no `image`")))?;
-    let unsupported = sorted_keys(&svc.extra);
-    let secrets = transform_service_refs(&name, svc.secrets, declared_secrets)?;
-    let configs = configs_xform::transform_service_refs(&name, svc.configs, declared_configs)?;
     let container = CreateContainerReq {
         image,
         name: svc.container_name,
-        cmd: svc.command.map(StringOrList::shell_split).unwrap_or_default(),
-        entrypoint: svc.entrypoint.map(StringOrList::shell_split).unwrap_or_default(),
-        env: svc.environment.map(MapOrList::into_kv_list).unwrap_or_default(),
+        cmd: opt(svc.command, StringOrList::shell_split),
+        entrypoint: opt(svc.entrypoint, StringOrList::shell_split),
+        env: opt(svc.environment, MapOrList::into_kv_list),
+        labels: opt(svc.labels, MapOrList::into_kv_map),
         working_dir: svc.working_dir,
         user: svc.user,
-        labels: svc.labels.map(MapOrList::into_kv_map).unwrap_or_default(),
         ports: parse_ports(&svc.ports, &name)?,
         volumes: parse_volumes(&svc.volumes, &name)?,
         network: svc.network_mode,
         restart: parse_restart(svc.restart.as_deref(), &name)?,
-        memory_limit: None,
-        cpu_shares: None,
         healthcheck: svc.healthcheck.map(transform_healthcheck).transpose()?,
         cap_add: svc.cap_add,
         cap_drop: svc.cap_drop,
         privileged: svc.privileged,
-        devices: vec![],
         extra_hosts: svc.extra_hosts,
         init: svc.init,
-        tmpfs: HashMap::new(),
-        shm_size: None,
-        ulimits: vec![],
-        sysctls: HashMap::new(),
         hostname: svc.hostname,
-        dns: vec![],
         expose: svc.expose,
+        ..Default::default()
     };
     Ok(ServiceSpec {
+        secrets: transform_service_refs(&name, svc.secrets, declared_secrets)?,
+        configs: configs_xform::transform_service_refs(&name, svc.configs, declared_configs)?,
+        unsupported: sorted_keys(&svc.extra),
         name,
         container,
-        secrets,
-        configs,
-        unsupported,
     })
+}
+
+/// `Option<T>` → `U` via `f`, defaulting to `U::default()` when `None`.
+/// Compresses the `.map(f).unwrap_or_default()` pattern that appears
+/// many times in the service-field initializer above.
+fn opt<T, U: Default>(o: Option<T>, f: impl FnOnce(T) -> U) -> U {
+    o.map(f).unwrap_or_default()
 }
 
 fn parse_ports(items: &[String], svc: &str) -> Result<Vec<PortPublish>, ParseError> {
@@ -174,7 +171,7 @@ fn transform_healthcheck(hc: HealthcheckYaml) -> Result<HealthcheckSpec, ParseEr
         });
     }
     Ok(HealthcheckSpec {
-        test: hc.test.map(StringOrList::into_list).unwrap_or_default(),
+        test: opt(hc.test, StringOrList::into_list),
         interval_ns: hc.interval.as_deref().map(parse_ns).transpose()?,
         timeout_ns: hc.timeout.as_deref().map(parse_ns).transpose()?,
         retries: hc.retries,
